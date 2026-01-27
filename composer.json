@@ -1,0 +1,67 @@
+{
+    "name": "app/ai-chatbot",
+    "description": "AI Chatbot - PHP/Swoole/Mezzio/Datastar implementation",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "ext-swoole": "*",
+        "delight-im/auth": "^9.0",
+        "laminas/laminas-config-aggregator": "^1.15",
+        "laminas/laminas-diactoros": "^3.5",
+        "laminas/laminas-servicemanager": "^4.2",
+        "mezzio/mezzio": "^3.19",
+        "mezzio/mezzio-fastroute": "^3.11",
+        "mezzio/mezzio-helpers": "^5.16",
+        "mezzio/mezzio-swoole": "^4.10",
+        "ramsey/uuid": "^4.7",
+        "starfederation/datastar-php": "^1.0",
+        "theodo-group/llphant": "^0.11"
+    },
+    "require-dev": {
+        "ext-inotify": "*",
+        "friendsofphp/php-cs-fixer": "^3.67",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^4.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "rector/type-perfect": "^2.0",
+        "roave/security-advisories": "dev-latest",
+        "tomasvotruba/type-coverage": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/App/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "dev": "php bin/server.php",
+        "stop": "pkill -f 'php bin/server.php' || true",
+        "test": "pest",
+        "test:coverage": "pest --coverage",
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "php-cs-fixer fix",
+        "stan": "phpstan analyse",
+        "db:init": "php bin/init-db.php",
+        "db:seed": "php bin/seed.php"
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "RC",
+    "prefer-stable": true
+}

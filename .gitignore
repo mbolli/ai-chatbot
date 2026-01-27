@@ -1,0 +1,8 @@
+/vendor/
+/data/*.sqlite
+/data/cache/
+/config/autoload/*.local.php
+.env
+.env.local
+.phpunit.result.cache
+.php-cs-fixer.cache

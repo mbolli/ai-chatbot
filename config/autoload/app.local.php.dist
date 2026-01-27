@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+// Local configuration - copy to app.local.php and customize
+// This file should NOT be committed to version control
+
+return [
+    'debug' => true,
+    
+    'app' => [
+        'env' => 'development',
+    ],
+    
+    'ai' => [
+        // 'api_key' => 'your-anthropic-api-key',
+    ],
+];
