@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Handler\Command;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Repository\ChatRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -36,8 +37,8 @@ final class ChatCommandHandler implements RequestHandlerInterface {
     }
 
     public function create(ServerRequestInterface $request): ResponseInterface {
-        // TODO: Get user ID from auth
-        $userId = 1;
+        /** @var int $userId */
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $data = $this->getRequestData($request);
 
@@ -62,7 +63,9 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
     public function delete(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('id');
-        $userId = 1; // TODO: Get from auth
+
+        /** @var int $userId */
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $chat = $this->chatRepository->find($chatId);
 
@@ -87,7 +90,9 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
     public function visibility(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('id');
-        $userId = 1; // TODO: Get from auth
+
+        /** @var int $userId */
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $chat = $this->chatRepository->find($chatId);
 

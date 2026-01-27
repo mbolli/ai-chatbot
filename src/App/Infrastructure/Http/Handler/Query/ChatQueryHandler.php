@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Handler\Query;
 use App\Domain\Model\Message;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use Laminas\Diactoros\Response\JsonResponse;
 use Mezzio\Router\RouteResult;
 use Psr\Http\Message\ResponseInterface;
@@ -33,7 +34,7 @@ final class ChatQueryHandler implements RequestHandlerInterface {
 
     public function show(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('id');
-        $userId = 1; // TODO: Get from auth
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $chat = $this->chatRepository->find($chatId);
 
@@ -50,7 +51,7 @@ final class ChatQueryHandler implements RequestHandlerInterface {
 
     public function messages(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('id');
-        $userId = 1; // TODO: Get from auth
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $chat = $this->chatRepository->find($chatId);
 

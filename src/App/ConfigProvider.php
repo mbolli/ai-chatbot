@@ -7,9 +7,13 @@ namespace App;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\Repository\VoteRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
+use App\Infrastructure\Auth\AuthService;
 use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\EventBus\SwooleEventBus;
+use App\Infrastructure\Http\Handler\AuthHandler;
 use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
@@ -21,6 +25,8 @@ use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
 use App\Infrastructure\Persistence\SqliteMessageRepository;
 use App\Infrastructure\Persistence\SqliteVoteRepository;
+use App\Infrastructure\Repository\SqliteUserRepository;
+use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
 use Psr\Container\ContainerInterface;
 
@@ -57,6 +63,30 @@ class ConfigProvider {
                 // Event Bus (singleton for SSE)
                 EventBusInterface::class => fn (): EventBusInterface => SwooleEventBus::getInstance(),
 
+                // Session Persistence (Swoole Table-based, coroutine-safe)
+                SwooleTableSessionPersistence::class => function (): SwooleTableSessionPersistence {
+                    // Use shared table for persistence across requests
+                    return new SwooleTableSessionPersistence(
+                        cookieName: 'PHPSESSID',
+                        sessionTtl: 3600 * 24 * 7, // 1 week
+                        table: SwooleTableSessionPersistence::getSharedTable(),
+                    );
+                },
+
+                // User Repository
+                UserRepositoryInterface::class => fn (ContainerInterface $container): UserRepositoryInterface => new SqliteUserRepository($container->get(\PDO::class)),
+
+                // Auth Service
+                AuthService::class => fn (ContainerInterface $container): AuthService => new AuthService(
+                    $container->get(UserRepositoryInterface::class),
+                ),
+
+                // Auth Middleware
+                AuthMiddleware::class => fn (ContainerInterface $container): AuthMiddleware => new AuthMiddleware(
+                    $container->get(AuthService::class),
+                    $container->get(SwooleTableSessionPersistence::class),
+                ),
+
                 // Template Renderer
                 TemplateRenderer::class => function (ContainerInterface $container): TemplateRenderer {
                     $config = $container->get('config');
@@ -83,6 +113,9 @@ class ConfigProvider {
                 UpdatesHandler::class => fn (ContainerInterface $container): UpdatesHandler => new UpdatesHandler(
                     $container->get(EventBusInterface::class),
                 ),
+
+                // Auth Handler
+                AuthHandler::class => fn (): AuthHandler => new AuthHandler(),
 
                 // Command Handlers
                 ChatCommandHandler::class => fn (ContainerInterface $container): ChatCommandHandler => new ChatCommandHandler(

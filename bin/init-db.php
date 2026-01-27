@@ -4,23 +4,23 @@
 declare(strict_types=1);
 
 /**
- * Initialize the SQLite database with schema
+ * Initialize the SQLite database with schema.
  */
-
 $dbPath = __DIR__ . '/../data/db.sqlite';
 $schemaPath = __DIR__ . '/../data/schema.sql';
 
 // Create data directory if not exists
-if (! is_dir(dirname($dbPath))) {
+if (!is_dir(dirname($dbPath))) {
     mkdir(dirname($dbPath), 0755, true);
 }
 
 // Check if database already exists
 $exists = file_exists($dbPath);
 
-if ($exists && ! in_array('--force', $argv, true)) {
+if ($exists && !in_array('--force', $argv, true)) {
     echo "Database already exists at: {$dbPath}\n";
     echo "Use --force to recreate.\n";
+
     exit(0);
 }
 
@@ -45,6 +45,7 @@ try {
 
     echo "Database initialized successfully at: {$dbPath}\n";
 } catch (Throwable $e) {
-    echo "Error initializing database: " . $e->getMessage() . "\n";
+    echo 'Error initializing database: ' . $e->getMessage() . "\n";
+
     exit(1);
 }

@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Handler\Query;
 
 use App\Domain\Model\Chat;
 use App\Domain\Repository\ChatRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use Laminas\Diactoros\Response\JsonResponse;
 use Mezzio\Router\RouteResult;
 use Psr\Http\Message\ResponseInterface;
@@ -29,7 +30,7 @@ final class HistoryQueryHandler implements RequestHandlerInterface {
     }
 
     public function list(ServerRequestInterface $request): ResponseInterface {
-        $userId = 1; // TODO: Get from auth
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $params = $request->getQueryParams();
         $limit = min((int) ($params['limit'] ?? 50), 100);

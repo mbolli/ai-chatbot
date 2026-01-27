@@ -1,6 +1,10 @@
 <?php
-/** @var array $chats */
-$e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+/**
+ * @var array $chats
+ * @var null|array $user
+ */
+$e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$isGuest = ($user['isGuest'] ?? true);
 ?>
 <!-- Sidebar -->
 <aside class="sidebar" data-show="$_sidebarOpen">
@@ -36,6 +40,33 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
             <span class="dot"></span>
             <span>Connecting...</span>
         </div>
+
+        <?php if ($isGuest) { ?>
+            <!-- Guest User Actions -->
+            <div class="sidebar-auth">
+                <button class="btn btn-secondary btn-sm btn-block"
+                        data-on:click="$_authModal = 'upgrade'">
+                    <i class="fas fa-user-plus"></i> Save Chats
+                </button>
+                <button class="btn-link btn-sm"
+                        data-on:click="$_authModal = 'login'">
+                    Already have an account? Sign in
+                </button>
+            </div>
+        <?php } else { ?>
+            <!-- Logged In User -->
+            <div class="sidebar-user">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
+                </div>
+                <button class="btn-icon"
+                        data-on:click="@post('/auth/logout')"
+                        title="Sign out">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        <?php } ?>
     </div>
 </aside>
 

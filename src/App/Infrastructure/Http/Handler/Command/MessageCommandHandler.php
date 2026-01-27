@@ -9,6 +9,7 @@ use App\Domain\Event\MessageStreamingEvent;
 use App\Domain\Model\Message;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Mezzio\Router\RouteResult;
@@ -36,7 +37,9 @@ final class MessageCommandHandler implements RequestHandlerInterface {
 
     public function send(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('chatId');
-        $userId = 1; // TODO: Get from auth
+
+        /** @var int $userId */
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
 
         $chat = $this->chatRepository->find($chatId);
 

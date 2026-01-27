@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e3946ccffd17e800cf26958f5f3f37b3",
+    "content-hash": "41f228c481d99cc7733673c1c27e6291",
     "packages": [
         {
             "name": "brick/math",
@@ -114,278 +114,6 @@
                 }
             ],
             "time": "2025-02-20T17:42:39+00:00"
-        },
-        {
-            "name": "delight-im/auth",
-            "version": "v9.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-Auth.git",
-                "reference": "ef996fd2ae63c5afc04bd31e2d1b66f548446f50"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-Auth/zipball/ef996fd2ae63c5afc04bd31e2d1b66f548446f50",
-                "reference": "ef996fd2ae63c5afc04bd31e2d1b66f548446f50",
-                "shasum": ""
-            },
-            "require": {
-                "delight-im/base64": "^1.0",
-                "delight-im/cookie": "^3.1",
-                "delight-im/db": "^1.5",
-                "delight-im/otp": "^1.0",
-                "ext-openssl": "*",
-                "php": ">=5.6.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Auth\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Authentication for PHP. Simple, lightweight and secure.",
-            "homepage": "https://github.com/delight-im/PHP-Auth",
-            "keywords": [
-                "Authentication",
-                "auth",
-                "login",
-                "security"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-Auth/issues",
-                "source": "https://github.com/delight-im/PHP-Auth/tree/v9.0.0"
-            },
-            "time": "2025-05-28T15:47:58+00:00"
-        },
-        {
-            "name": "delight-im/base64",
-            "version": "v1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-Base64.git",
-                "reference": "687b2a49f663e162030a8d27b32838bbe7f91c78"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-Base64/zipball/687b2a49f663e162030a8d27b32838bbe7f91c78",
-                "reference": "687b2a49f663e162030a8d27b32838bbe7f91c78",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Base64\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Simple and convenient Base64 encoding and decoding for PHP",
-            "homepage": "https://github.com/delight-im/PHP-Base64",
-            "keywords": [
-                "URL-safe",
-                "base-64",
-                "base64",
-                "decode",
-                "decoding",
-                "encode",
-                "encoding",
-                "url"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-Base64/issues",
-                "source": "https://github.com/delight-im/PHP-Base64/tree/master"
-            },
-            "time": "2017-07-24T18:59:51+00:00"
-        },
-        {
-            "name": "delight-im/cookie",
-            "version": "v3.4.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-Cookie.git",
-                "reference": "67065d34272377d63bab0bd58f984f9b228c803f"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-Cookie/zipball/67065d34272377d63bab0bd58f984f9b228c803f",
-                "reference": "67065d34272377d63bab0bd58f984f9b228c803f",
-                "shasum": ""
-            },
-            "require": {
-                "delight-im/http": "^2.0",
-                "php": ">=5.4.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Cookie\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Modern cookie management for PHP",
-            "homepage": "https://github.com/delight-im/PHP-Cookie",
-            "keywords": [
-                "cookie",
-                "cookies",
-                "csrf",
-                "http",
-                "same-site",
-                "samesite",
-                "xss"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-Cookie/issues",
-                "source": "https://github.com/delight-im/PHP-Cookie/tree/v3.4.0"
-            },
-            "time": "2020-04-16T11:01:26+00:00"
-        },
-        {
-            "name": "delight-im/db",
-            "version": "v1.5.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-DB.git",
-                "reference": "c613571382fa76359abc6de71d19738d7b7f1d13"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-DB/zipball/c613571382fa76359abc6de71d19738d7b7f1d13",
-                "reference": "c613571382fa76359abc6de71d19738d7b7f1d13",
-                "shasum": ""
-            },
-            "require": {
-                "ext-pdo": "*",
-                "php": ">=5.6.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Db\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Safe and convenient SQL database access in a driver-agnostic way",
-            "homepage": "https://github.com/delight-im/PHP-DB",
-            "keywords": [
-                "database",
-                "mysql",
-                "pdo",
-                "pgsql",
-                "postgresql",
-                "sql",
-                "sqlite"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-DB/issues",
-                "source": "https://github.com/delight-im/PHP-DB/tree/v1.5.0"
-            },
-            "time": "2025-05-26T16:39:50+00:00"
-        },
-        {
-            "name": "delight-im/http",
-            "version": "v2.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-HTTP.git",
-                "reference": "a5c2c4eae1dd3207f797984e8f64f2d71ed889dd"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-HTTP/zipball/a5c2c4eae1dd3207f797984e8f64f2d71ed889dd",
-                "reference": "a5c2c4eae1dd3207f797984e8f64f2d71ed889dd",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Http\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Hypertext Transfer Protocol (HTTP) utilities for PHP",
-            "homepage": "https://github.com/delight-im/PHP-HTTP",
-            "keywords": [
-                "headers",
-                "http",
-                "https"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-HTTP/issues",
-                "source": "https://github.com/delight-im/PHP-HTTP/tree/v2.1.0"
-            },
-            "time": "2021-10-12T18:52:29+00:00"
-        },
-        {
-            "name": "delight-im/otp",
-            "version": "v1.0.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/delight-im/PHP-OTP.git",
-                "reference": "eb6a5520e13f793dd12f4530ca69549570c99232"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/delight-im/PHP-OTP/zipball/eb6a5520e13f793dd12f4530ca69549570c99232",
-                "reference": "eb6a5520e13f793dd12f4530ca69549570c99232",
-                "shasum": ""
-            },
-            "require": {
-                "ext-openssl": "*",
-                "paragonie/constant_time_encoding": "~1.1.0 || ~2.7.0",
-                "php": ">=5.6.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Delight\\Otp\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "One-time password (OTP) implementation for two-factor authentication with TOTP in accordance with RFC 6238 and RFC 4226",
-            "homepage": "https://github.com/delight-im/PHP-OTP",
-            "keywords": [
-                "2fa",
-                "google-authenticator",
-                "hotp",
-                "otp",
-                "rfc-4226",
-                "rfc-6238",
-                "rfc4226",
-                "rfc6238",
-                "tfa",
-                "totp",
-                "two-factor",
-                "two-factor-authentication"
-            ],
-            "support": {
-                "issues": "https://github.com/delight-im/PHP-OTP/issues",
-                "source": "https://github.com/delight-im/PHP-OTP/tree/v1.0.2"
-            },
-            "time": "2025-08-04T10:06:20+00:00"
         },
         {
             "name": "dflydev/fig-cookies",
@@ -1513,6 +1241,158 @@
             "time": "2026-01-09T13:03:09+00:00"
         },
         {
+            "name": "mezzio/mezzio-authentication",
+            "version": "1.12.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mezzio/mezzio-authentication.git",
+                "reference": "50f825217246dc3bd9c991a31795fc7cd7ede6b4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mezzio/mezzio-authentication/zipball/50f825217246dc3bd9c991a31795fc7cd7ede6b4",
+                "reference": "50f825217246dc3bd9c991a31795fc7cd7ede6b4",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/container": "^1.0 || ^2.0",
+                "psr/http-message": "^1.0.1 || ^2.0.0",
+                "psr/http-server-middleware": "^1.0",
+                "webmozart/assert": "^1.11.0"
+            },
+            "conflict": {
+                "container-interop/container-interop": "<1.2.0",
+                "zendframework/zend-expressive-authentication": "*"
+            },
+            "require-dev": {
+                "ext-sqlite3": "*",
+                "laminas/laminas-coding-standard": "~3.1.0",
+                "phpunit/phpunit": "^11.5.42",
+                "psalm/plugin-phpunit": "^0.19.5",
+                "vimeo/psalm": "^6.13.1"
+            },
+            "suggest": {
+                "ext-pdo": "*: for use with the PDO-backed UserRepositoryInterface implementation",
+                "mezzio/mezzio-authentication-basic": "Provides an HTTP Basic Authentication AuthenticationInterface implementation",
+                "mezzio/mezzio-authentication-laminasauthentication": "Provides a laminas-authentication AuthenticationInterface implementation",
+                "mezzio/mezzio-authentication-session": "Provides a username/password + session AuthenticationInterface implementation"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "Mezzio\\Authentication\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Mezzio\\Authentication\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Authentication middleware for Mezzio and PSR-7 applications",
+            "homepage": "https://mezzio.dev",
+            "keywords": [
+                "Authentication",
+                "http",
+                "laminas",
+                "mezzio",
+                "middleware",
+                "psr-15",
+                "psr-7"
+            ],
+            "support": {
+                "chat": "https://laminas.dev/chat",
+                "docs": "https://docs.mezzio.dev/mezzio-authentication/",
+                "forum": "https://discourse.laminas.dev",
+                "issues": "https://github.com/mezzio/mezzio-authentication/issues",
+                "rss": "https://github.com/mezzio/mezzio-authentication/releases.atom",
+                "source": "https://github.com/mezzio/mezzio-authentication"
+            },
+            "funding": [
+                {
+                    "url": "https://funding.communitybridge.org/projects/laminas-project",
+                    "type": "community_bridge"
+                }
+            ],
+            "time": "2025-10-12T22:33:46+00:00"
+        },
+        {
+            "name": "mezzio/mezzio-authentication-session",
+            "version": "1.11.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mezzio/mezzio-authentication-session.git",
+                "reference": "ff34b654fd710985add706a0cbdcf7c776b794c4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mezzio/mezzio-authentication-session/zipball/ff34b654fd710985add706a0cbdcf7c776b794c4",
+                "reference": "ff34b654fd710985add706a0cbdcf7c776b794c4",
+                "shasum": ""
+            },
+            "require": {
+                "mezzio/mezzio-authentication": "^1.3",
+                "mezzio/mezzio-session": "^1.6",
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/container": "^1.0 || ^2.0",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.0.1 || ^2.0.0",
+                "webmozart/assert": "^1.10"
+            },
+            "conflict": {
+                "zendframework/zend-expressive-authentication-session": "*"
+            },
+            "require-dev": {
+                "laminas/laminas-coding-standard": "~3.1.0",
+                "laminas/laminas-diactoros": "^3.8",
+                "phpunit/phpunit": "^11.5.42",
+                "psalm/plugin-phpunit": "^0.19.5",
+                "vimeo/psalm": "^6.13.1"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "Mezzio\\Authentication\\Session\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Mezzio\\Authentication\\Session\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Username/password, session-backed authentication adapter for mezzio-authentication.",
+            "homepage": "https://mezzio.dev",
+            "keywords": [
+                "Authentication",
+                "laminas",
+                "mezzio",
+                "session"
+            ],
+            "support": {
+                "chat": "https://laminas.dev/chat",
+                "docs": "https://docs.mezzio.dev/mezzio-authentication-session/",
+                "forum": "https://discourse.laminas.dev",
+                "issues": "https://github.com/mezzio/mezzio-authentication-session/issues",
+                "rss": "https://github.com/mezzio/mezzio-authentication-session/releases.atom",
+                "source": "https://github.com/mezzio/mezzio-authentication-session"
+            },
+            "funding": [
+                {
+                    "url": "https://funding.communitybridge.org/projects/laminas-project",
+                    "type": "community_bridge"
+                }
+            ],
+            "time": "2025-10-12T22:41:37+00:00"
+        },
+        {
             "name": "mezzio/mezzio-fastroute",
             "version": "3.14.0",
             "source": {
@@ -1749,6 +1629,163 @@
                 }
             ],
             "time": "2026-01-09T11:44:24+00:00"
+        },
+        {
+            "name": "mezzio/mezzio-session",
+            "version": "1.17.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mezzio/mezzio-session.git",
+                "reference": "215095b4445283f2d527c1edc3338aa1ffbe3067"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mezzio/mezzio-session/zipball/215095b4445283f2d527c1edc3338aa1ffbe3067",
+                "reference": "215095b4445283f2d527c1edc3338aa1ffbe3067",
+                "shasum": ""
+            },
+            "require": {
+                "dflydev/fig-cookies": "^3.0",
+                "ext-json": "*",
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/container": "^1.0 || ^2.0",
+                "psr/http-server-middleware": "^1.0"
+            },
+            "conflict": {
+                "zendframework/zend-expressive-session": "*"
+            },
+            "require-dev": {
+                "laminas/laminas-coding-standard": "~3.1.0",
+                "laminas/laminas-diactoros": "^3.6.0",
+                "phpunit/phpunit": "^11.5.42",
+                "psalm/plugin-phpunit": "^0.19.5",
+                "vimeo/psalm": "^6.13.1"
+            },
+            "suggest": {
+                "mezzio/mezzio-csrf": "^1.0 || ^1.0-dev for CSRF protection capabilities",
+                "mezzio/mezzio-flash": "^1.0 || ^1.0-dev for flash message capabilities",
+                "mezzio/mezzio-session-ext": "^1.0 || ^1.0-dev for an ext-session persistence adapter"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "Mezzio\\Session\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Mezzio\\Session\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Session container and middleware for PSR-7 applications",
+            "homepage": "https://mezzio.dev",
+            "keywords": [
+                "laminas",
+                "mezzio",
+                "middleware",
+                "psr-7",
+                "session"
+            ],
+            "support": {
+                "chat": "https://laminas.dev/chat",
+                "docs": "https://docs.mezzio.dev/mezzio-session/",
+                "forum": "https://discourse.laminas.dev",
+                "issues": "https://github.com/mezzio/mezzio-session/issues",
+                "rss": "https://github.com/mezzio/mezzio-session/releases.atom",
+                "source": "https://github.com/mezzio/mezzio-session"
+            },
+            "funding": [
+                {
+                    "url": "https://funding.communitybridge.org/projects/laminas-project",
+                    "type": "community_bridge"
+                }
+            ],
+            "time": "2025-10-11T18:36:13+00:00"
+        },
+        {
+            "name": "mezzio/mezzio-session-cache",
+            "version": "1.17.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mezzio/mezzio-session-cache.git",
+                "reference": "545bb21d2373ab745f6190fcc62cffdef332429b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mezzio/mezzio-session-cache/zipball/545bb21d2373ab745f6190fcc62cffdef332429b",
+                "reference": "545bb21d2373ab745f6190fcc62cffdef332429b",
+                "shasum": ""
+            },
+            "require": {
+                "dflydev/fig-cookies": "^3.0.0",
+                "mezzio/mezzio-session": "^1.4",
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/cache": "^1.0 || ^2.0 || ^3.0",
+                "psr/container": "^1.0 || ^2.0",
+                "psr/http-message": "^2.0"
+            },
+            "conflict": {
+                "zendframework/zend-expressive-session-cache": "*"
+            },
+            "require-dev": {
+                "laminas/laminas-cache": "^4.1.0",
+                "laminas/laminas-cache-storage-adapter-apcu": "^3.1.0",
+                "laminas/laminas-coding-standard": "~3.1.0",
+                "laminas/laminas-diactoros": "^3.6.0",
+                "phpstan/extension-installer": "^1.4.3",
+                "phpstan/phpstan": "^2.1.31",
+                "phpstan/phpstan-phpunit": "^2.0.7",
+                "phpstan/phpstan-strict-rules": "^2.0.7",
+                "phpunit/phpunit": "^11.5.42",
+                "psalm/plugin-phpunit": "^0.19.5",
+                "vimeo/psalm": "^6.13.1"
+            },
+            "suggest": {
+                "psr/cache-implementation": "This package requires a PSR-6 CacheItemPoolInterface implementation."
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "Mezzio\\Session\\Cache\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Mezzio\\Session\\Cache\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "PSR-6 session persistence adapter for mezzio-session.",
+            "homepage": "https://mezzio.dev",
+            "keywords": [
+                "cache",
+                "laminas",
+                "mezzio",
+                "psr-6",
+                "session"
+            ],
+            "support": {
+                "chat": "https://laminas.dev/chat",
+                "docs": "https://docs.mezzio.dev/mezzio-session-cache/",
+                "forum": "https://discourse.laminas.dev",
+                "issues": "https://github.com/mezzio/mezzio-session-cache/issues",
+                "rss": "https://github.com/mezzio/mezzio-session-cache/releases.atom",
+                "source": "https://github.com/mezzio/mezzio-session-cache"
+            },
+            "funding": [
+                {
+                    "url": "https://funding.communitybridge.org/projects/laminas-project",
+                    "type": "community_bridge"
+                }
+            ],
+            "time": "2025-10-11T08:44:01+00:00"
         },
         {
             "name": "mezzio/mezzio-swoole",
@@ -2101,73 +2138,6 @@
             "time": "2025-09-04T14:32:16+00:00"
         },
         {
-            "name": "paragonie/constant_time_encoding",
-            "version": "v2.7.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/paragonie/constant_time_encoding.git",
-                "reference": "52a0d99e69f56b9ec27ace92ba56897fe6993105"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/paragonie/constant_time_encoding/zipball/52a0d99e69f56b9ec27ace92ba56897fe6993105",
-                "reference": "52a0d99e69f56b9ec27ace92ba56897fe6993105",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^7|^8"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^6|^7|^8|^9",
-                "vimeo/psalm": "^1|^2|^3|^4"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "ParagonIE\\ConstantTime\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Paragon Initiative Enterprises",
-                    "email": "security@paragonie.com",
-                    "homepage": "https://paragonie.com",
-                    "role": "Maintainer"
-                },
-                {
-                    "name": "Steve 'Sc00bz' Thomas",
-                    "email": "steve@tobtu.com",
-                    "homepage": "https://www.tobtu.com",
-                    "role": "Original Developer"
-                }
-            ],
-            "description": "Constant-time Implementations of RFC 4648 Encoding (Base-64, Base-32, Base-16)",
-            "keywords": [
-                "base16",
-                "base32",
-                "base32_decode",
-                "base32_encode",
-                "base64",
-                "base64_decode",
-                "base64_encode",
-                "bin2hex",
-                "encoding",
-                "hex",
-                "hex2bin",
-                "rfc4648"
-            ],
-            "support": {
-                "email": "info@paragonie.com",
-                "issues": "https://github.com/paragonie/constant_time_encoding/issues",
-                "source": "https://github.com/paragonie/constant_time_encoding"
-            },
-            "time": "2024-05-08T12:18:48+00:00"
-        },
-        {
             "name": "php-http/discovery",
             "version": "1.20.0",
             "source": {
@@ -2461,6 +2431,55 @@
                 "source": "https://github.com/PHPOffice/PHPWord/tree/1.4.0"
             },
             "time": "2025-06-05T10:32:36+00:00"
+        },
+        {
+            "name": "psr/cache",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/cache.git",
+                "reference": "aa5030cfa5405eccfdcb1083ce040c2cb8d253bf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/cache/zipball/aa5030cfa5405eccfdcb1083ce040c2cb8d253bf",
+                "reference": "aa5030cfa5405eccfdcb1083ce040c2cb8d253bf",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Cache\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for caching libraries",
+            "keywords": [
+                "cache",
+                "psr",
+                "psr-6"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/cache/tree/3.0.0"
+            },
+            "time": "2021-02-03T23:26:27+00:00"
         },
         {
             "name": "psr/container",
@@ -3183,6 +3202,182 @@
                 "source": "https://github.com/starfederation/datastar-php"
             },
             "time": "2025-12-17T14:44:50+00:00"
+        },
+        {
+            "name": "symfony/cache",
+            "version": "v8.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/cache.git",
+                "reference": "5d3fcada5e1b80157cfdfd1f9dbbd63f95ef6f13"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/cache/zipball/5d3fcada5e1b80157cfdfd1f9dbbd63f95ef6f13",
+                "reference": "5d3fcada5e1b80157cfdfd1f9dbbd63f95ef6f13",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.4",
+                "psr/cache": "^2.0|^3.0",
+                "psr/log": "^1.1|^2|^3",
+                "symfony/cache-contracts": "^3.6",
+                "symfony/service-contracts": "^2.5|^3",
+                "symfony/var-exporter": "^7.4|^8.0"
+            },
+            "conflict": {
+                "doctrine/dbal": "<4.3",
+                "ext-redis": "<6.1",
+                "ext-relay": "<0.12.1"
+            },
+            "provide": {
+                "psr/cache-implementation": "2.0|3.0",
+                "psr/simple-cache-implementation": "1.0|2.0|3.0",
+                "symfony/cache-implementation": "1.1|2.0|3.0"
+            },
+            "require-dev": {
+                "cache/integration-tests": "dev-master",
+                "doctrine/dbal": "^4.3",
+                "predis/predis": "^1.1|^2.0",
+                "psr/simple-cache": "^1.0|^2.0|^3.0",
+                "symfony/clock": "^7.4|^8.0",
+                "symfony/config": "^7.4|^8.0",
+                "symfony/dependency-injection": "^7.4|^8.0",
+                "symfony/filesystem": "^7.4|^8.0",
+                "symfony/http-kernel": "^7.4|^8.0",
+                "symfony/messenger": "^7.4|^8.0",
+                "symfony/var-dumper": "^7.4|^8.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Component\\Cache\\": ""
+                },
+                "classmap": [
+                    "Traits/ValueWrapper.php"
+                ],
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Provides extended PSR-6, PSR-16 (and tags) implementations",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "caching",
+                "psr6"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/cache/tree/v8.0.4"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-01-23T12:59:31+00:00"
+        },
+        {
+            "name": "symfony/cache-contracts",
+            "version": "v3.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/cache-contracts.git",
+                "reference": "5d68a57d66910405e5c0b63d6f0af941e66fc868"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/cache-contracts/zipball/5d68a57d66910405e5c0b63d6f0af941e66fc868",
+                "reference": "5d68a57d66910405e5c0b63d6f0af941e66fc868",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1",
+                "psr/cache": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/contracts",
+                    "name": "symfony/contracts"
+                },
+                "branch-alias": {
+                    "dev-main": "3.6-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Contracts\\Cache\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Generic abstractions related to caching",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "abstractions",
+                "contracts",
+                "decoupling",
+                "interfaces",
+                "interoperability",
+                "standards"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/cache-contracts/tree/v3.6.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2025-03-13T15:25:07+00:00"
         },
         {
             "name": "symfony/console",
@@ -4021,6 +4216,86 @@
                 }
             ],
             "time": "2026-01-12T12:37:40+00:00"
+        },
+        {
+            "name": "symfony/var-exporter",
+            "version": "v8.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/var-exporter.git",
+                "reference": "7345f46c251f2eb27c7b3ebdb5bb076b3ffcae04"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/var-exporter/zipball/7345f46c251f2eb27c7b3ebdb5bb076b3ffcae04",
+                "reference": "7345f46c251f2eb27c7b3ebdb5bb076b3ffcae04",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.4"
+            },
+            "require-dev": {
+                "symfony/property-access": "^7.4|^8.0",
+                "symfony/serializer": "^7.4|^8.0",
+                "symfony/var-dumper": "^7.4|^8.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Component\\VarExporter\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Allows exporting any serializable PHP data structure to plain PHP code",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "clone",
+                "construct",
+                "export",
+                "hydrate",
+                "instantiate",
+                "lazy-loading",
+                "proxy",
+                "serialize"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/var-exporter/tree/v8.0.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2025-11-05T18:53:00+00:00"
         },
         {
             "name": "theodo-group/llphant",

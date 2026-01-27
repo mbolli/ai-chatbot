@@ -13,5 +13,8 @@ parameters:
     param: 100
     property: 100
     constant: 100
+  ignoreErrors:
+    # Mezzio Session interface deprecation - will be fixed in v2.0
+    - '#has typehint with deprecated interface Mezzio\\Session\\SessionIdentifierAwareInterface#'
 includes:
   - vendor/phpstan/phpstan/conf/bleedingEdge.neon

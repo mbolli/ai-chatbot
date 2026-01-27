@@ -9,9 +9,9 @@ beforeEach(function (): void {
     $this->pdo = createTestPdo();
     $this->repository = new SqliteChatRepository($this->pdo);
 
-    // Create test users
-    $this->pdo->exec("INSERT INTO users (email, password, registered) VALUES ('test@example.com', 'hash', " . time() . ')');
-    $this->pdo->exec("INSERT INTO users (email, password, registered) VALUES ('test2@example.com', 'hash', " . time() . ')');
+    // Create test users (using new simplified schema)
+    $this->pdo->exec("INSERT INTO users (email, password_hash, is_guest, created_at) VALUES ('test@example.com', 'hash', 0, datetime('now'))");
+    $this->pdo->exec("INSERT INTO users (email, password_hash, is_guest, created_at) VALUES ('test2@example.com', 'hash', 0, datetime('now'))");
 });
 
 it('saves and finds a chat', function (): void {

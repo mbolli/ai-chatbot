@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Handler;
 
 use App\Domain\Repository\ChatRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Template\TemplateRenderer;
 use Laminas\Diactoros\Response\HtmlResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -18,15 +19,22 @@ final class HomeHandler implements RequestHandlerInterface {
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
-        // TODO: Get user ID from session/auth middleware
-        $userId = 1; // Guest user for now
+        $user = AuthMiddleware::getUser($request);
+        $userId = $user->id;
+        $userInfo = [
+            'id' => $user->id,
+            'email' => $user->email,
+            'isGuest' => $user->isGuest,
+        ];
 
         $chats = $this->chatRepository->findByUser($userId, 20);
 
         $html = $this->renderer->render('layout::default', [
             'title' => 'AI Chatbot',
+            'user' => $userInfo,
             'content' => $this->renderer->render('app::home', [
                 'chats' => $chats,
+                'user' => $userInfo,
             ]),
         ]);
 

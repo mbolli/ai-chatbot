@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Handler;
 
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Template\TemplateRenderer;
 use Laminas\Diactoros\Response\HtmlResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -21,9 +22,13 @@ final class ChatHandler implements RequestHandlerInterface {
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
         $chatId = $request->getAttribute('id');
-
-        // TODO: Get user ID from session/auth middleware
-        $userId = 1;
+        $user = AuthMiddleware::getUser($request);
+        $userId = $user->id;
+        $userInfo = [
+            'id' => $user->id,
+            'email' => $user->email,
+            'isGuest' => $user->isGuest,
+        ];
 
         $chat = $this->chatRepository->find($chatId);
 
@@ -41,10 +46,12 @@ final class ChatHandler implements RequestHandlerInterface {
 
         $html = $this->renderer->render('layout::default', [
             'title' => $chat->title ?? 'New Chat',
+            'user' => $userInfo,
             'content' => $this->renderer->render('app::chat', [
                 'chat' => $chat,
                 'messages' => $messages,
                 'chats' => $chats,
+                'user' => $userInfo,
             ]),
         ]);
 
