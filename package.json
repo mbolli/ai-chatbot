@@ -6,7 +6,7 @@
         "build": "esbuild src/ts/main.ts --bundle --outfile=public/js/app.js --minify --sourcemap",
         "watch": "esbuild src/ts/main.ts --bundle --outfile=public/js/app.js --watch --sourcemap",
         "typecheck": "tsc --noEmit",
-        "postinstall": "cp node_modules/starfederation/datastar/bundles/datastar.js public/js/datastar.js"
+        "postinstall": "cp node_modules/starfederation/datastar/bundles/datastar.js public/js/datastar.js && cp node_modules/@mbolli/datastar-attribute-on-keys/dist/index.js public/js/datastar-on-keys.js"
     },
     "devDependencies": {
         "esbuild": "^0.27.2",

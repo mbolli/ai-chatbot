@@ -27,7 +27,16 @@ $isGuest = ($user['isGuest'] ?? true);
     <link rel="stylesheet" href="/css/app.css">
 
     <!-- Datastar from CDN -->
+    <script type="importmap">
+    {
+        "imports": {
+            "datastar": "/js/datastar.js",
+            "datastar-on-keys": "/js/datastar-on-keys.js"
+        }
+    }
+    </script>
     <script type="module" src="/js/datastar.js"></script>
+    <script type="module" src="/js/datastar-on-keys.js"></script>
 </head>
 <body>
     <div id="app"
@@ -35,7 +44,7 @@ $isGuest = ($user['isGuest'] ?? true);
          data-signals='{
             "_sidebarOpen": true,
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
-            "_model": "claude-3-5-sonnet",
+            "_model": <?php echo json_encode($defaultModel ?? 'claude-3-5-sonnet-20241022'); ?>,
             "_artifactOpen": false,
             "_message": "",
             "_isGenerating": false,
