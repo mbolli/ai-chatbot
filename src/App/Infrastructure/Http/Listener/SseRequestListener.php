@@ -195,6 +195,11 @@ final class SseRequestListener {
     }
 
     private function sendNewMessage(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
+        // If assistant started, set _isGenerating signal first
+        if ($event->action === 'assistant_started') {
+            $this->sendPatchSignals($response, ['_isGenerating' => true]);
+        }
+
         $html = $event->action === 'assistant_started'
             ? $this->renderAssistantPlaceholder($event)
             : $this->renderMessage($event);
@@ -248,8 +253,6 @@ final class SseRequestListener {
             );
             $response->write($actionsPatch->getOutput());
 
-            // Make the actions div visible
-            $this->sendExecuteScript($response, "document.querySelector('#message-{$event->messageId} .message-actions')?.removeAttribute('style');");
         }
     }
 
@@ -262,28 +265,21 @@ final class SseRequestListener {
         $escaped = htmlspecialchars($event->chunk, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $messageId = $event->messageId;
 
-        // Append raw text to hidden container (for markdown source)
-        $rawPatch = new PatchElements(
-            '<span>' . $escaped . '</span>',
+        // Single combined patch: append chunk + trigger markdown + scroll
+        // The script uses data-effect to execute, then el.remove() cleans up
+        $combinedHtml = '<span>' . $escaped . '</span>'
+            . '<script data-effect="window.parseMessageMarkdown(\'message-' . $messageId . '\'); '
+            . 'requestAnimationFrame(() => { const c = document.getElementById(\'messages-container\'); if (c) c.scrollTop = c.scrollHeight; }); '
+            . 'el.remove()"></script>';
+
+        $patch = new PatchElements(
+            $combinedHtml,
             [
                 'selector' => '#message-' . $messageId . '-raw',
                 'mode' => ElementPatchMode::Append,
             ]
         );
-        $response->write($rawPatch->getOutput());
-
-        // Append to content with data-init to trigger markdown re-parse
-        $contentPatch = new PatchElements(
-            '<span data-init="window.parseMessageMarkdown(\'message-' . $messageId . '\')"></span>',
-            [
-                'selector' => '#message-' . $messageId . '-content',
-                'mode' => ElementPatchMode::Append,
-            ]
-        );
-        $response->write($contentPatch->getOutput());
-
-        // Auto-scroll to bottom
-        $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
+        $response->write($patch->getOutput());
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
@@ -360,10 +356,16 @@ final class SseRequestListener {
             return null;
         }
 
+        // Handle title_updated with combined patch events
+        if ($event->action === 'title_updated') {
+            $this->sendTitleUpdatePatches($response, $event);
+
+            return null;
+        }
+
         return match ($event->action) {
             'message_added' => $this->renderMessage($event),
             'assistant_started' => $this->renderAssistantPlaceholder($event),
-            'title_updated' => $this->renderTitleUpdate($event),
             default => '<div id="chat-update-signal" data-chat-id="' . $event->chatId . '" data-action="' . $event->action . '"></div>',
         };
     }
@@ -400,15 +402,30 @@ final class SseRequestListener {
         ]);
     }
 
-    private function renderTitleUpdate(ChatUpdatedEvent $event): string {
+    private function sendTitleUpdatePatches(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
         $title = htmlspecialchars($event->title ?? 'New Chat', ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        return <<<HTML
-<span id="chat-title">{$title}</span>
-<a id="chat-link-{$event->chatId}" href="/chat/{$event->chatId}" class="chat-link" data-patch-mode="replace">
-    <span class="chat-title">{$title}</span>
-</a>
-HTML;
+        // Update header title - Inner mode replaces contents, so just send the text
+        $headerPatch = new PatchElements(
+            $title,
+            [
+                'selector' => '#chat-title',
+                'mode' => ElementPatchMode::Inner,
+            ]
+        );
+        $response->write($headerPatch->getOutput());
+
+        // Update the sidebar chat link
+        $sidebarHtml = "<a id=\"chat-link-{$event->chatId}\" href=\"/chat/{$event->chatId}\" class=\"chat-link\"><span class=\"chat-title\">{$title}</span></a>";
+        $sidebarPatch = new PatchElements(
+            $sidebarHtml,
+            [
+                'selector' => '#chat-link-' . $event->chatId,
+                'mode' => ElementPatchMode::Outer,
+            ]
+        );
+        $response->write($sidebarPatch->getOutput());
+
     }
 
     private function handleDocumentUpdated(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {

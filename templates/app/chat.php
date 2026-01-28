@@ -31,7 +31,7 @@ $selectedModel = $chat->model;
 
 <?php if (!empty($needsAiResponse)) { ?>
 <!-- Auto-trigger AI response for pending user message -->
-<div data-on:load="@post('/cmd/chat/<?php echo $e($chat->id); ?>/generate')"></div>
+<div data-init="@post('/cmd/chat/<?php echo $e($chat->id); ?>/generate')"></div>
 <?php } ?>
 
 <?php include __DIR__ . '/../partials/artifact-panel.php'; ?>

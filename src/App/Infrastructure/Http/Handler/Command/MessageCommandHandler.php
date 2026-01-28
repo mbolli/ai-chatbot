@@ -311,9 +311,10 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             $messages = $this->messageRepository->findByChat($chatId);
             $history = $this->buildConversationHistory($messages);
 
-            // Stream AI response
+            // Stream AI response with 100ms buffering to reduce SSE events
             $fullContent = '';
             $wasStopped = false;
+            $chunkCount = 0;
 
             foreach ($this->aiService->streamChat($history, $chat->model, $chatId, $assistantMessage->id) as $chunk) {
                 // Check if stop was requested
@@ -324,6 +325,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 }
 
                 $fullContent .= $chunk;
+                ++$chunkCount;
 
                 $this->eventBus->emit($userId, new MessageStreamingEvent(
                     chatId: $chatId,
@@ -332,6 +334,25 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                     chunk: $chunk,
                     isComplete: false,
                 ));
+            }
+
+            // Handle empty response (AI returned nothing)
+            if (empty(mb_trim($fullContent)) && !$wasStopped) {
+                error_log("AI returned empty response for chat {$chatId}, model: {$chat->model}, chunks received: {$chunkCount}");
+
+                $errorContent = '⚠️ The AI returned an empty response. This could be due to content filtering or a temporary issue. Please try rephrasing your message or try again.';
+                $updatedMessage = $assistantMessage->appendContent($errorContent);
+                $this->messageRepository->update($updatedMessage);
+
+                $this->eventBus->emit($userId, new MessageStreamingEvent(
+                    chatId: $chatId,
+                    messageId: $assistantMessage->id,
+                    userId: $userId,
+                    chunk: $errorContent,
+                    isComplete: true,
+                ));
+
+                return;
             }
 
             // Update message with full content
@@ -352,18 +373,26 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 $this->generateChatTitle($userId, $chat, $userMessage->content ?? '');
             }
         } catch (\Throwable $e) {
-            // Log error and send error message to user
-            error_log('AI streaming error: ' . $e->getMessage());
+            // Log error with more context for debugging
+            error_log(\sprintf(
+                'AI streaming error in chat %s (model: %s): %s | Trace: %s',
+                $chatId,
+                $chat->model,
+                $e->getMessage(),
+                $e->getTraceAsString()
+            ));
 
-            // Provide a user-friendly error message
+            // Provide a user-friendly error message based on error type
             $errorMessage = $e->getMessage();
-            if (str_contains($errorMessage, 'API key not configured')) {
-                $errorContent = '⚠️ AI service is not configured. Please set up your API keys in the environment.';
-            } elseif (str_contains($errorMessage, 'rate limit')) {
-                $errorContent = '⚠️ Rate limit reached. Please wait a moment and try again.';
-            } else {
-                $errorContent = '⚠️ Sorry, I encountered an error while generating a response. Please try again.';
-            }
+            $errorContent = match (true) {
+                str_contains($errorMessage, 'API key not configured') => '⚠️ AI service is not configured. Please set up your API keys in the environment.',
+                str_contains($errorMessage, 'rate limit') || str_contains($errorMessage, '429') => '⚠️ Rate limit reached. Please wait a moment and try again.',
+                str_contains($errorMessage, 'overloaded') || str_contains($errorMessage, '529') => '⚠️ The AI service is currently overloaded. Please try again in a few moments.',
+                str_contains($errorMessage, 'timeout') || str_contains($errorMessage, 'timed out') => '⚠️ The request timed out. Please try a shorter message or try again.',
+                str_contains($errorMessage, 'invalid_api_key') || str_contains($errorMessage, '401') => '⚠️ Invalid API key. Please check your API configuration.',
+                str_contains($errorMessage, 'content') && str_contains($errorMessage, 'filter') => '⚠️ Your message was filtered by content moderation. Please rephrase and try again.',
+                default => '⚠️ Sorry, I encountered an error while generating a response. Please try again.',
+            };
 
             $updatedMessage = $assistantMessage->appendContent($errorContent);
             $this->messageRepository->update($updatedMessage);

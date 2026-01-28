@@ -61,6 +61,7 @@ final class LLPhantAIService implements AIServiceInterface {
 
     private CreateDocumentTool $createDocumentTool;
     private UpdateDocumentTool $updateDocumentTool;
+    private ?AnthropicStreamingClient $anthropicClient = null;
 
     /** @var list<Document> */
     private array $createdDocuments = [];
@@ -77,11 +78,29 @@ final class LLPhantAIService implements AIServiceInterface {
             $this->createDocumentTool = new CreateDocumentTool($documentRepository);
             $this->updateDocumentTool = new UpdateDocumentTool($documentRepository);
         }
+
+        // Initialize custom Anthropic client for true streaming
+        if ($this->anthropicApiKey !== null) {
+            $this->anthropicClient = new AnthropicStreamingClient(
+                $this->anthropicApiKey,
+                $this->maxTokens,
+            );
+        }
     }
 
     public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator {
         $this->createdDocuments = [];
 
+        $provider = $this->getProvider($model);
+
+        // Use custom streaming client for Anthropic (true streaming)
+        if ($provider === 'anthropic' && $this->anthropicClient !== null) {
+            yield from $this->streamAnthropicChat($messages, $model);
+
+            return;
+        }
+
+        // Fallback to LLPhant for OpenAI (which has better streaming support)
         $chat = $this->createChat($model);
         $llMessages = $this->convertMessages($messages);
 
@@ -175,6 +194,25 @@ final class LLPhantAIService implements AIServiceInterface {
         }
 
         return $models;
+    }
+
+    /**
+     * Stream chat using custom Anthropic client for true real-time streaming.
+     *
+     * @param array<array{role: string, content: string}> $messages
+     *
+     * @return \Generator<string>
+     */
+    private function streamAnthropicChat(array $messages, string $model): \Generator {
+        if ($this->anthropicClient === null) {
+            throw new \RuntimeException('Anthropic API key not configured');
+        }
+
+        yield from $this->anthropicClient->streamChatRealtime(
+            $messages,
+            $model,
+            $this->getSystemPrompt(),
+        );
     }
 
     private function configureTools(ChatInterface $chat): void {

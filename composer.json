@@ -8,6 +8,7 @@
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
         "ext-swoole": "*",
+        "anthropic-ai/sdk": "^0.4.0",
         "laminas/laminas-config-aggregator": "^1.15",
         "laminas/laminas-diactoros": "^3.5",
         "laminas/laminas-servicemanager": "^4.2",
