@@ -5,9 +5,11 @@ declare(strict_types=1);
 use App\Infrastructure\Http\Handler\AuthHandler;
 use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
+use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
+use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
 use App\Infrastructure\Http\Handler\Query\HistoryQueryHandler;
 use Mezzio\Application;
 use Mezzio\MiddlewareFactory;
@@ -33,6 +35,8 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     $app->get('/api/chats', HistoryQueryHandler::class, 'api.chats.list');
     $app->get('/api/chats/{id:[a-f0-9-]+}', ChatQueryHandler::class, 'api.chat.show');
     $app->get('/api/chats/{id:[a-f0-9-]+}/messages', ChatQueryHandler::class, 'api.chat.messages');
+    $app->get('/api/documents/{id:[a-f0-9-]+}', DocumentQueryHandler::class, 'api.document.show');
+    $app->post('/api/documents/{id:[a-f0-9-]+}/open', DocumentQueryHandler::class, 'api.document.open');
 
     // Command endpoints (POST/PUT/DELETE)
     $app->post('/cmd/chat', ChatCommandHandler::class, 'cmd.chat.create');
@@ -42,4 +46,9 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/message', MessageCommandHandler::class, 'cmd.message.send');
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/generate', MessageCommandHandler::class, 'cmd.message.generate');
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/stop', MessageCommandHandler::class, 'cmd.message.stop');
+
+    // Document/Artifact endpoints
+    $app->post('/cmd/document', DocumentCommandHandler::class, 'cmd.document.create');
+    $app->put('/cmd/document/{id:[a-f0-9-]+}', DocumentCommandHandler::class, 'cmd.document.update');
+    $app->delete('/cmd/document/{id:[a-f0-9-]+}', DocumentCommandHandler::class, 'cmd.document.delete');
 };

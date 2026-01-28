@@ -10,5 +10,8 @@ final class DocumentUpdatedEvent {
         public readonly string $chatId,
         public readonly int $userId,
         public readonly string $action,
+        public readonly ?int $version = null,
+        public readonly ?string $kind = null,
+        public readonly ?string $language = null,
     ) {}
 }

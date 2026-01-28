@@ -20,8 +20,10 @@ use App\Infrastructure\Http\Handler\AuthHandler;
 use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
+use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
+use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
 use App\Infrastructure\Http\Handler\Query\HistoryQueryHandler;
 use App\Infrastructure\Http\Listener\SseRequestListener;
 use App\Infrastructure\Persistence\SqliteChatRepository;
@@ -111,6 +113,7 @@ class ConfigProvider {
                     return new LLPhantAIService(
                         anthropicApiKey: $config['ai']['anthropic_api_key'] ?? $_ENV['ANTHROPIC_API_KEY'] ?? null,
                         openaiApiKey: $config['ai']['openai_api_key'] ?? $_ENV['OPENAI_API_KEY'] ?? null,
+                        documentRepository: $container->get(DocumentRepositoryInterface::class),
                     );
                 },
 
@@ -127,6 +130,7 @@ class ConfigProvider {
                     $container->get(TemplateRenderer::class),
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(MessageRepositoryInterface::class),
+                    $container->get(DocumentRepositoryInterface::class),
                     $container->get(AIServiceInterface::class),
                 ),
 
@@ -142,9 +146,15 @@ class ConfigProvider {
                 MessageCommandHandler::class => fn (ContainerInterface $container): MessageCommandHandler => new MessageCommandHandler(
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(MessageRepositoryInterface::class),
+                    $container->get(DocumentRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
                     $container->get(AIServiceInterface::class),
                     $container->get(StreamingSessionManager::class),
+                ),
+                DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(
+                    $container->get(DocumentRepositoryInterface::class),
+                    $container->get(ChatRepositoryInterface::class),
+                    $container->get(EventBusInterface::class),
                 ),
 
                 // Query Handlers
@@ -155,12 +165,18 @@ class ConfigProvider {
                 HistoryQueryHandler::class => fn (ContainerInterface $container): HistoryQueryHandler => new HistoryQueryHandler(
                     $container->get(ChatRepositoryInterface::class),
                 ),
+                DocumentQueryHandler::class => fn (ContainerInterface $container): DocumentQueryHandler => new DocumentQueryHandler(
+                    $container->get(DocumentRepositoryInterface::class),
+                    $container->get(ChatRepositoryInterface::class),
+                    $container->get(EventBusInterface::class),
+                ),
 
                 // SSE Listener (for mezzio-swoole RequestEvent handling)
                 SseRequestListener::class => fn (ContainerInterface $container): SseRequestListener => new SseRequestListener(
                     $container->get(EventBusInterface::class),
                     $container->get(SwooleTableSessionPersistence::class),
                     $container->get(TemplateRenderer::class),
+                    $container->get(DocumentRepositoryInterface::class),
                 ),
             ],
             'aliases' => [],
