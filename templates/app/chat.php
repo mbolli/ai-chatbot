@@ -58,9 +58,13 @@ $currentChatId = $chat->id;
 
         <div class="header-actions">
             <select class="model-selector" data-bind="$_model">
-                <option value="claude-3-5-sonnet" <?php echo $chat->model === 'claude-3-5-sonnet' ? 'selected' : ''; ?>>Claude 3.5 Sonnet</option>
-                <option value="claude-3-opus" <?php echo $chat->model === 'claude-3-opus' ? 'selected' : ''; ?>>Claude 3 Opus</option>
-                <option value="gpt-4" <?php echo $chat->model === 'gpt-4' ? 'selected' : ''; ?>>GPT-4</option>
+                <?php foreach ($models as $modelId => $modelInfo) { ?>
+                    <option value="<?php echo $e($modelId); ?>"
+                            <?php echo $chat->model === $modelId ? 'selected' : ''; ?>
+                            <?php echo !($modelInfo['available'] ?? true) ? 'disabled' : ''; ?>>
+                        <?php echo $e($modelInfo['name']); ?><?php echo !($modelInfo['available'] ?? true) ? ' (no API key)' : ''; ?>
+                    </option>
+                <?php } ?>
             </select>
 
             <button class="btn-icon" title="Share" data-on:click="$_showShareModal = true">
@@ -115,15 +119,15 @@ $currentChatId = $chat->id;
 
     <!-- Input Area -->
     <div class="input-container">
-        <form class="input-form"
-              data-on:submit__prevent="@post('/cmd/chat/<?php echo $e($chat->id); ?>/message', {contentType: 'json'}).then(() => $_message = '')">
+        <form class="input-form" method="POST"
+              data-on:submit__prevent="@post('/cmd/chat/<?php echo $e($chat->id); ?>/message', {payload: {message: $_message}})">
             <textarea
                 name="message"
                 class="message-input"
-                data-bind="$_message"
+                data-bind="_message"
                 placeholder="Send a message..."
                 rows="1"
-                data-on:keydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+                data-on-keys:enter__el="!evt.shiftKey && el.closest('form').requestSubmit()"></textarea>
             <button type="submit" class="btn btn-primary" data-attr-disabled="$_isGenerating || !$_message.trim()">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -131,6 +135,11 @@ $currentChatId = $chat->id;
         <p class="disclaimer">AI can make mistakes. Please verify important information.</p>
     </div>
 </main>
+
+<?php if (!empty($needsAiResponse)) { ?>
+<!-- Auto-trigger AI response for pending user message -->
+<div data-on:load="@post('/cmd/chat/<?php echo $e($chat->id); ?>/generate')"></div>
+<?php } ?>
 
 <!-- Artifact Panel (hidden by default) -->
 <aside class="artifact-panel" data-show="$_artifactOpen">
@@ -144,3 +153,8 @@ $currentChatId = $chat->id;
         <!-- Artifact content loaded here -->
     </div>
 </aside>
+
+<script>
+    // Scroll to bottom on initial page load
+    document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
+</script>

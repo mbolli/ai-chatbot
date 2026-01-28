@@ -6,11 +6,12 @@ namespace App\Infrastructure\Http\Handler\Command;
 
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Model\Chat;
+use App\Domain\Model\Message;
 use App\Domain\Repository\ChatRepositoryInterface;
+use App\Domain\Repository\MessageRepositoryInterface;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
-use Laminas\Diactoros\Response\JsonResponse;
 use Mezzio\Router\RouteResult;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -19,6 +20,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 final class ChatCommandHandler implements RequestHandlerInterface {
     public function __construct(
         private readonly ChatRepositoryInterface $chatRepository,
+        private readonly MessageRepositoryInterface $messageRepository,
         private readonly EventBusInterface $eventBus,
     ) {}
 
@@ -44,21 +46,29 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
         $chat = Chat::create(
             userId: $userId,
-            model: $data['model'] ?? 'claude-3-5-sonnet',
-            visibility: $data['visibility'] ?? 'private',
-            title: $data['title'] ?? null,
+            model: $data['_model'] ?? $data['model'] ?? 'claude-3-5-sonnet-20241022',
+            visibility: $data['_visibility'] ?? $data['visibility'] ?? 'private',
+            title: $data['_title'] ?? $data['title'] ?? null,
         );
 
         $this->chatRepository->save($chat);
 
+        // If an initial message was provided, save it (will be sent when user visits chat page)
+        $initialMessage = $data['_message'] ?? $data['message'] ?? null;
+        if (!empty($initialMessage)) {
+            $message = Message::user($chat->id, $initialMessage);
+            $this->messageRepository->save($message);
+        }
+
+        // Emit event with redirect URL - SSE listener will handle the redirect
         $this->eventBus->emit($userId, new ChatUpdatedEvent(
             chatId: $chat->id,
             userId: $userId,
             action: 'created',
+            redirectUrl: "/chat/{$chat->id}",
         ));
 
-        // Return the chat ID for redirect
-        return new JsonResponse(['id' => $chat->id], 201);
+        return new EmptyResponse(204);
     }
 
     public function delete(ServerRequestInterface $request): ResponseInterface {
@@ -131,7 +141,7 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
             // Datastar wraps signals in 'datastar' key
             if (isset($data['datastar'])) {
-                return $data['datastar'];
+                $data = $data['datastar'];
             }
 
             return $data;

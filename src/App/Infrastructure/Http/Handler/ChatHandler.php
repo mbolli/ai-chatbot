@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Handler;
 
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Domain\Service\AIServiceInterface;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Template\TemplateRenderer;
 use Laminas\Diactoros\Response\HtmlResponse;
@@ -18,6 +19,7 @@ final class ChatHandler implements RequestHandlerInterface {
         private readonly TemplateRenderer $renderer,
         private readonly ChatRepositoryInterface $chatRepository,
         private readonly MessageRepositoryInterface $messageRepository,
+        private readonly AIServiceInterface $aiService,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
@@ -44,14 +46,30 @@ final class ChatHandler implements RequestHandlerInterface {
         $messages = $this->messageRepository->findByChat($chatId);
         $chats = $this->chatRepository->findByUser($userId, 20);
 
+        $models = $this->aiService->getAvailableModels();
+
+        // Check if there's a pending user message that needs AI response
+        // This happens when a chat was created with an initial message from home page
+        $needsAiResponse = false;
+        if (!empty($messages)) {
+            $lastMessage = end($messages);
+            if ($lastMessage->role === 'user') {
+                $needsAiResponse = true;
+            }
+        }
+
         $html = $this->renderer->render('layout::default', [
             'title' => $chat->title ?? 'New Chat',
             'user' => $userInfo,
+            'defaultModel' => $chat->model,
+            'currentChatId' => $chat->id,
             'content' => $this->renderer->render('app::chat', [
                 'chat' => $chat,
                 'messages' => $messages,
                 'chats' => $chats,
                 'user' => $userInfo,
+                'models' => $models,
+                'needsAiResponse' => $needsAiResponse,
             ]),
         ]);
 

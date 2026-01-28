@@ -83,10 +83,14 @@ $isGuest = ($user['isGuest'] ?? true);
         </div>
 
         <div class="header-actions">
-            <select class="model-selector" data-bind="$_model">
-                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                <option value="claude-3-opus">Claude 3 Opus</option>
-                <option value="gpt-4">GPT-4</option>
+            <select class="model-selector" data-bind="_model">
+                <?php foreach ($models as $modelId => $modelInfo) { ?>
+                    <option value="<?php echo $e($modelId); ?>"
+                            <?php echo $modelId === $defaultModel ? 'selected' : ''; ?>
+                            <?php echo !($modelInfo['available'] ?? true) ? 'disabled' : ''; ?>>
+                        <?php echo $e($modelInfo['name']); ?><?php echo !($modelInfo['available'] ?? true) ? ' (no API key)' : ''; ?>
+                    </option>
+                <?php } ?>
             </select>
         </div>
     </header>
@@ -103,15 +107,15 @@ $isGuest = ($user['isGuest'] ?? true);
 
     <!-- Input Area -->
     <div class="input-container">
-        <form class="input-form"
-              data-on:submit__prevent="@post('/cmd/chat', {contentType: 'json'}).then(() => $_message = '')">
+        <form class="input-form" method="POST"
+              data-on:submit__prevent="$_isGenerating = true; @post('/cmd/chat', {payload: {message: $_message, model: $_model}})">
             <textarea
                 name="message"
                 class="message-input"
-                data-bind="$_message"
+                data-bind="_message"
                 placeholder="Send a message..."
                 rows="1"
-                data-on:keydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+                data-on-keys:enter__el="!evt.shiftKey && el.closest('form').requestSubmit()"></textarea>
             <button type="submit" class="btn btn-primary" data-attr-disabled="$_isGenerating || !$_message.trim()">
                 <i class="fas fa-paper-plane"></i>
             </button>
