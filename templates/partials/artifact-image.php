@@ -1,0 +1,68 @@
+<?php
+
+use App\Domain\Model\Document;
+
+/**
+ * @var Document $document
+ */
+$e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$content = $document->content ?? '';
+
+// Determine if content is SVG or base64 image
+$isSvg = str_starts_with(trim($content), '<svg') || str_starts_with(trim($content), '<?xml');
+$isBase64 = str_starts_with($content, 'data:image/');
+?>
+<div class="artifact-image">
+    <div class="artifact-image-toolbar">
+        <?php if ($isSvg) { ?>
+            <button class="btn btn-sm" data-on:click="window.downloadSvg(<?php echo htmlspecialchars(json_encode($content), ENT_QUOTES); ?>, '<?php echo $e($document->title); ?>.svg')">
+                <i class="fas fa-download"></i> Download SVG
+            </button>
+        <?php } elseif ($isBase64) { ?>
+            <button class="btn btn-sm" data-on:click="window.downloadBase64Image(<?php echo htmlspecialchars(json_encode($content), ENT_QUOTES); ?>, '<?php echo $e($document->title); ?>')">
+                <i class="fas fa-download"></i> Download Image
+            </button>
+        <?php } ?>
+    </div>
+    
+    <div class="artifact-image-preview">
+        <?php if ($isSvg) { ?>
+            <div class="svg-container" id="artifact-content-text">
+                <?php echo $content; ?>
+            </div>
+        <?php } elseif ($isBase64) { ?>
+            <img src="<?php echo $e($content); ?>" alt="<?php echo $e($document->title); ?>" />
+        <?php } else { ?>
+            <div class="image-placeholder">
+                <i class="fas fa-image"></i>
+                <p>No image content</p>
+            </div>
+        <?php } ?>
+    </div>
+    
+    <?php if ($isSvg) { ?>
+        <div class="artifact-image-edit" data-show="$_artifactEditing">
+            <textarea 
+                class="artifact-svg-textarea"
+                data-bind="$_artifactContent"
+                placeholder="Enter SVG code..."
+                spellcheck="false"
+            ><?php echo $e($content); ?></textarea>
+            
+            <div class="artifact-edit-actions">
+                <button class="btn btn-secondary" data-on:click="$_artifactEditing = false">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" 
+                        data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
+                    Save
+                </button>
+            </div>
+        </div>
+        
+        <button class="btn btn-edit" data-show="!$_artifactEditing" 
+                data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($content); ?>">
+            <i class="fas fa-edit"></i> Edit SVG
+        </button>
+    <?php } ?>
+</div>
