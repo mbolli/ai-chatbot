@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Handler\Command;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Model\Document;
 use App\Domain\Model\Message;
@@ -14,6 +15,7 @@ use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
+use App\Domain\Service\RateLimitService;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -47,6 +49,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         private readonly EventBusInterface $eventBus,
         private readonly AIServiceInterface $aiService,
         private readonly StreamingSessionManager $sessionManager,
+        private readonly RateLimitService $rateLimitService,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
@@ -89,6 +92,24 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         if ($this->sessionManager->hasActiveSession($chatId, $userId)) {
             return new EmptyResponse(409); // Conflict - already streaming
         }
+
+        // Check rate limit
+        if (!$this->rateLimitService->canSendMessage($userId)) {
+            $usageInfo = $this->rateLimitService->getUsageInfo($userId);
+
+            $this->eventBus->emit($userId, new RateLimitExceededEvent(
+                userId: $userId,
+                chatId: $chatId,
+                used: $usageInfo['used'],
+                limit: $usageInfo['limit'],
+                isGuest: $usageInfo['is_guest'],
+            ));
+
+            return new EmptyResponse(429); // Too Many Requests
+        }
+
+        // Record this message for rate limiting
+        $this->rateLimitService->recordMessage($userId);
 
         // Create user message
         $userMessage = Message::user($chatId, $content);

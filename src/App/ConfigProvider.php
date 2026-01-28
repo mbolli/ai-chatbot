@@ -7,9 +7,11 @@ namespace App;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Domain\Repository\RateLimitRepositoryInterface;
 use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\Repository\VoteRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
+use App\Domain\Service\RateLimitService;
 use App\Infrastructure\AI\LLPhantAIService;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
@@ -29,6 +31,7 @@ use App\Infrastructure\Http\Listener\SseRequestListener;
 use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
 use App\Infrastructure\Persistence\SqliteMessageRepository;
+use App\Infrastructure\Persistence\SqliteRateLimitRepository;
 use App\Infrastructure\Persistence\SqliteVoteRepository;
 use App\Infrastructure\Repository\SqliteUserRepository;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
@@ -104,6 +107,20 @@ class ConfigProvider {
                 MessageRepositoryInterface::class => fn (ContainerInterface $container): MessageRepositoryInterface => new SqliteMessageRepository($container->get(\PDO::class)),
                 DocumentRepositoryInterface::class => fn (ContainerInterface $container): DocumentRepositoryInterface => new SqliteDocumentRepository($container->get(\PDO::class)),
                 VoteRepositoryInterface::class => fn (ContainerInterface $container): VoteRepositoryInterface => new SqliteVoteRepository($container->get(\PDO::class)),
+                RateLimitRepositoryInterface::class => fn (ContainerInterface $container): RateLimitRepositoryInterface => new SqliteRateLimitRepository($container->get(\PDO::class)),
+
+                // Rate Limit Service
+                RateLimitService::class => function (ContainerInterface $container): RateLimitService {
+                    $config = $container->get('config');
+                    $rateLimits = $config['rate_limits'] ?? [];
+
+                    return new RateLimitService(
+                        rateLimitRepository: $container->get(RateLimitRepositoryInterface::class),
+                        userRepository: $container->get(UserRepositoryInterface::class),
+                        guestDailyLimit: $rateLimits['guest']['daily_messages'] ?? 20,
+                        registeredDailyLimit: $rateLimits['registered']['daily_messages'] ?? 100,
+                    );
+                },
 
                 // AI Service
                 AIServiceInterface::class => function (ContainerInterface $container): AIServiceInterface {
@@ -149,6 +166,7 @@ class ConfigProvider {
                     $container->get(EventBusInterface::class),
                     $container->get(AIServiceInterface::class),
                     $container->get(StreamingSessionManager::class),
+                    $container->get(RateLimitService::class),
                 ),
                 DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(
                     $container->get(DocumentRepositoryInterface::class),
