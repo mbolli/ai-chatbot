@@ -5,7 +5,7 @@
  * @var callable $e Escape function
  */
 ?>
-<aside class="artifact-panel" data-show="$_artifactOpen">
+<aside class="artifact-panel" data-class="{'artifact-open': $_artifactOpen, 'artifact-closed': !$_artifactOpen}">
     <div class="artifact-header">
         <span id="artifact-title">Artifact</span>
         <div class="artifact-actions">

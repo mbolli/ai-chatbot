@@ -9,7 +9,7 @@
  */
 $isGuest = ($user['isGuest'] ?? true);
 ?>
-<aside class="sidebar" data-show="$_sidebarOpen">
+<aside class="sidebar" data-class="{'sidebar-open': $_sidebarOpen, 'sidebar-closed': !$_sidebarOpen}">
     <div class="sidebar-header">
         <h2>AI Chatbot</h2>
         <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
@@ -19,7 +19,7 @@ $isGuest = ($user['isGuest'] ?? true);
 
     <nav class="sidebar-nav" id="chat-list">
         <?php if (empty($chats)) { ?>
-            <p class="sidebar-empty">No conversations yet</p>
+            <p class="sidebar-empty animate-fade-in">No conversations yet</p>
         <?php } else { ?>
             <?php foreach ($chats as $chat) { ?>
                 <a href="/chat/<?php echo $e($chat->id); ?>"
@@ -29,7 +29,13 @@ $isGuest = ($user['isGuest'] ?? true);
                     <i class="fas fa-message"></i>
                     <span class="chat-title"><?php echo $e($chat->title ?? 'New Chat'); ?></span>
                     <button class="btn-icon btn-delete"
-                            data-on:click__stop="@delete('/cmd/chat/<?php echo $e($chat->id); ?>')"
+                            data-on:click__stop="
+                                const item = this.closest('.sidebar-item');
+                                item.classList.add('deleting');
+                                setTimeout(() => {
+                                    @delete('/cmd/chat/<?php echo $e($chat->id); ?>');
+                                }, 250);
+                            "
                             title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>

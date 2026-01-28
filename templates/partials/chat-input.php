@@ -41,15 +41,15 @@ $formSubmit = $isNewChat
                     data-attr-aria-pressed="$_previewMarkdown">
                 <i class="fas fa-eye" data-class="{'fa-edit': $_previewMarkdown, 'fa-eye': !$_previewMarkdown}"></i>
             </button>
-            <button type="submit" class="btn btn-primary" data-show="!$_isGenerating" data-attr-disabled="!$_message.trim()">
+            <button type="submit" class="btn btn-primary btn-send" data-show="!$_isGenerating" data-attr-disabled="!$_message.trim()">
                 <i class="fas fa-paper-plane"></i>
             </button>
             <?php if ($chatId) { ?>
-                <button type="button" class="btn btn-danger" data-show="$_isGenerating" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating">
+                <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_isGenerating" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating">
                     <i class="fas fa-stop"></i>
                 </button>
             <?php } else { ?>
-                <button type="button" class="btn btn-danger" data-show="$_isGenerating" title="Stop generating">
+                <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_isGenerating" title="Stop generating">
                     <i class="fas fa-stop"></i>
                 </button>
             <?php } ?>

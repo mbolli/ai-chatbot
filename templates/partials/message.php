@@ -20,7 +20,7 @@ $vote = $vote ?? null;
 ?>
 <div class="message message-<?php echo $e($role); ?>"
      id="message-<?php echo $e($id); ?>"
-     <?php echo $streaming ? 'data-streaming="true"' : ''; ?>>
+     <?php echo $streaming ? 'data-attr:data-streaming="$_isGenerating ? \'true\' : \'false\'"' : ''; ?>>
     <div class="message-avatar">
         <?php if ($isUser) { ?>
             <i class="fas fa-user"></i>

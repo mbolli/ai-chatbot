@@ -22,7 +22,11 @@ $downvoted = $vote === false ? 'voted' : '';
         <i class="fas fa-file-alt"></i>
     </button>
     <?php } ?>
-    <button class="btn-icon" title="Copy" data-on:click="navigator.clipboard.writeText(document.getElementById('message-<?php echo $e($messageId); ?>-content').textContent)">
+    <button class="btn-icon btn-copy" title="Copy" data-on:click="
+        navigator.clipboard.writeText(document.getElementById('message-<?php echo $e($messageId); ?>-content').textContent);
+        this.classList.add('btn-copy-success');
+        setTimeout(() => this.classList.remove('btn-copy-success'), 600);
+    ">
         <i class="fas fa-copy"></i>
     </button>
     <button class="btn-icon vote-btn <?php echo $upvoted; ?>"
