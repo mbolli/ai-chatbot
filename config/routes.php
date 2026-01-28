@@ -9,7 +9,6 @@ use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\HistoryQueryHandler;
-use App\Infrastructure\Http\Handler\UpdatesHandler;
 use Mezzio\Application;
 use Mezzio\MiddlewareFactory;
 use Psr\Container\ContainerInterface;
@@ -18,8 +17,7 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     // Home
     $app->get('/', HomeHandler::class, 'home');
 
-    // SSE Updates endpoint
-    $app->get('/updates', UpdatesHandler::class, 'updates');
+    // SSE /updates endpoint is handled directly by SseRequestListener at Swoole level
 
     // Chat pages
     $app->get('/chat/{id:[a-f0-9-]+}', ChatHandler::class, 'chat.show');

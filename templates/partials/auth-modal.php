@@ -14,7 +14,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
 <!-- Login Modal -->
 <div class="modal" data-show="$_authModal === 'login'">
-    <div class="modal-content" data-on:click__stop="">
+    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
         <div class="modal-header">
             <h2>Sign In</h2>
             <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">
@@ -77,7 +77,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
 <!-- Register Modal -->
 <div class="modal" data-show="$_authModal === 'register'">
-    <div class="modal-content" data-on:click__stop="">
+    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
         <div class="modal-header">
             <h2>Create Account</h2>
             <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">
@@ -142,7 +142,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
 <!-- Upgrade Modal (for guest users) -->
 <div class="modal" data-show="$_authModal === 'upgrade'">
-    <div class="modal-content" data-on:click__stop="">
+    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
         <div class="modal-header">
             <h2>Save Your Chats</h2>
             <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">

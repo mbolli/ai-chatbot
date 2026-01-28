@@ -12,19 +12,17 @@ $cacheConfig = [
 ];
 
 $aggregator = new ConfigAggregator([
-    Mezzio\Helper\ConfigProvider::class,
     Mezzio\Router\ConfigProvider::class,
-    ConfigProvider::class,
     Mezzio\Router\FastRouteRouter\ConfigProvider::class,
     Laminas\Diactoros\ConfigProvider::class,
+    Mezzio\Helper\ConfigProvider::class,
 
-    // App config
+    ConfigProvider::class,
     App\ConfigProvider::class,
-
-    // Load application config in a pre-defined order
-    new PhpFileProvider(realpath(__DIR__) . '/autoload/{{,*.}global,{,*.}local}.php'),
+    Mezzio\Swoole\ConfigProvider::class,
 
     new ArrayProvider($cacheConfig),
+    new PhpFileProvider(realpath(__DIR__) . '/autoload/{{,*.}global,{,*.}local}.php'),
 ], $cacheConfig['config_cache_path']);
 
 return $aggregator->getMergedConfig();

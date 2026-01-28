@@ -124,6 +124,15 @@ final class SwooleTableSessionPersistence implements SessionPersistenceInterface
     }
 
     /**
+     * Get session data by session ID (for SSE listener).
+     *
+     * @return array<string, mixed>
+     */
+    public function getSessionData(string $sessionId): array {
+        return $this->loadSession($sessionId);
+    }
+
+    /**
      * Get session ID from request cookies.
      */
     private function getSessionIdFromRequest(ServerRequestInterface $request): string {

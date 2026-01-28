@@ -47,8 +47,9 @@
         }
     },
     "scripts": {
-        "dev": "php bin/server.php",
-        "stop": "pkill -f 'php bin/server.php' || true",
+        "serve": "vendor/bin/laminas mezzio:swoole:start",
+        "stop": "vendor/bin/laminas mezzio:swoole:stop",
+        "reload": "vendor/bin/laminas mezzio:swoole:reload",
         "test": "pest",
         "test:coverage": "pest --coverage",
         "cs": "php-cs-fixer fix --dry-run --diff",
