@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Handler;
 
 use App\Domain\Repository\ChatRepositoryInterface;
+use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Template\TemplateRenderer;
 use Laminas\Diactoros\Response\HtmlResponse;
+use Laminas\Diactoros\Response\RedirectResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -19,6 +21,7 @@ final class ChatHandler implements RequestHandlerInterface {
         private readonly TemplateRenderer $renderer,
         private readonly ChatRepositoryInterface $chatRepository,
         private readonly MessageRepositoryInterface $messageRepository,
+        private readonly DocumentRepositoryInterface $documentRepository,
         private readonly AIServiceInterface $aiService,
     ) {}
 
@@ -35,16 +38,25 @@ final class ChatHandler implements RequestHandlerInterface {
         $chat = $this->chatRepository->find($chatId);
 
         if ($chat === null) {
-            return new HtmlResponse('Chat not found', 404);
+            return new RedirectResponse('/');
         }
 
-        // Check access
+        // Check access - redirect to home if not authorized
         if (!$chat->isOwnedBy($userId) && !$chat->isPublic()) {
-            return new HtmlResponse('Access denied', 403);
+            return new RedirectResponse('/');
         }
 
         $messages = $this->messageRepository->findByChat($chatId);
         $chats = $this->chatRepository->findByUser($userId, 20);
+        $documents = $this->documentRepository->findByChat($chatId);
+
+        // Create a map of message_id => document for easy lookup in template
+        $messageDocuments = [];
+        foreach ($documents as $doc) {
+            if ($doc->messageId !== null) {
+                $messageDocuments[$doc->messageId] = $doc;
+            }
+        }
 
         $models = $this->aiService->getAvailableModels();
 
@@ -66,6 +78,7 @@ final class ChatHandler implements RequestHandlerInterface {
             'content' => $this->renderer->render('app::chat', [
                 'chat' => $chat,
                 'messages' => $messages,
+                'messageDocuments' => $messageDocuments,
                 'chats' => $chats,
                 'user' => $userInfo,
                 'models' => $models,
