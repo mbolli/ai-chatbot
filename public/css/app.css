@@ -252,7 +252,6 @@ html, body {
 
 .message-text {
     line-height: var(--line-height-3);
-    white-space: pre-wrap;
     word-break: break-word;
 }
 
@@ -265,6 +264,15 @@ html, body {
 }
 
 .message:hover .message-actions {
+    opacity: 1;
+}
+
+/* Artifact button always visible when present */
+.message-actions .btn-icon[title^="Open artifact"] {
+    color: var(--accent);
+}
+
+.message:has(.message-actions .btn-icon[title^="Open artifact"]) .message-actions {
     opacity: 1;
 }
 
@@ -343,6 +351,15 @@ html, body {
     cursor: not-allowed;
 }
 
+.btn-danger {
+    background: var(--red-7);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--red-8);
+}
+
 .btn-icon {
     width: 36px;
     height: 36px;
@@ -392,6 +409,103 @@ html, body {
     flex: 1;
     overflow: auto;
     padding: var(--size-4);
+}
+
+/* Artifact Content Styles */
+.artifact-text {
+    line-height: var(--font-lineheight-3);
+}
+
+.artifact-code {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.artifact-code .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--size-2) var(--size-3);
+    background: var(--surface-2);
+    border-radius: var(--radius-2) var(--radius-2) 0 0;
+}
+
+.artifact-code .code-language {
+    font-size: var(--font-size-0);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.artifact-code pre {
+    flex: 1;
+    margin: 0;
+    padding: var(--size-3);
+    background: var(--surface-2);
+    border-radius: 0;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    line-height: var(--font-lineheight-3);
+}
+
+.artifact-code .code-output {
+    padding: var(--size-3);
+    background: var(--gray-9);
+    color: var(--gray-1);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-0);
+    border-radius: 0 0 var(--radius-2) var(--radius-2);
+    min-height: 60px;
+    max-height: 200px;
+    overflow: auto;
+}
+
+.artifact-code .code-output:empty::before {
+    content: 'Output will appear here...';
+    color: var(--gray-5);
+    font-style: italic;
+}
+
+.artifact-sheet {
+    overflow: auto;
+}
+
+.sheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-1);
+}
+
+.sheet-table th,
+.sheet-table td {
+    padding: var(--size-2) var(--size-3);
+    border: 1px solid var(--surface-3);
+    text-align: left;
+}
+
+.sheet-table th {
+    background: var(--surface-2);
+    font-weight: var(--font-weight-5);
+    position: sticky;
+    top: 0;
+}
+
+.sheet-table tr:hover td {
+    background: var(--surface-2);
+}
+
+.artifact-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.artifact-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 /* Responsive */
@@ -651,4 +765,349 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ================================
+   Artifact Panel Styles
+   ================================ */
+
+.artifact-panel {
+    width: 50%;
+    min-width: 400px;
+    max-width: 700px;
+    background: var(--surface-1);
+    border-left: 1px solid var(--surface-3);
+    display: flex;
+    flex-direction: column;
+    transition: margin-right var(--ease-2) 0.2s;
+}
+
+.artifact-panel[data-show="false"] {
+    display: none;
+}
+
+.artifact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--size-3) var(--size-4);
+    border-bottom: 1px solid var(--surface-3);
+    background: var(--surface-2);
+}
+
+.artifact-title {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2);
+    font-weight: var(--font-weight-6);
+}
+
+.artifact-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2);
+}
+
+.artifact-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--size-4);
+}
+
+/* Text Artifact */
+.artifact-text {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.artifact-text-content {
+    flex: 1;
+    overflow-y: auto;
+    line-height: var(--line-height-4);
+}
+
+.artifact-text-content.markdown h1,
+.artifact-text-content.markdown h2,
+.artifact-text-content.markdown h3 {
+    margin-top: var(--size-4);
+    margin-bottom: var(--size-2);
+}
+
+.artifact-text-content.markdown code {
+    background: var(--surface-3);
+    padding: 0.2em 0.4em;
+    border-radius: var(--radius-1);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.artifact-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: var(--size-3);
+    background: var(--surface-2);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-1);
+    resize: vertical;
+}
+
+/* Code Artifact */
+.artifact-code {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.artifact-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--size-3);
+}
+
+.language-badge {
+    background: var(--accent);
+    color: white;
+    padding: var(--size-1) var(--size-2);
+    border-radius: var(--radius-1);
+    font-size: var(--font-size-0);
+    font-weight: var(--font-weight-6);
+}
+
+.btn-run {
+    background: var(--success);
+    color: white;
+    padding: var(--size-2) var(--size-3);
+    border: none;
+    border-radius: var(--radius-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--size-2);
+}
+
+.btn-run:hover {
+    filter: brightness(1.1);
+}
+
+.btn-run:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.artifact-code-editor {
+    flex: 1;
+    overflow: auto;
+}
+
+.code-block {
+    margin: 0;
+    padding: var(--size-4);
+    background: var(--gray-9);
+    border-radius: var(--radius-2);
+    overflow-x: auto;
+}
+
+.code-block code {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    line-height: var(--line-height-3);
+    color: var(--text-primary);
+    white-space: pre;
+}
+
+.artifact-code-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: var(--size-3);
+    background: var(--gray-9);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    resize: vertical;
+    line-height: var(--line-height-3);
+}
+
+.artifact-console {
+    margin-top: var(--size-3);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    overflow: hidden;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--size-2) var(--size-3);
+    background: var(--gray-9);
+    color: var(--text-secondary);
+    font-size: var(--font-size-0);
+}
+
+.console-output {
+    margin: 0;
+    padding: var(--size-3);
+    background: var(--gray-10, #111);
+    color: var(--green-4);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    min-height: 100px;
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+/* Sheet Artifact */
+.artifact-sheet {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.artifact-sheet-toolbar {
+    display: flex;
+    gap: var(--size-2);
+    margin-bottom: var(--size-3);
+}
+
+.artifact-sheet-container {
+    flex: 1;
+    overflow: auto;
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+}
+
+.sheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-1);
+}
+
+.sheet-table th,
+.sheet-table td {
+    padding: var(--size-2) var(--size-3);
+    border: 1px solid var(--surface-3);
+    text-align: left;
+}
+
+.sheet-table th {
+    background: var(--surface-2);
+    font-weight: var(--font-weight-6);
+    position: sticky;
+    top: 0;
+}
+
+.sheet-table td.row-number,
+.sheet-table th.row-number {
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    width: 40px;
+    text-align: center;
+}
+
+.artifact-csv-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: var(--size-3);
+    background: var(--surface-2);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    resize: vertical;
+}
+
+/* Image Artifact */
+.artifact-image {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.artifact-image-toolbar {
+    display: flex;
+    gap: var(--size-2);
+    margin-bottom: var(--size-3);
+}
+
+.artifact-image-preview {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--surface-2);
+    border-radius: var(--radius-2);
+    padding: var(--size-4);
+    overflow: auto;
+}
+
+.artifact-image-preview img,
+.artifact-image-preview svg {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.svg-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.svg-container svg {
+    max-width: 100%;
+    max-height: 400px;
+}
+
+.image-placeholder {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.image-placeholder i {
+    font-size: 48px;
+    margin-bottom: var(--size-2);
+}
+
+.artifact-svg-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: var(--size-3);
+    background: var(--surface-2);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-1);
+    resize: vertical;
+}
+
+/* Artifact Edit Actions */
+.artifact-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-2);
+    margin-top: var(--size-3);
+}
+
+.btn-edit {
+    margin-top: var(--size-3);
+}
+
+/* Version Selector */
+.version-selector {
+    padding: var(--size-1) var(--size-2);
+    background: var(--surface-2);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-1);
+    color: var(--text-primary);
+    font-size: var(--font-size-0);
 }

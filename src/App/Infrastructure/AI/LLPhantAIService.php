@@ -277,10 +277,9 @@ When updating existing documents, use the updateDocument tool with the document 
 
 Examples of when to create documents:
 - "Write me a Python script to..." → create code document
-- "Create a README for..." → create text document  
+- "Create a README for..." → create text document
 - "Generate a CSV with..." → create sheet document
 - "Make an SVG icon of..." → create image document
 PROMPT;
     }
 }
-

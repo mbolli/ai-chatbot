@@ -35,34 +35,34 @@ $content = $document->content ?? '';
             </button>
         <?php } ?>
     </div>
-    
+
     <div class="artifact-code-editor">
         <pre class="code-block"><code id="artifact-code-content" class="language-<?php echo $e($language); ?>"><?php echo $e($content); ?></code></pre>
     </div>
-    
+
     <div class="artifact-code-edit" data-show="$_artifactEditing">
-        <textarea 
+        <textarea
             class="artifact-code-textarea"
             data-bind="$_artifactContent"
             spellcheck="false"
         ><?php echo $e($content); ?></textarea>
-        
+
         <div class="artifact-edit-actions">
             <button class="btn btn-secondary" data-on:click="$_artifactEditing = false">
                 Cancel
             </button>
-            <button class="btn btn-primary" 
+            <button class="btn btn-primary"
                     data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
                 Save
             </button>
         </div>
     </div>
-    
-    <button class="btn btn-edit" data-show="!$_artifactEditing" 
+
+    <button class="btn btn-edit" data-show="!$_artifactEditing"
             data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($content); ?>">
         <i class="fas fa-edit"></i> Edit Code
     </button>
-    
+
     <?php if ($language === 'python') { ?>
         <div class="artifact-console" data-show="$_output">
             <div class="console-header">

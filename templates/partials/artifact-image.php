@@ -9,7 +9,7 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $content = $document->content ?? '';
 
 // Determine if content is SVG or base64 image
-$isSvg = str_starts_with(trim($content), '<svg') || str_starts_with(trim($content), '<?xml');
+$isSvg = str_starts_with(mb_trim($content), '<svg') || str_starts_with(mb_trim($content), '<?xml');
 $isBase64 = str_starts_with($content, 'data:image/');
 ?>
 <div class="artifact-image">
@@ -24,7 +24,7 @@ $isBase64 = str_starts_with($content, 'data:image/');
             </button>
         <?php } ?>
     </div>
-    
+
     <div class="artifact-image-preview">
         <?php if ($isSvg) { ?>
             <div class="svg-container" id="artifact-content-text">
@@ -39,28 +39,28 @@ $isBase64 = str_starts_with($content, 'data:image/');
             </div>
         <?php } ?>
     </div>
-    
+
     <?php if ($isSvg) { ?>
         <div class="artifact-image-edit" data-show="$_artifactEditing">
-            <textarea 
+            <textarea
                 class="artifact-svg-textarea"
                 data-bind="$_artifactContent"
                 placeholder="Enter SVG code..."
                 spellcheck="false"
             ><?php echo $e($content); ?></textarea>
-            
+
             <div class="artifact-edit-actions">
                 <button class="btn btn-secondary" data-on:click="$_artifactEditing = false">
                     Cancel
                 </button>
-                <button class="btn btn-primary" 
+                <button class="btn btn-primary"
                         data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
                     Save
                 </button>
             </div>
         </div>
-        
-        <button class="btn btn-edit" data-show="!$_artifactEditing" 
+
+        <button class="btn btn-edit" data-show="!$_artifactEditing"
                 data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($content); ?>">
             <i class="fas fa-edit"></i> Edit SVG
         </button>

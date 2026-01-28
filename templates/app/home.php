@@ -8,7 +8,7 @@
  * @var null|array $user
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$md = fn ($s): string => (new \Parsedown())->setSafeMode(true)->text((string) $s);
+$md = fn ($s): string => (new Parsedown())->setSafeMode(true)->text((string) $s);
 $currentChatId = null;
 $title = 'New Chat';
 $selectedModel = $defaultModel;
@@ -21,14 +21,16 @@ $selectedModel = $defaultModel;
 
     <?php
     $messages = [];
-    $chatId = null;
-    include __DIR__ . '/../partials/messages.php';
-    ?>
+$chatId = null;
+
+include __DIR__ . '/../partials/messages.php';
+?>
 
     <?php
-    $chatId = null;
-    include __DIR__ . '/../partials/chat-input.php';
-    ?>
+$chatId = null;
+
+include __DIR__ . '/../partials/chat-input.php';
+?>
 </main>
 
 <?php include __DIR__ . '/../partials/artifact-panel.php'; ?>

@@ -19,8 +19,8 @@ use App\Infrastructure\EventBus\SwooleEventBus;
 use App\Infrastructure\Http\Handler\AuthHandler;
 use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
-use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
+use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
@@ -33,7 +33,6 @@ use App\Infrastructure\Persistence\SqliteVoteRepository;
 use App\Infrastructure\Repository\SqliteUserRepository;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
-use Mezzio\Template\TemplateRendererInterface;
 use Psr\Container\ContainerInterface;
 
 class ConfigProvider {

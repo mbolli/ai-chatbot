@@ -12,7 +12,7 @@ use App\Domain\Model\Message;
  * @var bool $needsAiResponse
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$md = fn ($s): string => (new \Parsedown())->setSafeMode(true)->text((string) $s);
+$md = fn ($s): string => (new Parsedown())->setSafeMode(true)->text((string) $s);
 $currentChatId = $chat->id;
 $chatId = $chat->id;
 $title = $chat->title ?? 'New Chat';

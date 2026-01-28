@@ -27,9 +27,9 @@ final class UpdateDocumentTool {
     /**
      * Update an existing document's content.
      *
-     * @param string $documentId The ID of the document to update
-     * @param string $content The new content for the document
-     * @param string|null $title Optional new title for the document
+     * @param string      $documentId The ID of the document to update
+     * @param string      $content    The new content for the document
+     * @param null|string $title      Optional new title for the document
      *
      * @return string A confirmation message or error
      */

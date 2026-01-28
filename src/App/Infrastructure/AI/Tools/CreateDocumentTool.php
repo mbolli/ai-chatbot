@@ -34,10 +34,10 @@ final class CreateDocumentTool {
     /**
      * Create a new document artifact.
      *
-     * @param string $kind The type of document: 'text' for markdown/prose, 'code' for programming code, 'sheet' for CSV data, 'image' for SVG/image content
-     * @param string $title A short descriptive title for the document
-     * @param string $content The actual content of the document
-     * @param string|null $language For code documents, the programming language (e.g., 'python', 'javascript', 'php')
+     * @param string      $kind     The type of document: 'text' for markdown/prose, 'code' for programming code, 'sheet' for CSV data, 'image' for SVG/image content
+     * @param string      $title    A short descriptive title for the document
+     * @param string      $content  The actual content of the document
+     * @param null|string $language For code documents, the programming language (e.g., 'python', 'javascript', 'php')
      *
      * @return string A confirmation message with the document ID
      */

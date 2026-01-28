@@ -19,6 +19,7 @@
         "mezzio/mezzio-session": "^1.17",
         "mezzio/mezzio-session-cache": "^1.17",
         "mezzio/mezzio-swoole": "^4.10",
+        "parsedown/parsedown": "^1.7",
         "ramsey/uuid": "^4.7",
         "starfederation/datastar-php": "^1.0",
         "symfony/cache": "^8.0",

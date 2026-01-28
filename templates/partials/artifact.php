@@ -12,7 +12,7 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 <div class="artifact" id="artifact-<?php echo $e($document->id); ?>" data-document-id="<?php echo $e($document->id); ?>">
     <div class="artifact-header">
         <div class="artifact-title">
-            <i class="fas <?php echo match($document->kind) {
+            <i class="fas <?php echo match ($document->kind) {
                 'code' => 'fa-code',
                 'sheet' => 'fa-table',
                 'image' => 'fa-image',

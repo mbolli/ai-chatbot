@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Listener;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
@@ -381,7 +382,7 @@ HTML;
     /**
      * Render the artifact content based on document kind.
      */
-    private function renderArtifactContent(\App\Domain\Model\Document $document): string {
+    private function renderArtifactContent(Document $document): string {
         $e = fn (string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $content = $document->content ?? '';
 
@@ -394,7 +395,7 @@ HTML;
         };
     }
 
-    private function renderTextArtifact(\App\Domain\Model\Document $document, callable $e): string {
+    private function renderTextArtifact(Document $document, callable $e): string {
         $content = $document->content ?? '';
         $parsedContent = TemplateRenderer::md($content);
 
@@ -405,7 +406,7 @@ HTML;
 HTML;
     }
 
-    private function renderCodeArtifact(\App\Domain\Model\Document $document, callable $e): string {
+    private function renderCodeArtifact(Document $document, callable $e): string {
         $content = $e($document->content ?? '');
         $language = $e($document->language ?? 'python');
 
@@ -423,7 +424,7 @@ HTML;
 HTML;
     }
 
-    private function renderSheetArtifact(\App\Domain\Model\Document $document, callable $e): string {
+    private function renderSheetArtifact(Document $document, callable $e): string {
         $content = $document->content ?? '';
         $lines = explode("\n", $content);
         $headers = [];
@@ -454,7 +455,7 @@ HTML;
 HTML;
     }
 
-    private function renderImageArtifact(\App\Domain\Model\Document $document, callable $e): string {
+    private function renderImageArtifact(Document $document, callable $e): string {
         $content = $e($document->content ?? '');
 
         return <<<HTML
@@ -477,14 +478,14 @@ HTML;
             console.error('[Pyodide] No code element found');
             return;
         }
-        
+
         const code = codeEl.textContent;
         const outputEl = document.getElementById('code-output');
-        
+
         if (!window.pyodide) {
             if (outputEl) outputEl.textContent = 'Pyodide is still loading, please wait...';
             console.log('[Pyodide] Not ready yet, waiting...');
-            
+
             // Wait for pyodide to be ready
             window.addEventListener('pyodide-ready', function handler() {
                 window.removeEventListener('pyodide-ready', handler);
@@ -492,9 +493,9 @@ HTML;
             }, { once: true });
             return;
         }
-        
+
         if (outputEl) outputEl.textContent = 'Running...';
-        
+
         // Capture stdout/stderr
         window.pyodide.runPythonAsync(`
 import sys
@@ -525,29 +526,29 @@ sys.stderr = sys.__stderr__
             }
         });
     };
-    
+
     // Only load Pyodide once
     if (window.pyodideLoaded || document.getElementById('pyodide-script')) {
         return;
     }
-    
+
     console.log('[Pyodide] Loading runtime...');
-    
+
     var script = document.createElement('script');
     script.id = 'pyodide-script';
     script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
     script.async = true;
-    
+
     script.onload = function() {
         window.pyodideLoaded = true;
         console.log('[Pyodide] Script loaded, initializing...');
-        
+
         // Initialize Pyodide
         if (typeof loadPyodide === 'function') {
             loadPyodide().then(function(pyodide) {
                 window.pyodide = pyodide;
                 console.log('[Pyodide] Runtime ready!');
-                
+
                 // Dispatch event for any listeners
                 window.dispatchEvent(new CustomEvent('pyodide-ready'));
             }).catch(function(err) {
@@ -555,11 +556,11 @@ sys.stderr = sys.__stderr__
             });
         }
     };
-    
+
     script.onerror = function() {
         console.error('[Pyodide] Failed to load script');
     };
-    
+
     document.head.appendChild(script);
 })();
 JS;

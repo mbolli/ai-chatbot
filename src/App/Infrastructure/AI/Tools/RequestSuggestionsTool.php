@@ -14,7 +14,7 @@ final class RequestSuggestionsTool {
     /**
      * Request suggestions for improving document content.
      *
-     * @param string $documentId The ID of the document to get suggestions for
+     * @param string $documentId  The ID of the document to get suggestions for
      * @param string $description What kind of suggestions to generate (e.g., 'grammar', 'clarity', 'style')
      *
      * @return string Acknowledgment that suggestions will be generated

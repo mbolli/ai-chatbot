@@ -22,26 +22,26 @@ $content = nl2br($e($content));
     <div class="artifact-text-content markdown" id="artifact-content-text">
         <?php echo $content; ?>
     </div>
-    
+
     <div class="artifact-text-edit" data-show="$_artifactEditing">
-        <textarea 
+        <textarea
             class="artifact-textarea"
             data-bind="$_artifactContent"
             placeholder="Enter content..."
         ><?php echo $e($document->content ?? ''); ?></textarea>
-        
+
         <div class="artifact-edit-actions">
             <button class="btn btn-secondary" data-on:click="$_artifactEditing = false">
                 Cancel
             </button>
-            <button class="btn btn-primary" 
+            <button class="btn btn-primary"
                     data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
                 Save
             </button>
         </div>
     </div>
-    
-    <button class="btn btn-edit" data-show="!$_artifactEditing" 
+
+    <button class="btn btn-edit" data-show="!$_artifactEditing"
             data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($document->content ?? ''); ?>">
         <i class="fas fa-edit"></i> Edit
     </button>

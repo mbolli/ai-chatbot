@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Handler\Command;
 
 use App\Domain\Event\ChatUpdatedEvent;
+use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Model\Document;
@@ -281,6 +282,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             $testCommand = $this->getTestCommand($userMessage->content ?? '', $isLocalhost);
             if ($testCommand !== null) {
                 $this->executeTestCommand($testCommand, $userId, $chatId, $assistantMessage);
+
                 return;
             }
 
@@ -448,22 +450,23 @@ final class MessageCommandHandler implements RequestHandlerInterface {
      */
     private function testLongStream(int $userId, string $chatId, Message $assistantMessage): void {
         $paragraphs = [
-            "This is a test of the streaming functionality. ",
-            "The quick brown fox jumps over the lazy dog. ",
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ",
-            "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ",
-            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ",
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum. ",
-            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia. ",
-            "Testing chunk delivery and UI responsiveness during long streams. ",
+            'This is a test of the streaming functionality. ',
+            'The quick brown fox jumps over the lazy dog. ',
+            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ',
+            'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ',
+            'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ',
+            'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum. ',
+            'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia. ',
+            'Testing chunk delivery and UI responsiveness during long streams. ',
         ];
 
         $fullContent = '';
 
         // Stream 50 chunks with small delays
-        for ($i = 0; $i < 50; $i++) {
+        for ($i = 0; $i < 50; ++$i) {
             if ($this->sessionManager->isStopRequested($chatId, $userId)) {
                 $fullContent .= ' ⏹';
+
                 break;
             }
 
@@ -495,6 +498,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         foreach ($words as $word) {
             if ($this->sessionManager->isStopRequested($chatId, $userId)) {
                 $fullContent .= ' ⏹';
+
                 break;
             }
 
@@ -596,7 +600,7 @@ MD;
         $this->documentRepository->save($document);
 
         // Emit event to open the artifact panel
-        $this->eventBus->emit($userId, new \App\Domain\Event\DocumentUpdatedEvent(
+        $this->eventBus->emit($userId, new DocumentUpdatedEvent(
             documentId: $document->id,
             chatId: $chatId,
             userId: $userId,
@@ -623,7 +627,7 @@ MD;
         $this->documentRepository->save($document);
 
         // Emit event - this will trigger Pyodide loading via SSE
-        $this->eventBus->emit($userId, new \App\Domain\Event\DocumentUpdatedEvent(
+        $this->eventBus->emit($userId, new DocumentUpdatedEvent(
             documentId: $document->id,
             chatId: $chatId,
             userId: $userId,
@@ -650,7 +654,7 @@ MD;
         $this->documentRepository->save($document);
 
         // Emit event to open the artifact panel
-        $this->eventBus->emit($userId, new \App\Domain\Event\DocumentUpdatedEvent(
+        $this->eventBus->emit($userId, new DocumentUpdatedEvent(
             documentId: $document->id,
             chatId: $chatId,
             userId: $userId,
@@ -696,6 +700,7 @@ HELP;
         foreach ($chunks as $chunk) {
             if ($this->sessionManager->isStopRequested($chatId, $userId)) {
                 $fullContent .= ' ⏹';
+
                 break;
             }
 

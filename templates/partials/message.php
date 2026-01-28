@@ -38,7 +38,7 @@ $isAssistant = $role === 'assistant';
                     echo nl2br($e($content));
                 }
             }
-        ?></div>
+?></div>
         <?php if ($isAssistant && $streaming) { ?>
             <div id="message-<?php echo $e($id); ?>-raw" style="display:none"></div>
         <?php } ?>

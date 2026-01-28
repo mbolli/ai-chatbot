@@ -27,7 +27,7 @@
     window.downloadArtifact = function() {
         const artifactId = window.datastar?.signals?._artifactId;
         if (!artifactId) return;
-        
+
         // Fetch document and download
         fetch('/api/documents/' + artifactId)
             .then(r => r.json())
@@ -44,7 +44,7 @@
             })
             .catch(err => console.error('Download failed:', err));
     };
-    
+
     function getExtension(kind, language) {
         if (kind === 'code') {
             const extensions = { python: '.py', javascript: '.js', typescript: '.ts', php: '.php', html: '.html', css: '.css' };
@@ -54,7 +54,7 @@
         if (kind === 'text') return '.md';
         return '.txt';
     }
-    
+
     // Open artifact by ID
     window.openArtifact = function(documentId) {
         // Call the /open endpoint which triggers SSE to render the artifact

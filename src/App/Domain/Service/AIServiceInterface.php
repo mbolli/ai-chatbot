@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
+use App\Domain\Model\Document;
+
 /**
  * Interface for AI chat services.
  */
@@ -11,10 +13,10 @@ interface AIServiceInterface {
     /**
      * Generate a streaming AI response.
      *
-     * @param array<array{role: string, content: string}> $messages Conversation history
-     * @param string                                      $model    The model to use
-     * @param string|null                                 $chatId   Chat ID for tool context
-     * @param string|null                                 $messageId Message ID for tool context
+     * @param array<array{role: string, content: string}> $messages  Conversation history
+     * @param string                                      $model     The model to use
+     * @param null|string                                 $chatId    Chat ID for tool context
+     * @param null|string                                 $messageId Message ID for tool context
      *
      * @return \Generator<string> Yields response chunks
      */
@@ -39,7 +41,7 @@ interface AIServiceInterface {
     /**
      * Get documents created by tools during the last chat.
      *
-     * @return array<\App\Domain\Model\Document>
+     * @return array<Document>
      */
     public function getCreatedDocuments(): array;
 }

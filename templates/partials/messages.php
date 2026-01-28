@@ -37,7 +37,7 @@ $messageDocuments = $messageDocuments ?? [];
                             } else {
                                 echo nl2br($e($message->content));
                             }
-                        ?></div>
+                ?></div>
                         <?php if ($message->isAssistant() && $chatId) { ?>
                             <div class="message-actions">
                                 <?php if ($doc !== null) { ?>
