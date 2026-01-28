@@ -16,6 +16,8 @@ interface ChatRepositoryInterface {
 
     public function save(Chat $chat): void;
 
+    public function update(Chat $chat): void;
+
     public function delete(string $id): void;
 
     public function deleteByUser(int $userId): void;

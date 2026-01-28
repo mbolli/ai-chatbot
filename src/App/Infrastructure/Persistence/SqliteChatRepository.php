@@ -62,18 +62,22 @@ final class SqliteChatRepository implements ChatRepositoryInterface {
                 'updated_at' => $chat->updatedAt->getTimestamp(),
             ]);
         } else {
-            $stmt = $this->pdo->prepare(
-                'UPDATE chats SET title = :title, model = :model, visibility = :visibility, updated_at = :updated_at
-                 WHERE id = :id'
-            );
-            $stmt->execute([
-                'id' => $chat->id,
-                'title' => $chat->title,
-                'model' => $chat->model,
-                'visibility' => $chat->visibility,
-                'updated_at' => $chat->updatedAt->getTimestamp(),
-            ]);
+            $this->update($chat);
         }
+    }
+
+    public function update(Chat $chat): void {
+        $stmt = $this->pdo->prepare(
+            'UPDATE chats SET title = :title, model = :model, visibility = :visibility, updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $chat->id,
+            'title' => $chat->title,
+            'model' => $chat->model,
+            'visibility' => $chat->visibility,
+            'updated_at' => $chat->updatedAt->getTimestamp(),
+        ]);
     }
 
     public function delete(string $id): void {
