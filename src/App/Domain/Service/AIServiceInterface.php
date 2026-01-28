@@ -13,10 +13,12 @@ interface AIServiceInterface {
      *
      * @param array<array{role: string, content: string}> $messages Conversation history
      * @param string                                      $model    The model to use
+     * @param string|null                                 $chatId   Chat ID for tool context
+     * @param string|null                                 $messageId Message ID for tool context
      *
      * @return \Generator<string> Yields response chunks
      */
-    public function streamChat(array $messages, string $model): \Generator;
+    public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator;
 
     /**
      * Generate a chat title based on the first message.
@@ -33,4 +35,11 @@ interface AIServiceInterface {
      * @return array<string, array{name: string, provider: string, available: bool}>
      */
     public function getAvailableModels(): array;
+
+    /**
+     * Get documents created by tools during the last chat.
+     *
+     * @return array<\App\Domain\Model\Document>
+     */
+    public function getCreatedDocuments(): array;
 }

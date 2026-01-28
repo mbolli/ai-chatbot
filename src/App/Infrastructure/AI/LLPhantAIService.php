@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
+use App\Domain\Model\Document;
+use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
+use App\Infrastructure\AI\Tools\CreateDocumentTool;
+use App\Infrastructure\AI\Tools\UpdateDocumentTool;
 use LLPhant\AnthropicConfig;
 use LLPhant\Chat\AnthropicChat;
 use LLPhant\Chat\ChatInterface;
 use LLPhant\Chat\Enums\OpenAIChatModel;
+use LLPhant\Chat\FunctionInfo\FunctionBuilder;
 use LLPhant\Chat\Message;
 use LLPhant\Chat\OpenAIChat;
 use LLPhant\OpenAIConfig;
@@ -54,17 +59,38 @@ final class LLPhantAIService implements AIServiceInterface {
     private const string TITLE_MODEL_ANTHROPIC = AnthropicConfig::CLAUDE_3_HAIKU;
     private const string TITLE_MODEL_OPENAI = OpenAIChatModel::Gpt4Omini->value;
 
+    private CreateDocumentTool $createDocumentTool;
+    private UpdateDocumentTool $updateDocumentTool;
+
+    /** @var list<Document> */
+    private array $createdDocuments = [];
+
     public function __construct(
         private readonly ?string $anthropicApiKey = null,
         private readonly ?string $openaiApiKey = null,
-    ) {}
+        ?DocumentRepositoryInterface $documentRepository = null,
+    ) {
+        // Initialize tools if repository is provided
+        if ($documentRepository !== null) {
+            $this->createDocumentTool = new CreateDocumentTool($documentRepository);
+            $this->updateDocumentTool = new UpdateDocumentTool($documentRepository);
+        }
+    }
 
-    public function streamChat(array $messages, string $model): \Generator {
+    public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator {
+        $this->createdDocuments = [];
+
         $chat = $this->createChat($model);
         $llMessages = $this->convertMessages($messages);
 
-        // Set system message
+        // Set system message with tool instructions
         $chat->setSystemMessage($this->getSystemPrompt());
+
+        // Configure tools if available and chat ID is provided
+        if (isset($this->createDocumentTool) && $chatId !== null) {
+            $this->createDocumentTool->setChatContext($chatId, $messageId);
+            $this->configureTools($chat);
+        }
 
         // Stream the response using generateChatStream
         $stream = $chat->generateChatStream($llMessages);
@@ -76,6 +102,18 @@ final class LLPhantAIService implements AIServiceInterface {
                 yield $chunk;
             }
         }
+
+        // Collect any created documents
+        if (isset($this->createDocumentTool)) {
+            $doc = $this->createDocumentTool->getLastCreatedDocument();
+            if ($doc !== null) {
+                $this->createdDocuments[] = $doc;
+            }
+        }
+    }
+
+    public function getCreatedDocuments(): array {
+        return $this->createdDocuments;
     }
 
     public function generateTitle(string $firstMessage): string {
@@ -119,6 +157,21 @@ final class LLPhantAIService implements AIServiceInterface {
         }
 
         return $models;
+    }
+
+    private function configureTools(ChatInterface $chat): void {
+        // Build function info for tools
+        $createDocFn = FunctionBuilder::buildFunctionInfo($this->createDocumentTool, 'createDocument');
+        $updateDocFn = FunctionBuilder::buildFunctionInfo($this->updateDocumentTool, 'updateDocument');
+
+        // Add tools to the chat
+        if ($chat instanceof AnthropicChat) {
+            $chat->addTool($createDocFn);
+            $chat->addTool($updateDocFn);
+        } elseif ($chat instanceof OpenAIChat) {
+            $chat->addTool($createDocFn);
+            $chat->addTool($updateDocFn);
+        }
     }
 
     private function getProvider(string $model): string {
@@ -210,6 +263,24 @@ Guidelines:
 - Use markdown formatting when helpful
 - If you're unsure, say so
 - Be friendly and professional
+
+## Document/Artifact Creation
+
+When the user asks you to create, write, or generate content that would benefit from being in a separate document (code, articles, data, etc.), use the createDocument tool:
+
+- **text**: For articles, essays, documentation, markdown content
+- **code**: For programming code (specify the language: python, javascript, php, etc.)
+- **sheet**: For tabular data in CSV format
+- **image**: For SVG graphics or image content
+
+When updating existing documents, use the updateDocument tool with the document ID.
+
+Examples of when to create documents:
+- "Write me a Python script to..." → create code document
+- "Create a README for..." → create text document  
+- "Generate a CSV with..." → create sheet document
+- "Make an SVG icon of..." → create image document
 PROMPT;
     }
 }
+
