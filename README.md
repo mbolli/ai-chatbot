@@ -1,111 +1,516 @@
-# AI Chatbot - PHP/Swoole/Mezzio/Datastar
+# AI Chatbot
 
-A real-time AI chatbot built with PHP, Swoole, Mezzio, and Datastar. This is a migration/comparison project from the Next.js Vercel AI Chatbot.
+[![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Swoole](https://img.shields.io/badge/Swoole-5.0+-007EC6?logo=swoole&logoColor=white)](https://openswoole.com/)
+[![Mezzio](https://img.shields.io/badge/Mezzio-3.19-6C3BAF?logo=laminas&logoColor=white)](https://docs.mezzio.dev/)
+[![Datastar](https://img.shields.io/badge/Datastar-1.0-FF6B35?logo=rocket&logoColor=white)](https://data-star.dev/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Made by zweiundeins.gmbh](https://img.shields.io/badge/Made%20with%20%E2%98%95%20by-zweiundeins.gmbh-blue)](https://zweiundeins.gmbh)
 
-## Requirements
+A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI without JavaScript frameworks.
 
-- PHP 8.2+
-- Swoole extension
-- SQLite3
+> This project demonstrates how to build a modern AI chat application using PHP's async capabilities with Swoole and Datastar's HTML-over-the-wire approach for real-time updates.
 
-## Installation
+## ✨ Features
+
+- **Real-time AI Streaming** - Token-by-token streaming via Server-Sent Events (SSE)
+- **Multiple AI Providers** - Support for Anthropic (Claude) and OpenAI (GPT) models
+- **Document Artifacts** - AI can create and edit code, text, spreadsheets, and images
+- **CQRS Architecture** - Clean separation of commands, queries, and events
+- **Session-based Auth** - Simple authentication with guest and registered user support
+- **Rate Limiting** - Configurable daily message limits for guests and registered users
+- **Responsive UI** - Mobile-friendly design with sidebar navigation
+- **No Build Required** - Datastar provides reactivity without complex JS bundling
+
+## 📋 Requirements
+
+- PHP 8.2 or higher
+- Swoole extension (`pecl install swoole`)
+- SQLite3 extension
+- Composer
+- Node.js 18+ (optional, for TypeScript development)
+
+## 🚀 Quick Start
+
+### 1. Clone and Install Dependencies
 
 ```bash
-# Install dependencies
+git clone <repository-url>
+cd ai-chatbot
+
+# Install PHP dependencies
 composer install
 
-# Initialize database
-php bin/server.php
-# The database is auto-created on first run
-
-# Or manually create it:
-sqlite3 data/db.sqlite < data/schema.sql
+# Install frontend dependencies (optional)
+npm install
 ```
 
-## Configuration
+### 2. Configure Environment
 
-Copy the local config template:
+```bash
+# Copy the environment template and add your API keys
+cp .env.example .env
+```
+
+Edit `.env` with your API keys:
+
+```bash
+# Required: At least one AI provider API key
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+# OPENAI_API_KEY=sk-your-key-here
+
+# Optional: Model and token configuration
+AI_DEFAULT_MODEL=claude-3-5-sonnet-20241022
+AI_MAX_TOKENS=4096
+```
+
+Optionally copy the local PHP config for additional settings:
 
 ```bash
 cp config/autoload/app.local.php.dist config/autoload/app.local.php
 ```
 
-Edit `config/autoload/app.local.php` and add your API keys:
-
-```php
-return [
-    'debug' => true,
-    'ai' => [
-        'api_key' => 'your-anthropic-api-key',
-    ],
-];
-```
-
-## Running
+### 3. Initialize Database
 
 ```bash
-# Start the Swoole server
-composer dev
-# or
-php bin/server.php
+# Initialize the SQLite database
+composer db:init
 
-# Server runs at http://localhost:8080
+# Or manually:
+sqlite3 data/db.sqlite < data/schema.sql
 ```
 
-## Testing
+### 4. Start the Server
+
+```bash
+# Start the Swoole server (runs on http://localhost:8080)
+composer serve
+```
+
+Visit **http://localhost:8080** in your browser.
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (Datastar + TypeScript)                               │
+│  └── SSE connection to /updates for real-time DOM patching      │
+├─────────────────────────────────────────────────────────────────┤
+│  Infrastructure Layer                                           │
+│  ├── Http/Handler/Command/  → POST/PUT/DELETE mutations         │
+│  ├── Http/Handler/Query/    → GET read operations               │
+│  ├── Http/Listener/         → SseRequestListener for streaming  │
+│  └── AI/                    → LLPhantAIService, streaming tools │
+├─────────────────────────────────────────────────────────────────┤
+│  Application Layer (Events)                                     │
+│  ├── Domain/Event/          → MessageStreamingEvent, ChatUpdated│
+│  └── EventBus/              → SwooleEventBus for SSE broadcasts │
+├─────────────────────────────────────────────────────────────────┤
+│  Domain Layer                                                   │
+│  ├── Model/                 → Chat, Message, Document, User     │
+│  ├── Service/               → AIServiceInterface, RateLimitSvc  │
+│  └── Repository/            → Interface definitions             │
+├─────────────────────────────────────────────────────────────────┤
+│  Persistence (SQLite)                                           │
+│  └── data/db.sqlite                                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### CQRS Pattern
+
+The application follows the Command Query Responsibility Segregation pattern:
+
+- **Commands** (`/cmd/*`) - POST/PUT/DELETE operations that modify state
+- **Queries** (`/api/*`) - GET operations that read state
+- **Events** - Emitted when state changes, broadcast to clients via SSE
+
+### Real-time Streaming Flow
+
+1. User sends message via `POST /cmd/chat/{chatId}/message`
+2. `MessageCommandHandler` creates user + assistant message placeholders
+3. Swoole coroutine starts `streamAiResponse()` calling `AIService::streamChat()`
+4. Each token chunk emits `MessageStreamingEvent` via `EventBus`
+5. `SseRequestListener` receives events and sends Datastar `PatchElements`
+6. Browser's Datastar automatically patches DOM with streamed content
+
+## 📁 Project Structure
+
+```
+├── bin/
+│   ├── init-db.php           # Database initialization script
+│   └── seed.php              # Sample data seeder
+├── config/
+│   ├── config.php            # Config aggregator
+│   ├── container.php         # DI container setup
+│   ├── routes.php            # Route definitions
+│   ├── pipeline.php          # Middleware pipeline
+│   └── autoload/             # Environment-specific configs
+├── data/
+│   ├── schema.sql            # Database schema
+│   └── db.sqlite             # SQLite database (created on init)
+├── public/
+│   ├── css/app.css           # Styles
+│   └── js/
+│       ├── app.js            # Custom TypeScript (compiled)
+│       └── datastar.js       # Datastar library
+├── src/App/
+│   ├── ConfigProvider.php    # DI factories
+│   ├── Domain/
+│   │   ├── Event/            # Domain events
+│   │   ├── Model/            # Entity classes (Chat, Message, Document, etc.)
+│   │   ├── Repository/       # Repository interfaces
+│   │   └── Service/          # Service interfaces
+│   └── Infrastructure/
+│       ├── AI/               # AI service implementations
+│       ├── Auth/             # Authentication middleware
+│       ├── EventBus/         # SSE event broadcasting
+│       ├── Http/Handler/     # Request handlers
+│       ├── Persistence/      # SQLite repositories
+│       ├── Session/          # Swoole-based sessions
+│       └── Template/         # Template renderer
+├── templates/
+│   ├── app/                  # Page templates
+│   ├── layout/               # Layout templates
+│   └── partials/             # Reusable components
+└── tests/
+    ├── Feature/              # Integration tests
+    └── Unit/                 # Unit tests
+```
+
+## 🔌 API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | Login with email/password |
+| POST | `/auth/register` | Register new account |
+| POST | `/auth/logout` | Logout current session |
+| POST | `/auth/upgrade` | Upgrade guest to registered |
+| GET | `/auth/status` | Get current auth status |
+
+### Queries (Read Operations)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/chats` | List user's chats |
+| GET | `/api/chats/{id}` | Get chat details |
+| GET | `/api/chats/{id}/messages` | Get chat messages |
+| GET | `/api/documents/{id}` | Get document/artifact |
+
+### Commands (Write Operations)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/cmd/chat` | Create new chat |
+| DELETE | `/cmd/chat/{id}` | Delete chat |
+| PATCH | `/cmd/chat/{id}/visibility` | Toggle public/private |
+| POST | `/cmd/chat/{chatId}/message` | Send message & generate response |
+| POST | `/cmd/chat/{chatId}/generate` | Regenerate AI response |
+| POST | `/cmd/chat/{chatId}/stop` | Stop streaming response |
+| POST | `/cmd/document` | Create document |
+| PUT | `/cmd/document/{id}` | Update document |
+| DELETE | `/cmd/document/{id}` | Delete document |
+| PATCH | `/cmd/vote/{chatId}/{messageId}` | Vote on message |
+
+### Real-time
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/updates` | SSE endpoint for real-time updates |
+
+## 🤖 AI Models
+
+### Supported Models
+
+**Anthropic (Claude)**
+- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet (Latest)
+- `claude-3-5-sonnet` - Claude 3.5 Sonnet (June)
+- `claude-3-opus` - Claude 3 Opus
+- `claude-3-sonnet` - Claude 3 Sonnet
+- `claude-3-haiku` - Claude 3 Haiku (Fast/Cheap)
+
+**OpenAI (GPT)**
+- `gpt-4o` - GPT-4o
+- `gpt-4o-mini` - GPT-4o Mini
+- `gpt-4-turbo` - GPT-4 Turbo
+- `gpt-4` - GPT-4
+
+### AI Tools
+
+The AI can use tools to create and update documents:
+
+- **CreateDocument** - Create code, text, spreadsheet, or image artifacts
+- **UpdateDocument** - Modify existing artifacts
+
+## 🗄️ Database Schema
+
+```sql
+-- Users (session-based auth)
+users (id, email, password_hash, is_guest, created_at)
+
+-- Chats (conversations)
+chats (id, user_id, title, model, visibility, created_at, updated_at)
+
+-- Messages
+messages (id, chat_id, role, content, parts, created_at)
+
+-- Documents/Artifacts
+documents (id, chat_id, message_id, kind, title, language, created_at, updated_at)
+
+-- Document versions (undo/redo)
+document_versions (id, document_id, content, version, created_at)
+
+-- Message votes
+votes (id, chat_id, message_id, user_id, is_upvote, created_at)
+
+-- AI suggestions
+suggestions (id, document_id, content, status, created_at)
+```
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+# Server
+composer serve          # Start Swoole server at :8080
+composer stop           # Stop Swoole server
+composer reload         # Reload Swoole workers
+
+# Database
+composer db:init        # Initialize database schema
+composer db:seed        # Seed with sample data
+
+# Testing
+composer test           # Run Pest tests
+composer test:coverage  # Run tests with coverage
+
+# Code Quality
+composer cs             # Check code style (dry-run)
+composer cs:fix         # Fix code style issues
+composer stan           # Run PHPStan static analysis
+
+# Frontend (optional)
+npm run build           # Build TypeScript with esbuild
+npm run watch           # Watch mode for development
+npm run typecheck       # TypeScript type checking
+```
+
+### Running Tests
+
+Tests use Pest PHP with in-memory SQLite:
 
 ```bash
 # Run all tests
 composer test
 
+# Run specific test file
+./vendor/bin/pest tests/Unit/ChatTest.php
+
 # Run with coverage
 composer test:coverage
 ```
 
-## Project Structure
+### Code Style
 
-```
-├── bin/
-│   └── server.php          # Swoole entry point
-├── config/
-│   ├── config.php          # Config aggregator
-│   ├── container.php       # DI container
-│   ├── routes.php          # Route definitions
-│   ├── pipeline.php        # Middleware pipeline
-│   └── autoload/           # Environment configs
-├── data/
-│   ├── schema.sql          # Database schema
-│   └── db.sqlite           # SQLite database
-├── public/
-│   ├── css/app.css         # Styles (Open Props)
-│   └── js/app.js           # Client JS
-├── src/App/
-│   ├── ConfigProvider.php  # DI configuration
-│   ├── Domain/             # Domain models, events, repository interfaces
-│   └── Infrastructure/     # Implementations (HTTP handlers, persistence, etc.)
-├── templates/              # PHP templates
-└── tests/                  # Pest tests
+This project uses PHP-CS-Fixer with PSR-12 style:
+
+```bash
+# Check for issues
+composer cs
+
+# Auto-fix issues
+composer cs:fix
 ```
 
-## Architecture
+### Static Analysis
 
-This project uses CQRS (Command Query Responsibility Segregation) pattern:
+PHPStan is configured at level 6:
 
-- **Commands**: POST/PUT/DELETE operations that modify state
-- **Queries**: GET operations that read state
-- **Events**: Emitted when state changes, broadcast via SSE
+```bash
+composer stan
+```
 
-Real-time updates use Server-Sent Events (SSE) with Datastar for DOM patching.
+## 🎨 Frontend (Datastar)
 
-## Development Progress
+The frontend uses [Datastar](https://data-star.dev/) for reactive UI without JavaScript frameworks.
 
-- [x] Phase 1: Foundation (database, models, repositories, Swoole setup, tests)
-- [ ] Phase 2: Authentication (PHP-Auth integration)
-- [ ] Phase 3: Core Chat (CRUD, UI)
-- [ ] Phase 4: AI Integration (LLPhant, streaming)
-- [ ] Phase 5: Artifacts (documents, code execution)
-- [ ] Phase 6: Polish (rate limiting, voting, suggestions)
+### Key Concepts
 
-## License
+- **Signals** - Client-side state (form inputs, UI flags)
+- **PatchElements** - Server-sent HTML fragments that update DOM
+- **ExecuteScript** - Server-sent JavaScript execution
+- **Actions** - Declarative HTTP requests (`@post`, `@get`, etc.)
 
-MIT
+### Example Usage
+
+```html
+<!-- SSE connection for real-time updates -->
+<div data-init="@get('/updates')">
+
+<!-- Form with signal binding -->
+<input type="text" data-model="$message" />
+
+<!-- Action on click -->
+<button data-on:click="@post('/cmd/chat/123/message')">
+    Send
+</button>
+
+<!-- Conditional rendering -->
+<div data-show="$isGenerating">
+    Generating...
+</div>
+```
+
+## 🔧 Configuration Reference
+
+### Environment Configuration
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Available environment variables:
+
+```bash
+# AI Provider API Keys (at least one required)
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+OPENAI_API_KEY=sk-your-key-here
+
+# AI Model Configuration
+AI_DEFAULT_MODEL=claude-3-5-sonnet-20241022
+AI_MAX_TOKENS=4096
+
+# Application Settings
+APP_ENV=development
+APP_DEBUG=true
+
+# Rate Limits
+RATE_LIMIT_GUEST_HOURLY=10
+RATE_LIMIT_GUEST_DAILY=20
+RATE_LIMIT_USER_HOURLY=30
+RATE_LIMIT_USER_DAILY=100
+```
+
+For additional PHP configuration overrides, create `config/autoload/app.local.php`:
+
+```php
+<?php
+
+return [
+    'database' => [
+        'path' => getcwd() . '/data/db.sqlite',
+    ],
+    'templates' => [
+        'paths' => [
+            '' => getcwd() . '/templates',
+        ],
+    ],
+];
+```
+
+### Swoole Configuration
+
+Default Swoole settings can be overridden in `config/autoload/swoole.local.php`:
+
+```php
+<?php
+
+return [
+    'mezzio-swoole' => [
+        'swoole-http-server' => [
+            'host' => '0.0.0.0',
+            'port' => 8080,
+            'options' => [
+                'worker_num' => 4,
+                'task_worker_num' => 2,
+                'max_request' => 10000,
+            ],
+        ],
+    ],
+];
+```
+
+## 🚢 Deployment
+
+### Production Checklist
+
+1. Set `debug` to `false` in configuration
+2. Use strong session secrets
+3. Configure proper rate limits
+4. Set up SSL/TLS termination (nginx/Caddy)
+5. Configure log rotation
+
+### Example Nginx Configuration
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name chat.example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SSE endpoint needs special handling
+    location /updates {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding off;
+    }
+}
+```
+
+### Docker (Example)
+
+```dockerfile
+FROM php:8.2-cli
+
+RUN pecl install swoole && docker-php-ext-enable swoole
+RUN docker-php-ext-install pdo pdo_sqlite
+
+WORKDIR /app
+COPY . .
+RUN composer install --no-dev --optimize-autoloader
+
+EXPOSE 8080
+CMD ["php", "vendor/bin/laminas", "mezzio:swoole:start"]
+```
+
+## 📚 Additional Resources
+
+- [Mezzio Documentation](https://docs.mezzio.dev/)
+- [Swoole Documentation](https://wiki.swoole.com/)
+- [Datastar Documentation](https://data-star.dev/)
+- [LLPhant Library](https://github.com/theodo-group/LLPhant)
+- [Anthropic API](https://docs.anthropic.com/)
+- [OpenAI API](https://platform.openai.com/docs/)
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- Inspired by the [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot)
+- Built with [LLPhant](https://github.com/theodo-group/LLPhant) for AI integration
+- Real-time updates powered by [Datastar](https://data-star.dev/)
+
+---
+
+*Need help taming complexity in your web stack?* [zwei und eins gmbh](https://zweiundeins.gmbh) specializes in high-performance web applications.
