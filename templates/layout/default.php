@@ -19,6 +19,7 @@ $isGuest = ($user['isGuest'] ?? true);
     <link rel="stylesheet" href="https://unpkg.com/open-props">
     <link rel="stylesheet" href="https://unpkg.com/open-props/normalize.min.css">
     <link rel="stylesheet" href="https://unpkg.com/open-props/buttons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/open-props/animations.min.css">
 
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -62,11 +63,9 @@ $isGuest = ($user['isGuest'] ?? true);
             "_toasts": []
          }'
          data-init="@get('/updates')"
-         data-on-keys:ctrl+b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
-         data-on-keys:cmd+b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
-         data-on-keys:ctrl+k__window__prevent="window.location.href = '/'"
-         data-on-keys:cmd+k__window__prevent="window.location.href = '/'"
-         data-on-keys:escape__window="$_artifactOpen = false; $_authModal = null">
+         data-on-keys:ctrl-b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
+         data-on-keys:ctrl-k__window__prevent="window.location.href = '/'"
+         data-on-keys:esc__window__prevent="console.log(evt); $_artifactOpen = false; $_authModal = null">
         <?php echo $content ?? ''; ?>
 
         <!-- Auth Modals -->
