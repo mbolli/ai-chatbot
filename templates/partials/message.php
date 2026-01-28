@@ -11,6 +11,7 @@ declare(strict_types=1);
  * @var null|string $chatId Chat ID (for voting)
  * @var bool $streaming Whether the message is currently streaming
  * @var callable $e Escape function
+ * @var callable $md Markdown parser function
  */
 $isUser = $role === 'user';
 $isAssistant = $role === 'assistant';
@@ -27,7 +28,20 @@ $isAssistant = $role === 'assistant';
     </div>
     <div class="message-content">
         <div class="message-role"><?php echo $isUser ? 'You' : 'Assistant'; ?></div>
-        <div class="message-text" id="message-<?php echo $e($id); ?>-content"><?php echo $content ? nl2br($e($content)) : ''; ?></div>
+        <div class="message-text markdown-content" id="message-<?php echo $e($id); ?>-content"><?php
+            if ($content) {
+                if ($isAssistant && !$streaming) {
+                    // Parse markdown for completed assistant messages
+                    echo $md($content);
+                } else {
+                    // User messages: escape HTML
+                    echo nl2br($e($content));
+                }
+            }
+        ?></div>
+        <?php if ($isAssistant && $streaming) { ?>
+            <div id="message-<?php echo $e($id); ?>-raw" style="display:none"></div>
+        <?php } ?>
         <?php if ($isAssistant && !$streaming && $chatId) { ?>
             <div class="message-actions">
                 <button class="btn-icon" title="Copy" data-on:click="navigator.clipboard.writeText(document.getElementById('message-<?php echo $e($id); ?>-content').textContent)">
@@ -40,6 +54,9 @@ $isAssistant = $role === 'assistant';
                     <i class="fas fa-thumbs-down"></i>
                 </button>
             </div>
+        <?php } elseif ($isAssistant && $streaming) { ?>
+            <!-- Empty actions div for artifacts to prepend to during streaming -->
+            <div class="message-actions" style="display:none"></div>
         <?php } ?>
         <?php if ($streaming) { ?>
             <div class="message-streaming-indicator">

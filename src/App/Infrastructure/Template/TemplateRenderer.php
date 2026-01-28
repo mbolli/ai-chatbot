@@ -56,6 +56,27 @@ final class TemplateRenderer {
         return self::escape($string);
     }
 
+    /**
+     * Parse markdown to HTML.
+     */
+    public static function markdown(string $text): string {
+        static $parsedown = null;
+
+        if ($parsedown === null) {
+            $parsedown = new \Parsedown();
+            $parsedown->setSafeMode(true);
+        }
+
+        return $parsedown->text($text);
+    }
+
+    /**
+     * Shorthand for markdown.
+     */
+    public static function md(string $text): string {
+        return self::markdown($text);
+    }
+
     private function resolveTemplate(string $template): ?string {
         // Parse namespace::template format
         if (str_contains($template, '::')) {

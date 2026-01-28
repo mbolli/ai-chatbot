@@ -46,6 +46,11 @@ $isGuest = ($user['isGuest'] ?? true);
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
             "_model": <?php echo json_encode($defaultModel ?? 'claude-3-5-sonnet-20241022'); ?>,
             "_artifactOpen": false,
+            "_artifactId": null,
+            "_artifactEditing": false,
+            "_artifactContent": "",
+            "_documentVersion": 1,
+            "_output": "",
             "_message": "",
             "_isGenerating": false,
             "_authModal": null,
@@ -65,5 +70,24 @@ $isGuest = ($user['isGuest'] ?? true);
 
     <!-- App JS -->
     <script type="module" src="/js/app.js"></script>
+
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Configure marked for safe rendering
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        // Parse markdown for a message element
+        window.parseMessageMarkdown = function(messageId) {
+            const raw = document.getElementById(messageId + '-raw');
+            const content = document.getElementById(messageId + '-content');
+            if (raw && content) {
+                content.innerHTML = marked.parse(raw.textContent || '');
+            }
+        };
+    </script>
 </body>
 </html>
