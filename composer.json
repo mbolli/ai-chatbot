@@ -47,7 +47,10 @@
         }
     },
     "scripts": {
-        "serve": "vendor/bin/laminas mezzio:swoole:start",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout", 
+            "vendor/bin/laminas mezzio:swoole:start"
+        ],
         "stop": "vendor/bin/laminas mezzio:swoole:stop",
         "reload": "vendor/bin/laminas mezzio:swoole:reload",
         "test": "pest",

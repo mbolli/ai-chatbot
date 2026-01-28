@@ -9,6 +9,9 @@ use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\Repository\VoteRepositoryInterface;
+use App\Domain\Service\AIServiceInterface;
+use App\Infrastructure\AI\LLPhantAIService;
+use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Auth\AuthService;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -20,7 +23,7 @@ use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\HistoryQueryHandler;
-use App\Infrastructure\Http\Handler\UpdatesHandler;
+use App\Infrastructure\Http\Listener\SseRequestListener;
 use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
 use App\Infrastructure\Persistence\SqliteMessageRepository;
@@ -28,6 +31,7 @@ use App\Infrastructure\Persistence\SqliteVoteRepository;
 use App\Infrastructure\Repository\SqliteUserRepository;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
+use Mezzio\Template\TemplateRendererInterface;
 use Psr\Container\ContainerInterface;
 
 class ConfigProvider {
@@ -100,18 +104,30 @@ class ConfigProvider {
                 DocumentRepositoryInterface::class => fn (ContainerInterface $container): DocumentRepositoryInterface => new SqliteDocumentRepository($container->get(\PDO::class)),
                 VoteRepositoryInterface::class => fn (ContainerInterface $container): VoteRepositoryInterface => new SqliteVoteRepository($container->get(\PDO::class)),
 
+                // AI Service
+                AIServiceInterface::class => function (ContainerInterface $container): AIServiceInterface {
+                    $config = $container->get('config');
+
+                    return new LLPhantAIService(
+                        anthropicApiKey: $config['ai']['anthropic_api_key'] ?? $_ENV['ANTHROPIC_API_KEY'] ?? null,
+                        openaiApiKey: $config['ai']['openai_api_key'] ?? $_ENV['OPENAI_API_KEY'] ?? null,
+                    );
+                },
+
+                // Streaming Session Manager (singleton for Swoole)
+                StreamingSessionManager::class => fn (): StreamingSessionManager => new StreamingSessionManager(),
+
                 // Handlers
                 HomeHandler::class => fn (ContainerInterface $container): HomeHandler => new HomeHandler(
                     $container->get(TemplateRenderer::class),
                     $container->get(ChatRepositoryInterface::class),
+                    $container->get(AIServiceInterface::class),
                 ),
                 ChatHandler::class => fn (ContainerInterface $container): ChatHandler => new ChatHandler(
                     $container->get(TemplateRenderer::class),
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(MessageRepositoryInterface::class),
-                ),
-                UpdatesHandler::class => fn (ContainerInterface $container): UpdatesHandler => new UpdatesHandler(
-                    $container->get(EventBusInterface::class),
+                    $container->get(AIServiceInterface::class),
                 ),
 
                 // Auth Handler
@@ -120,12 +136,15 @@ class ConfigProvider {
                 // Command Handlers
                 ChatCommandHandler::class => fn (ContainerInterface $container): ChatCommandHandler => new ChatCommandHandler(
                     $container->get(ChatRepositoryInterface::class),
+                    $container->get(MessageRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
                 ),
                 MessageCommandHandler::class => fn (ContainerInterface $container): MessageCommandHandler => new MessageCommandHandler(
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(MessageRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
+                    $container->get(AIServiceInterface::class),
+                    $container->get(StreamingSessionManager::class),
                 ),
 
                 // Query Handlers
@@ -135,6 +154,13 @@ class ConfigProvider {
                 ),
                 HistoryQueryHandler::class => fn (ContainerInterface $container): HistoryQueryHandler => new HistoryQueryHandler(
                     $container->get(ChatRepositoryInterface::class),
+                ),
+
+                // SSE Listener (for mezzio-swoole RequestEvent handling)
+                SseRequestListener::class => fn (ContainerInterface $container): SseRequestListener => new SseRequestListener(
+                    $container->get(EventBusInterface::class),
+                    $container->get(SwooleTableSessionPersistence::class),
+                    $container->get(TemplateRenderer::class),
                 ),
             ],
             'aliases' => [],

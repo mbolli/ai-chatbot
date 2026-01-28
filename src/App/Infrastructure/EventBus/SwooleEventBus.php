@@ -42,10 +42,11 @@ final class SwooleEventBus implements EventBusInterface {
     }
 
     public function emit(int $userId, object $event): void {
-        foreach ($this->subscribers as $subscriber) {
+        foreach ($this->subscribers as $subscriptionId => $subscriber) {
             if ($subscriber['userId'] === $userId) {
                 try {
-                    ($subscriber['callback'])($event);
+                    $callback = $subscriber['callback'];
+                    $callback($event);
                 } catch (\Throwable $e) {
                     // Log error but continue with other subscribers
                     error_log('EventBus error: ' . $e->getMessage());
