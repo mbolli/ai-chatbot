@@ -40,4 +40,6 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     $app->patch('/cmd/chat/{id:[a-f0-9-]+}/visibility', ChatCommandHandler::class, 'cmd.chat.visibility');
 
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/message', MessageCommandHandler::class, 'cmd.message.send');
+    $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/generate', MessageCommandHandler::class, 'cmd.message.generate');
+    $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/stop', MessageCommandHandler::class, 'cmd.message.stop');
 };
