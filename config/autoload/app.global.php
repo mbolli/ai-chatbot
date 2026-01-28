@@ -9,29 +9,41 @@ use Mezzio\Swoole\Event\RequestHandlerRequestListener;
 use Mezzio\Swoole\Event\StaticResourceRequestListener;
 
 return [
-    'debug' => false,
+    'debug' => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
 
     'app' => [
         'name' => 'AI Chatbot',
-        'env' => 'production',
+        'env' => $_ENV['APP_ENV'] ?? 'production',
     ],
 
     'database' => [
         'path' => getcwd() . '/data/db.sqlite',
     ],
 
+    // AI Configuration - tune these for cost control
     'ai' => [
-        'provider' => 'anthropic',
-        'model' => 'claude-3-5-sonnet-20241022',
-        'max_tokens' => 8192,
+        // API Keys (required - set in .env)
+        'anthropic_api_key' => $_ENV['ANTHROPIC_API_KEY'] ?? null,
+        'openai_api_key' => $_ENV['OPENAI_API_KEY'] ?? null,
+
+        // Default model - Haiku is 12x cheaper than Sonnet!
+        // Options: claude-3-haiku-20240307, claude-3-5-sonnet-20241022, gpt-4o-mini
+        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-3-haiku-20240307',
+
+        // Max output tokens per response (cost control)
+        // Haiku: ~$1.25/1M output tokens, so 2048 tokens = ~$0.0025
+        'max_tokens' => (int) ($_ENV['AI_MAX_TOKENS'] ?? 2048),
     ],
 
+    // Rate limits - protect your budget!
     'rate_limits' => [
         'guest' => [
-            'daily_messages' => 20,
+            'requests_per_hour' => (int) ($_ENV['RATE_LIMIT_GUEST_HOURLY'] ?? 10),
+            'daily_messages' => (int) ($_ENV['RATE_LIMIT_GUEST_DAILY'] ?? 20),
         ],
         'registered' => [
-            'daily_messages' => 100,
+            'requests_per_hour' => (int) ($_ENV['RATE_LIMIT_USER_HOURLY'] ?? 30),
+            'daily_messages' => (int) ($_ENV['RATE_LIMIT_USER_DAILY'] ?? 100),
         ],
     ],
 

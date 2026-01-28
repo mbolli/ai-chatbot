@@ -126,11 +126,14 @@ class ConfigProvider {
                 // AI Service
                 AIServiceInterface::class => function (ContainerInterface $container): AIServiceInterface {
                     $config = $container->get('config');
+                    $aiConfig = $config['ai'] ?? [];
 
                     return new LLPhantAIService(
-                        anthropicApiKey: $config['ai']['anthropic_api_key'] ?? $_ENV['ANTHROPIC_API_KEY'] ?? null,
-                        openaiApiKey: $config['ai']['openai_api_key'] ?? $_ENV['OPENAI_API_KEY'] ?? null,
+                        anthropicApiKey: $aiConfig['anthropic_api_key'] ?? null,
+                        openaiApiKey: $aiConfig['openai_api_key'] ?? null,
                         documentRepository: $container->get(DocumentRepositoryInterface::class),
+                        maxTokens: $aiConfig['max_tokens'] ?? 2048,
+                        defaultModel: $aiConfig['default_model'] ?? null,
                     );
                 },
 

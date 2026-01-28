@@ -51,7 +51,7 @@ final class LLPhantAIService implements AIServiceInterface {
     /**
      * Default model to use when requested model is not found.
      */
-    private const string DEFAULT_MODEL = AnthropicConfig::CLAUDE_3_5_SONNET_20241022;
+    private const string DEFAULT_MODEL = AnthropicConfig::CLAUDE_3_HAIKU;
 
     /**
      * Fast model for title generation (prefer Haiku for speed/cost).
@@ -69,6 +69,8 @@ final class LLPhantAIService implements AIServiceInterface {
         private readonly ?string $anthropicApiKey = null,
         private readonly ?string $openaiApiKey = null,
         ?DocumentRepositoryInterface $documentRepository = null,
+        private readonly int $maxTokens = 2048,
+        private readonly ?string $defaultModel = null,
     ) {
         // Initialize tools if repository is provided
         if ($documentRepository !== null) {
@@ -114,6 +116,22 @@ final class LLPhantAIService implements AIServiceInterface {
 
     public function getCreatedDocuments(): array {
         return $this->createdDocuments;
+    }
+
+    public function getDefaultModel(): string {
+        // Return configured default, or first available model, or fallback
+        if ($this->defaultModel !== null) {
+            return $this->defaultModel;
+        }
+
+        // Pick first available
+        foreach ($this->getAvailableModels() as $id => $info) {
+            if ($info['available']) {
+                return $id;
+            }
+        }
+
+        return self::DEFAULT_MODEL;
     }
 
     public function generateTitle(string $firstMessage): string {
@@ -190,10 +208,10 @@ final class LLPhantAIService implements AIServiceInterface {
     private function createChat(string $model): ChatInterface {
         $provider = $this->getProvider($model);
 
-        // If model not found in our lists, use default
+        // If model not found in our lists, use configured default or fallback
         if (!\array_key_exists($model, self::ANTHROPIC_MODELS) && !\array_key_exists($model, self::OPENAI_MODELS)) {
-            $model = self::DEFAULT_MODEL;
-            $provider = 'anthropic';
+            $model = $this->defaultModel ?? self::DEFAULT_MODEL;
+            $provider = $this->getProvider($model);
         }
 
         return match ($provider) {
@@ -210,7 +228,7 @@ final class LLPhantAIService implements AIServiceInterface {
 
         $config = new AnthropicConfig(
             model: $model,
-            maxTokens: 4096,
+            maxTokens: $this->maxTokens,
             apiKey: $this->anthropicApiKey,
         );
 

@@ -32,16 +32,7 @@ final class HomeHandler implements RequestHandlerInterface {
         $chats = $this->chatRepository->findByUser($userId, 20);
 
         $models = $this->aiService->getAvailableModels();
-
-        // Find first available model as default
-        $defaultModel = 'claude-3-5-sonnet-20241022';
-        foreach ($models as $modelId => $modelInfo) {
-            if ($modelInfo['available']) {
-                $defaultModel = $modelId;
-
-                break;
-            }
-        }
+        $defaultModel = $this->aiService->getDefaultModel();
 
         $html = $this->renderer->render('layout::default', [
             'title' => 'AI Chatbot',

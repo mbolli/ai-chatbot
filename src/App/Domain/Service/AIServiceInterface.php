@@ -39,6 +39,13 @@ interface AIServiceInterface {
     public function getAvailableModels(): array;
 
     /**
+     * Get the configured default model.
+     *
+     * @return string Model ID
+     */
+    public function getDefaultModel(): string;
+
+    /**
      * Get documents created by tools during the last chat.
      *
      * @return array<Document>
