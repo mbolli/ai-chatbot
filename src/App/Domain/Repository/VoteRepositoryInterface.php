@@ -15,6 +15,11 @@ interface VoteRepositoryInterface {
     public function findByChat(string $chatId): array;
 
     /**
+     * @return array<string, bool> Map of messageId => isUpvote
+     */
+    public function findByChatAndUser(string $chatId, int $userId): array;
+
+    /**
      * @return list<Vote>
      */
     public function findByMessage(string $messageId): array;

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Handler;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Domain\Repository\VoteRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Template\TemplateRenderer;
@@ -22,6 +23,7 @@ final class ChatHandler implements RequestHandlerInterface {
         private readonly ChatRepositoryInterface $chatRepository,
         private readonly MessageRepositoryInterface $messageRepository,
         private readonly DocumentRepositoryInterface $documentRepository,
+        private readonly VoteRepositoryInterface $voteRepository,
         private readonly AIServiceInterface $aiService,
     ) {}
 
@@ -49,6 +51,7 @@ final class ChatHandler implements RequestHandlerInterface {
         $messages = $this->messageRepository->findByChat($chatId);
         $chats = $this->chatRepository->findByUser($userId, 20);
         $documents = $this->documentRepository->findByChat($chatId);
+        $votes = $this->voteRepository->findByChatAndUser($chatId, $userId);
 
         // Create a map of message_id => document for easy lookup in template
         $messageDocuments = [];
@@ -79,6 +82,7 @@ final class ChatHandler implements RequestHandlerInterface {
                 'chat' => $chat,
                 'messages' => $messages,
                 'messageDocuments' => $messageDocuments,
+                'votes' => $votes,
                 'chats' => $chats,
                 'user' => $userInfo,
                 'models' => $models,

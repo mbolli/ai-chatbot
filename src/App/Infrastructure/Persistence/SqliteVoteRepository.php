@@ -42,6 +42,23 @@ final class SqliteVoteRepository implements VoteRepositoryInterface {
     }
 
     /**
+     * @return array<string, bool> Map of messageId => isUpvote
+     */
+    public function findByChatAndUser(string $chatId, int $userId): array {
+        $stmt = $this->pdo->prepare(
+            'SELECT message_id, is_upvote FROM votes WHERE chat_id = :chat_id AND user_id = :user_id'
+        );
+        $stmt->execute(['chat_id' => $chatId, 'user_id' => $userId]);
+
+        $votes = [];
+        while ($row = $stmt->fetch()) {
+            $votes[$row['message_id']] = (bool) $row['is_upvote'];
+        }
+
+        return $votes;
+    }
+
+    /**
      * @return list<Vote>
      */
     public function findByMessage(string $messageId): array {

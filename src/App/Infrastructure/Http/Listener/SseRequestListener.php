@@ -8,6 +8,7 @@ use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
+use App\Domain\Event\VoteUpdatedEvent;
 use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -161,8 +162,28 @@ final class SseRequestListener {
             return;
         }
 
+        // Handle MessageStreamingEvent completion (void return)
+        if ($eventClass === 'MessageStreamingEvent' && $event instanceof MessageStreamingEvent) {
+            $this->handleMessageStreaming($response, $event);
+
+            return;
+        }
+
+        // Handle DocumentUpdatedEvent delete (void return)
+        if ($eventClass === 'DocumentUpdatedEvent' && $event instanceof DocumentUpdatedEvent && $event->action === 'deleted') {
+            $this->renderDocumentDeleted($response, $event);
+
+            return;
+        }
+
+        // Handle VoteUpdatedEvent
+        if ($eventClass === 'VoteUpdatedEvent' && $event instanceof VoteUpdatedEvent) {
+            $this->handleVoteUpdated($response, $event);
+
+            return;
+        }
+
         $html = match ($eventClass) {
-            'MessageStreamingEvent' => $this->handleMessageStreaming($response, $event),
             'ChatUpdatedEvent' => $this->handleChatUpdated($response, $event),
             'DocumentUpdatedEvent' => $this->handleDocumentUpdated($response, $event),
             default => null,
@@ -197,47 +218,39 @@ final class SseRequestListener {
         $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
     }
 
-    private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): ?string {
+    private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
         if ($event->isComplete) {
             // Reset _isGenerating signal
             $this->sendPatchSignals($response, ['_isGenerating' => false]);
 
-            // Add the standard message actions (copy, vote buttons)
-            // The artifact button (if any) is already in the actions div via prepend
-            $e = fn (string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $messageId = $e($event->messageId);
-            $chatId = $e($event->chatId);
+            // Look up artifact for this message (if any)
+            $document = $this->documentRepository->findByMessageId($event->messageId);
+            $artifact = $document !== null
+                ? ['id' => $document->id, 'title' => $document->title]
+                : null;
 
-            $actionsHtml = <<<HTML
-<button class="btn-icon" title="Copy" data-on:click="navigator.clipboard.writeText(document.getElementById('message-{$messageId}-content').textContent)">
-    <i class="fas fa-copy"></i>
-</button>
-<button class="btn-icon" title="Good response" data-on:click="@patch('/cmd/vote/{$chatId}/{$messageId}', {body: {isUpvote: true}})">
-    <i class="fas fa-thumbs-up"></i>
-</button>
-<button class="btn-icon" title="Bad response" data-on:click="@patch('/cmd/vote/{$chatId}/{$messageId}', {body: {isUpvote: false}})">
-    <i class="fas fa-thumbs-down"></i>
-</button>
-HTML;
+            // Render the message-actions partial (vote is null for new message)
+            $actionsHtml = $this->renderer->partial('message-actions', [
+                'chatId' => $event->chatId,
+                'messageId' => $event->messageId,
+                'vote' => null,
+                'artifact' => $artifact,
+                'e' => TemplateRenderer::escape(...),
+            ]);
 
-            // Append to message-actions (artifact button may already be there)
+            // Replace the empty actions div with the full partial
             $actionsPatch = new PatchElements(
                 $actionsHtml,
                 [
-                    'selector' => '#message-' . $messageId . ' .message-actions',
-                    'mode' => ElementPatchMode::Append,
+                    'selector' => '#message-' . $event->messageId . '-actions',
+                    'mode' => ElementPatchMode::Outer,
                 ]
             );
             $response->write($actionsPatch->getOutput());
 
             // Make the actions div visible
-            $this->sendExecuteScript($response, "document.querySelector('#message-{$messageId} .message-actions')?.removeAttribute('style');");
-
-            return null;
+            $this->sendExecuteScript($response, "document.querySelector('#message-{$event->messageId} .message-actions')?.removeAttribute('style');");
         }
-
-        // Return null - we'll handle this with append mode separately
-        return null;
     }
 
     private function sendMessageChunk(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
@@ -313,6 +326,32 @@ HTML;
         }
     }
 
+    private function handleVoteUpdated(SwooleHttpResponse $response, VoteUpdatedEvent $event): void {
+        // Look up artifact for this message (if any)
+        $document = $this->documentRepository->findByMessageId($event->messageId);
+        $artifact = $document !== null
+            ? ['id' => $document->id, 'title' => $document->title]
+            : null;
+
+        // Render the message-actions partial with updated vote state
+        $html = $this->renderer->partial('message-actions', [
+            'chatId' => $event->chatId,
+            'messageId' => $event->messageId,
+            'vote' => $event->vote,
+            'artifact' => $artifact,
+            'e' => TemplateRenderer::escape(...),
+        ]);
+
+        $patchEvent = new PatchElements(
+            $html,
+            [
+                'selector' => '#message-' . $event->messageId . '-actions',
+                'mode' => ElementPatchMode::Outer,
+            ],
+        );
+        $response->write($patchEvent->getOutput());
+    }
+
     private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
         // Handle generation_stopped by sending signal to reset _isGenerating
         if ($event->action === 'generation_stopped') {
@@ -373,10 +412,10 @@ HTML;
     }
 
     private function handleDocumentUpdated(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
+        // Note: 'deleted' action is handled separately before this method is called
         return match ($event->action) {
             'created' => $this->renderDocumentCreated($response, $event),
             'updated' => $this->renderDocumentUpdated($event),
-            'deleted' => $this->renderDocumentDeleted($response, $event),
             default => '<div id="document-update-signal" data-document-id="' . $event->documentId . '" data-action="' . $event->action . '"></div>',
         };
     }
@@ -401,22 +440,8 @@ HTML;
             $html .= '<div id="artifact-content" class="artifact-content">' . $artifactHtml . '</div>';
             $html .= '<span id="artifact-title">' . htmlspecialchars($document->title, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>';
 
-            // Add artifact button to the message if it has a messageId
-            if ($document->messageId !== null) {
-                $e = fn (string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                $buttonHtml = '<button id="artifact-btn-' . $e($document->messageId) . '" class="btn-icon" title="Open artifact: ' . $e($document->title) . '" '
-                    . 'data-on:click="window.openArtifact(\'' . $e($document->id) . '\')">'
-                    . '<i class="fas fa-file-alt"></i></button>';
-
-                $buttonPatch = new PatchElements(
-                    $buttonHtml,
-                    [
-                        'selector' => '#message-' . $e($document->messageId) . ' .message-actions',
-                        'mode' => ElementPatchMode::Prepend,
-                    ]
-                );
-                $response->write($buttonPatch->getOutput());
-            }
+            // Note: Artifact button is rendered as part of message-actions partial
+            // when streaming completes (handleMessageStreaming) or on page load
         }
 
         // If this is a Python code document, load Pyodide lazily
@@ -487,9 +512,9 @@ HTML;
             }
         }
 
-        $headerHtml = '<tr>' . implode('', array_map(fn ($h) => '<th>' . $e($h) . '</th>', $headers)) . '</tr>';
+        $headerHtml = '<tr>' . implode('', array_map(fn (string $h): string => '<th>' . $e($h) . '</th>', $headers)) . '</tr>';
         $rowsHtml = implode('', array_map(
-            fn ($row) => '<tr>' . implode('', array_map(fn ($c) => '<td>' . $e($c) . '</td>', $row)) . '</tr>',
+            fn (array $row): string => '<tr>' . implode('', array_map(fn (string $c): string => '<td>' . $e($c) . '</td>', $row)) . '</tr>',
             $rows
         ));
 
@@ -632,14 +657,12 @@ JS;
 HTML;
     }
 
-    private function renderDocumentDeleted(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
+    private function renderDocumentDeleted(SwooleHttpResponse $response, DocumentUpdatedEvent $event): void {
         // Close artifact panel if this document is open
         $this->sendPatchSignals($response, [
             '_artifactOpen' => false,
             '_artifactId' => null,
         ]);
-
-        return null;
     }
 
     private function sendDatastarFragment(SwooleHttpResponse $response, string $html): void {

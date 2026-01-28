@@ -24,6 +24,18 @@ final class SqliteDocumentRepository implements DocumentRepositoryInterface {
         return Document::fromArray($row);
     }
 
+    public function findByMessageId(string $messageId): ?Document {
+        $stmt = $this->pdo->prepare('SELECT * FROM documents WHERE message_id = :message_id LIMIT 1');
+        $stmt->execute(['message_id' => $messageId]);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return null;
+        }
+
+        return Document::fromArray($row);
+    }
+
     /**
      * @return list<Document>
      */

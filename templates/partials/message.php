@@ -10,11 +10,13 @@ declare(strict_types=1);
  * @var string $content Message content
  * @var null|string $chatId Chat ID (for voting)
  * @var bool $streaming Whether the message is currently streaming
+ * @var null|bool $vote User's vote (true=upvote, false=downvote, null=no vote)
  * @var callable $e Escape function
  * @var callable $md Markdown parser function
  */
 $isUser = $role === 'user';
 $isAssistant = $role === 'assistant';
+$vote = $vote ?? null;
 ?>
 <div class="message message-<?php echo $e($role); ?>"
      id="message-<?php echo $e($id); ?>"
@@ -30,11 +32,11 @@ $isAssistant = $role === 'assistant';
         <div class="message-role"><?php echo $isUser ? 'You' : 'Assistant'; ?></div>
         <div class="message-text markdown-content" id="message-<?php echo $e($id); ?>-content"><?php
             if ($content) {
-                if ($isAssistant && !$streaming) {
-                    // Parse markdown for completed assistant messages
+                if (!$streaming) {
+                    // Parse markdown for completed messages (both user and assistant)
                     echo $md($content);
                 } else {
-                    // User messages: escape HTML
+                    // Streaming: plain text until complete
                     echo nl2br($e($content));
                 }
             }
@@ -42,21 +44,13 @@ $isAssistant = $role === 'assistant';
         <?php if ($isAssistant && $streaming) { ?>
             <div id="message-<?php echo $e($id); ?>-raw" style="display:none"></div>
         <?php } ?>
-        <?php if ($isAssistant && !$streaming && $chatId) { ?>
-            <div class="message-actions">
-                <button class="btn-icon" title="Copy" data-on:click="navigator.clipboard.writeText(document.getElementById('message-<?php echo $e($id); ?>-content').textContent)">
-                    <i class="fas fa-copy"></i>
-                </button>
-                <button class="btn-icon" title="Good response" data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($id); ?>', {body: {isUpvote: true}})">
-                    <i class="fas fa-thumbs-up"></i>
-                </button>
-                <button class="btn-icon" title="Bad response" data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($id); ?>', {body: {isUpvote: false}})">
-                    <i class="fas fa-thumbs-down"></i>
-                </button>
-            </div>
-        <?php } elseif ($isAssistant && $streaming) { ?>
-            <!-- Empty actions div for artifacts to prepend to during streaming -->
-            <div class="message-actions" style="display:none"></div>
+        <?php if ($isAssistant && !$streaming && $chatId) {
+            $messageId = $id;
+
+            include __DIR__ . '/message-actions.php';
+        } elseif ($isAssistant && $streaming) { ?>
+            <!-- Empty actions div with ID for SSE to target after streaming completes -->
+            <div class="message-actions" id="message-<?php echo $e($id); ?>-actions" style="display:none"></div>
         <?php } ?>
         <?php if ($streaming) { ?>
             <div class="message-streaming-indicator">

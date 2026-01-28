@@ -7,6 +7,7 @@ use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
 use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
+use App\Infrastructure\Http\Handler\Command\VoteCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
@@ -51,4 +52,7 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     $app->post('/cmd/document', DocumentCommandHandler::class, 'cmd.document.create');
     $app->put('/cmd/document/{id:[a-f0-9-]+}', DocumentCommandHandler::class, 'cmd.document.update');
     $app->delete('/cmd/document/{id:[a-f0-9-]+}', DocumentCommandHandler::class, 'cmd.document.delete');
+
+    // Vote endpoints
+    $app->patch('/cmd/vote/{chatId:[a-f0-9-]+}/{messageId:[a-f0-9-]+}', VoteCommandHandler::class, 'cmd.vote');
 };

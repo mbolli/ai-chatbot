@@ -23,6 +23,7 @@ use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
 use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
+use App\Infrastructure\Http\Handler\Command\VoteCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
@@ -147,6 +148,7 @@ class ConfigProvider {
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(MessageRepositoryInterface::class),
                     $container->get(DocumentRepositoryInterface::class),
+                    $container->get(VoteRepositoryInterface::class),
                     $container->get(AIServiceInterface::class),
                 ),
 
@@ -171,6 +173,12 @@ class ConfigProvider {
                 DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(
                     $container->get(DocumentRepositoryInterface::class),
                     $container->get(ChatRepositoryInterface::class),
+                    $container->get(EventBusInterface::class),
+                ),
+                VoteCommandHandler::class => fn (ContainerInterface $container): VoteCommandHandler => new VoteCommandHandler(
+                    $container->get(VoteRepositoryInterface::class),
+                    $container->get(ChatRepositoryInterface::class),
+                    $container->get(MessageRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
                 ),
 

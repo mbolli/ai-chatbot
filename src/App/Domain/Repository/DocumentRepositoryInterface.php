@@ -9,6 +9,8 @@ use App\Domain\Model\Document;
 interface DocumentRepositoryInterface {
     public function find(string $id): ?Document;
 
+    public function findByMessageId(string $messageId): ?Document;
+
     /**
      * @return list<Document>
      */
