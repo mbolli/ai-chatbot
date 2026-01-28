@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Listener;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -153,6 +154,13 @@ final class SseRequestListener {
             }
         }
 
+        // Handle RateLimitExceededEvent
+        if ($eventClass === 'RateLimitExceededEvent' && $event instanceof RateLimitExceededEvent) {
+            $this->handleRateLimitExceeded($response, $event);
+
+            return;
+        }
+
         $html = match ($eventClass) {
             'MessageStreamingEvent' => $this->handleMessageStreaming($response, $event),
             'ChatUpdatedEvent' => $this->handleChatUpdated($response, $event),
@@ -263,6 +271,46 @@ HTML;
 
         // Auto-scroll to bottom
         $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
+    }
+
+    private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
+        $remaining = $event->limit - $event->used;
+        $accountType = $event->isGuest ? 'Guest' : 'Registered';
+
+        // Show toast notification
+        $message = $event->isGuest
+            ? "You've reached your daily limit of {$event->limit} messages. Sign up for more!"
+            : "You've reached your daily limit of {$event->limit} messages. Limit resets at midnight.";
+
+        $toastHtml = <<<HTML
+        <div id="toast-rate-limit" class="toast toast-error" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: var(--red-9); color: white; border-radius: 8px; box-shadow: var(--shadow-3); display: flex; align-items: center; gap: 8px; animation: slideUp 0.3s ease-out;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{$message}</span>
+            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; margin-left: 8px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        HTML;
+
+        $patchEvent = new PatchElements(
+            $toastHtml,
+            [
+                'selector' => 'body',
+                'mode' => ElementPatchMode::Append,
+            ],
+        );
+        $response->write($patchEvent->getOutput());
+
+        // Auto-remove toast after 5 seconds
+        $this->sendExecuteScript($response, "setTimeout(() => document.getElementById('toast-rate-limit')?.remove(), 5000)");
+
+        // Reset generating state
+        $this->sendPatchSignals($response, ['_isGenerating' => false]);
+
+        // If guest, also show the register modal
+        if ($event->isGuest) {
+            $this->sendPatchSignals($response, ['_showRegisterModal' => true]);
+        }
     }
 
     private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
