@@ -60,6 +60,7 @@ final class TemplateRenderer {
      * Parse markdown to HTML.
      */
     public static function markdown(string $text): string {
+        /** @var ?\Parsedown $parsedown */
         static $parsedown = null;
 
         if ($parsedown === null) {

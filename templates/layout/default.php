@@ -53,18 +53,27 @@ $isGuest = ($user['isGuest'] ?? true);
             "_output": "",
             "_message": "",
             "_isGenerating": false,
+            "_previewMarkdown": false,
             "_authModal": null,
             "_authEmail": "",
             "_authPassword": "",
             "_authError": "",
-            "_authLoading": false
+            "_authLoading": false,
+            "_toasts": []
          }'
-         data-init="@get('/updates')">
-
+         data-init="@get('/updates')"
+         data-on-keys:ctrl+b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
+         data-on-keys:cmd+b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
+         data-on-keys:ctrl+k__window__prevent="window.location.href = '/'"
+         data-on-keys:cmd+k__window__prevent="window.location.href = '/'"
+         data-on-keys:escape__window="$_artifactOpen = false; $_authModal = null">
         <?php echo $content ?? ''; ?>
 
         <!-- Auth Modals -->
         <?php include __DIR__ . '/../partials/auth-modal.php'; ?>
+
+        <!-- Toast Notifications -->
+        <?php include __DIR__ . '/../partials/toast.php'; ?>
 
     </div>
 

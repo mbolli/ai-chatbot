@@ -1,23 +1,25 @@
 <?php
 /**
  * Auth Modal Partial
- * Renders login/register/upgrade modals with Datastar bindings.
+ * Renders login/register/upgrade modals using the Popover API.
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 ?>
 
-<!-- Auth Modal Backdrop -->
-<div class="modal-backdrop"
-     data-show="$_authModal !== null"
-     data-on:click="$_authModal = null; $_authError = ''">
-</div>
-
-<!-- Login Modal -->
-<div class="modal" data-show="$_authModal === 'login'">
-    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
+<!-- Login Modal (Popover API) -->
+<div id="login-modal"
+     class="modal-popover"
+     popover="manual"
+     data-on-signal-patch="el.togglePopover($_authModal === 'login')"
+     data-on-signal-patch-filter="{include: /^_authModal$/}"
+     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'login') { $_authModal = null; $_authError = ''; }">
+    <div class="modal-content">
         <div class="modal-header">
             <h2>Sign In</h2>
-            <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">
+            <button class="btn-icon modal-close"
+                    type="button"
+                    popovertarget="login-modal"
+                    popovertargetaction="hide">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -67,7 +69,9 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
         <div class="modal-footer">
             <p>Don't have an account?
-                <button class="btn-link" data-on:click="$_authModal = 'register'; $_authError = ''">
+                <button type="button"
+                        class="btn-link"
+                        data-on:click="$_authModal = 'register'; $_authError = ''">
                     Create one
                 </button>
             </p>
@@ -75,12 +79,20 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
     </div>
 </div>
 
-<!-- Register Modal -->
-<div class="modal" data-show="$_authModal === 'register'">
-    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
+<!-- Register Modal (Popover API) -->
+<div id="register-modal"
+     class="modal-popover"
+     popover="manual"
+     data-on-signal-patch="el.togglePopover($_authModal === 'register')"
+     data-on-signal-patch-filter="{include: /^_authModal$/}"
+     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'register') { $_authModal = null; $_authError = ''; }">
+    <div class="modal-content">
         <div class="modal-header">
             <h2>Create Account</h2>
-            <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">
+            <button class="btn-icon modal-close"
+                    type="button"
+                    popovertarget="register-modal"
+                    popovertargetaction="hide">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -132,7 +144,9 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
         <div class="modal-footer">
             <p>Already have an account?
-                <button class="btn-link" data-on:click="$_authModal = 'login'; $_authError = ''">
+                <button type="button"
+                        class="btn-link"
+                        data-on:click="$_authModal = 'login'; $_authError = ''">
                     Sign in
                 </button>
             </p>
@@ -140,12 +154,20 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
     </div>
 </div>
 
-<!-- Upgrade Modal (for guest users) -->
-<div class="modal" data-show="$_authModal === 'upgrade'">
-    <div class="modal-content" data-on:click__stop="event.stopPropagation()">
+<!-- Upgrade Modal (for guest users) (Popover API) -->
+<div id="upgrade-modal"
+     class="modal-popover"
+     popover="manual"
+     data-on-signal-patch="el.togglePopover($_authModal === 'upgrade')"
+     data-on-signal-patch-filter="{include: /^_authModal$/}"
+     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'upgrade') { $_authModal = null; $_authError = ''; }">
+    <div class="modal-content">
         <div class="modal-header">
             <h2>Save Your Chats</h2>
-            <button class="btn-icon modal-close" data-on:click="$_authModal = null; $_authError = ''">
+            <button class="btn-icon modal-close"
+                    type="button"
+                    popovertarget="upgrade-modal"
+                    popovertargetaction="hide">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -202,10 +224,14 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
         <div class="modal-footer">
             <p>Already have an account?
-                <button class="btn-link" data-on:click="$_authModal = 'login'; $_authError = ''">
+                <button type="button"
+                        class="btn-link"
+                        data-on:click="$_authModal = 'login'; $_authError = ''">
                     Sign in instead
                 </button>
             </p>
         </div>
     </div>
 </div>
+
+
