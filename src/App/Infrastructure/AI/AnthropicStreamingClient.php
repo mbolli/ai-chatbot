@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use Swoole\Coroutine\Socket;
+use App\Infrastructure\AI\Tools\CreateDocumentTool;
+use App\Infrastructure\AI\Tools\UpdateDocumentTool;
+use OpenSwoole\Coroutine;
+use OpenSwoole\Coroutine\Channel;
 
 /**
- * Anthropic API client with true real-time streaming using Swoole coroutines.
+ * Anthropic API client with true real-time streaming using cURL + OpenSwoole.
  *
- * Why not use the official SDK?
+ * Uses cURL with CURLOPT_WRITEFUNCTION for streaming, which works with
+ * OpenSwoole's coroutine hooks. Chunks are passed through a Channel
+ * to enable real-time yielding as they arrive from the API.
  *
- * The anthropic-ai/sdk package uses PSR-18 HTTP clients which buffer
- * the entire response before returning. For true real-time streaming
- * in a Swoole environment, we need direct socket control to yield
- * chunks as they arrive from the API.
- *
- * This client uses Swoole's raw coroutine Socket to read and yield
- * SSE chunks immediately as they arrive without buffering.
+ * Supports tool use (function calling) for document creation.
  */
 final class AnthropicStreamingClient {
-    private const string API_HOST = 'api.anthropic.com';
+    private const string API_HOST = 'https://api.anthropic.com';
     private const string API_VERSION = '2023-06-01';
-    private const int DEFAULT_MAX_TOKENS = 2048;
+    private const int DEFAULT_MAX_TOKENS = 4096;
+
+    private ?CreateDocumentTool $createDocumentTool = null;
+    private ?UpdateDocumentTool $updateDocumentTool = null;
 
     public function __construct(
         private readonly string $apiKey,
@@ -30,13 +32,18 @@ final class AnthropicStreamingClient {
     ) {}
 
     /**
+     * Set tools for this client.
+     */
+    public function setTools(?CreateDocumentTool $createTool, ?UpdateDocumentTool $updateTool): void {
+        $this->createDocumentTool = $createTool;
+        $this->updateDocumentTool = $updateTool;
+    }
+
+    /**
      * Stream chat completion from Anthropic API with true real-time streaming.
      *
-     * Uses raw Swoole socket to read SSE events as they arrive, yielding
-     * text chunks immediately without buffering the entire response.
-     *
      * @param array<array{role: string, content: string}> $messages Conversation messages
-     * @param string                                      $model    Model ID (e.g., claude-3-haiku-20240307)
+     * @param string                                      $model    Model ID (e.g., claude-sonnet-4-5-20250929)
      * @param null|string                                 $system   Optional system prompt
      *
      * @return \Generator<string> Yields text chunks as they arrive
@@ -44,6 +51,9 @@ final class AnthropicStreamingClient {
      * @throws \RuntimeException On API errors with descriptive message
      */
     public function streamChatRealtime(array $messages, string $model, ?string $system = null): \Generator {
+        // Build tools array if available
+        $tools = $this->buildToolsArray();
+
         $payload = [
             'model' => $model,
             'max_tokens' => $this->maxTokens,
@@ -55,200 +65,373 @@ final class AnthropicStreamingClient {
             $payload['system'] = $system;
         }
 
+        if (!empty($tools)) {
+            $payload['tools'] = $tools;
+        }
+
+        yield from $this->executeStreamingRequest($payload, $messages, $model, $system);
+    }
+
+    /**
+     * Execute a streaming request to Anthropic API.
+     *
+     * @return \Generator<string>
+     */
+    private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
         $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
 
-        // Create SSL socket connection
-        $socket = new Socket(AF_INET, SOCK_STREAM, 0);
-        $socket->setProtocol(['open_ssl' => true]);
+        // Channel for passing chunks from cURL callback to generator
+        $channel = new Channel(100);
 
-        if (!$socket->connect(self::API_HOST, 443, 30)) {
-            throw new \RuntimeException('connection error: Failed to connect to Anthropic API - ' . $socket->errMsg);
-        }
+        // Track tool use state
+        $toolUseState = [
+            'activeToolUse' => null,  // Current tool use block being built
+            'pendingToolCalls' => [], // Completed tool calls to execute
+        ];
 
-        // Build HTTP request
-        $contentLength = \strlen($jsonPayload);
-        $request = "POST /v1/messages HTTP/1.1\r\n";
-        $request .= "Host: " . self::API_HOST . "\r\n";
-        $request .= "Content-Type: application/json\r\n";
-        $request .= "Accept: text/event-stream\r\n";
-        $request .= "x-api-key: {$this->apiKey}\r\n";
-        $request .= "anthropic-version: " . self::API_VERSION . "\r\n";
-        $request .= "Content-Length: {$contentLength}\r\n";
-        $request .= "Connection: close\r\n";
-        $request .= "\r\n";
-        $request .= $jsonPayload;
+        // Run cURL in separate coroutine so we can yield from this one
+        Coroutine::create(function () use ($jsonPayload, $channel, &$toolUseState): void {
+            $buffer = '';
 
-        if (!$socket->sendAll($request)) {
-            $socket->close();
+            $ch = curl_init(self::API_HOST . '/v1/messages');
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $jsonPayload,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Accept: text/event-stream',
+                    'x-api-key: ' . $this->apiKey,
+                    'anthropic-version: ' . self::API_VERSION,
+                ],
+                CURLOPT_RETURNTRANSFER => false,
+                CURLOPT_TIMEOUT => 120,
+                CURLOPT_CONNECTTIMEOUT => 30,
+                CURLOPT_WRITEFUNCTION => function ($ch, $data) use ($channel, &$buffer, &$toolUseState): int {
+                    $buffer .= $data;
 
-            throw new \RuntimeException('connection error: Failed to send request');
-        }
+                    // Process complete lines
+                    while (($lineEnd = strpos($buffer, "\n")) !== false) {
+                        $line = substr($buffer, 0, $lineEnd);
+                        $buffer = substr($buffer, $lineEnd + 1);
+                        $line = trim($line);
 
-        // Read HTTP response headers
-        $headerBuffer = '';
-        $headers = '';
-        $remaining = '';
-        while (true) {
-            $data = $socket->recv(4096, 30);
-            if ($data === false || $data === '') {
-                $socket->close();
+                        if ($line === '' || !str_starts_with($line, 'data: ')) {
+                            continue;
+                        }
 
-                throw new \RuntimeException('connection error: Connection closed while reading headers');
+                        $jsonStr = substr($line, 6);
+
+                        if ($jsonStr === '[DONE]') {
+                            continue;
+                        }
+
+                        try {
+                            $event = json_decode($jsonStr, true, 512, JSON_THROW_ON_ERROR);
+                        } catch (\JsonException) {
+                            continue;
+                        }
+
+                        $type = $event['type'] ?? '';
+
+                        // Handle text content
+                        if ($type === 'content_block_delta') {
+                            $delta = $event['delta'] ?? [];
+                            $deltaType = $delta['type'] ?? '';
+
+                            if ($deltaType === 'text_delta' && isset($delta['text'])) {
+                                $channel->push(['type' => 'chunk', 'data' => $delta['text']]);
+                            } elseif ($deltaType === 'input_json_delta' && isset($delta['partial_json'])) {
+                                // Accumulate tool input JSON
+                                if ($toolUseState['activeToolUse'] !== null) {
+                                    $toolUseState['activeToolUse']['input_json'] .= $delta['partial_json'];
+                                }
+                            }
+                        } elseif ($type === 'content_block_start') {
+                            $contentBlock = $event['content_block'] ?? [];
+                            if (($contentBlock['type'] ?? '') === 'tool_use') {
+                                // Start a new tool use block
+                                $toolUseState['activeToolUse'] = [
+                                    'id' => $contentBlock['id'] ?? '',
+                                    'name' => $contentBlock['name'] ?? '',
+                                    'input_json' => '',
+                                ];
+                            }
+                        } elseif ($type === 'content_block_stop') {
+                            // Finalize tool use block if active
+                            if ($toolUseState['activeToolUse'] !== null) {
+                                $toolCall = $toolUseState['activeToolUse'];
+                                try {
+                                    $toolCall['input'] = json_decode($toolCall['input_json'] ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+                                } catch (\JsonException) {
+                                    $toolCall['input'] = [];
+                                }
+                                unset($toolCall['input_json']);
+                                $toolUseState['pendingToolCalls'][] = $toolCall;
+                                $toolUseState['activeToolUse'] = null;
+                            }
+                        } elseif ($type === 'message_stop') {
+                            // Check if we have pending tool calls
+                            if (!empty($toolUseState['pendingToolCalls'])) {
+                                $channel->push(['type' => 'tool_calls', 'data' => $toolUseState['pendingToolCalls']]);
+                                $toolUseState['pendingToolCalls'] = [];
+                            }
+                        } elseif ($type === 'error') {
+                            $channel->push(['type' => 'error', 'data' => $event['error']['message'] ?? 'Unknown error']);
+                        }
+                    }
+
+                    return \strlen($data);
+                },
+            ]);
+
+            $result = curl_exec($ch);
+
+            if ($result === false) {
+                $error = curl_error($ch);
+                $errno = curl_errno($ch);
+                curl_close($ch);
+                $channel->push(['type' => 'error', 'data' => "cURL error ({$errno}): {$error}"]);
+                $channel->push(['type' => 'done']);
+
+                return;
             }
 
-            $headerBuffer .= $data;
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-            $headerEnd = strpos($headerBuffer, "\r\n\r\n");
-            if ($headerEnd !== false) {
-                $headers = substr($headerBuffer, 0, $headerEnd);
-                $remaining = substr($headerBuffer, $headerEnd + 4);
-
-                break;
-            }
-        }
-
-        // Parse status code
-        if (!preg_match('/HTTP\/[\d.]+ (\d+)/', $headers, $matches)) {
-            $socket->close();
-
-            throw new \RuntimeException('API error: Invalid HTTP response');
-        }
-
-        $statusCode = (int) $matches[1];
-
-        if ($statusCode >= 400) {
-            // Read error body
-            $errorBody = $remaining;
-            while (true) {
-                $data = $socket->recv(4096, 5);
-                if ($data === false || $data === '') {
-                    break;
-                }
-
-                $errorBody .= $data;
+            if ($httpCode >= 400) {
+                $channel->push(['type' => 'error', 'data' => "HTTP error: {$httpCode}"]);
             }
 
-            $socket->close();
+            $channel->push(['type' => 'done']);
+        });
 
-            throw new \RuntimeException($this->parseErrorMessage($errorBody, $statusCode), $statusCode);
-        }
-
-        // Process SSE stream in real-time
-        $buffer = $remaining;
+        // Yield chunks as they arrive
         $hasYieldedContent = false;
 
         while (true) {
-            // Process complete lines from buffer
-            while (($lineEnd = strpos($buffer, "\n")) !== false) {
-                $line = substr($buffer, 0, $lineEnd);
-                $buffer = substr($buffer, $lineEnd + 1);
-                $line = trim($line);
+            $item = $channel->pop(60.0); // 60 second timeout
 
-                if ($line === '' || !str_starts_with($line, 'data: ')) {
-                    continue;
-                }
-
-                $jsonStr = substr($line, 6); // Remove 'data: ' prefix
-
-                if ($jsonStr === '[DONE]') {
-                    $socket->close();
-
-                    if (!$hasYieldedContent) {
-                        error_log('Anthropic API returned no content for model: ' . $model);
-                    }
-
-                    return;
-                }
-
-                try {
-                    $event = json_decode($jsonStr, true, 512, JSON_THROW_ON_ERROR);
-                } catch (\JsonException) {
-                    continue;
-                }
-
-                $type = $event['type'] ?? '';
-
-                if ($type === 'content_block_delta') {
-                    $delta = $event['delta'] ?? [];
-                    if (($delta['type'] ?? '') === 'text_delta' && isset($delta['text'])) {
-                        $hasYieldedContent = true;
-
-                        yield $delta['text'];
-                    }
-                }
-
-                if ($type === 'message_stop') {
-                    $socket->close();
-
-                    return;
-                }
-
-                if ($type === 'error') {
-                    $socket->close();
-
-                    throw new \RuntimeException($event['error']['message'] ?? 'Unknown Anthropic error');
-                }
+            if ($item === false) {
+                break;
             }
 
-            // Read more data from socket
-            $data = $socket->recv(4096, 60);
-            if ($data === false || $data === '') {
-                break; // Connection closed or timeout
+            if ($item['type'] === 'done') {
+                break;
             }
 
-            $buffer .= $data;
+            if ($item['type'] === 'error') {
+                throw new \RuntimeException($item['data']);
+            }
+
+            if ($item['type'] === 'chunk') {
+                $hasYieldedContent = true;
+
+                yield $item['data'];
+            }
+
+            if ($item['type'] === 'tool_calls') {
+                // Execute tool calls and continue the conversation
+                $toolResults = $this->executeToolCalls($item['data']);
+
+                // Build continuation messages with tool results
+                $continuationMessages = $originalMessages;
+                $continuationMessages[] = [
+                    'role' => 'assistant',
+                    'content' => $this->buildAssistantToolUseContent($item['data']),
+                ];
+                $continuationMessages[] = [
+                    'role' => 'user',
+                    'content' => $this->buildToolResultContent($toolResults),
+                ];
+
+                // Continue streaming with tool results
+                $continuationPayload = [
+                    'model' => $model,
+                    'max_tokens' => $this->maxTokens,
+                    'messages' => $this->formatMessages($continuationMessages),
+                    'stream' => true,
+                ];
+
+                if ($system !== null) {
+                    $continuationPayload['system'] = $system;
+                }
+
+                $tools = $this->buildToolsArray();
+                if (!empty($tools)) {
+                    $continuationPayload['tools'] = $tools;
+                }
+
+                // Recursively stream the continuation (allows multiple tool calls)
+                yield from $this->executeStreamingRequest($continuationPayload, $continuationMessages, $model, $system);
+
+                break; // Exit this loop since we're continuing in recursion
+            }
         }
 
-        $socket->close();
+        $channel->close();
 
         if (!$hasYieldedContent) {
-            error_log('Anthropic API stream ended without content. Remaining buffer: ' . substr($buffer, 0, 200));
+            error_log('Anthropic API stream ended without content. Model: ' . $model);
         }
     }
 
     /**
-     * Parse error message from API response.
+     * Build the tools array for the API request.
+     *
+     * @return array<array{name: string, description: string, input_schema: array}>
      */
-    private function parseErrorMessage(string $body, int $statusCode): string {
-        try {
-            $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-            $message = $data['error']['message'] ?? "HTTP {$statusCode}";
-        } catch (\JsonException) {
-            $message = "HTTP {$statusCode}";
+    private function buildToolsArray(): array {
+        $tools = [];
+
+        if ($this->createDocumentTool !== null) {
+            $tools[] = [
+                'name' => 'createDocument',
+                'description' => 'Create a new document artifact (code, text, spreadsheet, or image). Use this when the user asks you to write, create, or generate content that would benefit from being in a separate editable document.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'kind' => [
+                            'type' => 'string',
+                            'enum' => ['text', 'code', 'sheet', 'image'],
+                            'description' => 'The type of document: "text" for markdown/prose, "code" for programming code, "sheet" for CSV data, "image" for SVG content',
+                        ],
+                        'title' => [
+                            'type' => 'string',
+                            'description' => 'A short descriptive title for the document',
+                        ],
+                        'content' => [
+                            'type' => 'string',
+                            'description' => 'The actual content of the document',
+                        ],
+                        'language' => [
+                            'type' => 'string',
+                            'description' => 'For code documents, the programming language (e.g., "python", "javascript", "php")',
+                        ],
+                    ],
+                    'required' => ['kind', 'title', 'content'],
+                ],
+            ];
         }
 
-        return match ($statusCode) {
-            401 => 'invalid_api_key: ' . $message,
-            429 => 'rate limit exceeded: ' . $message,
-            529 => 'overloaded: Anthropic API is overloaded',
-            408 => 'timeout: Request timed out',
-            default => $statusCode >= 500
-                ? "server error (HTTP {$statusCode}): {$message}"
-                : "API error (HTTP {$statusCode}): {$message}",
-        };
+        if ($this->updateDocumentTool !== null) {
+            $tools[] = [
+                'name' => 'updateDocument',
+                'description' => 'Update an existing document artifact with new content.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'documentId' => [
+                            'type' => 'string',
+                            'description' => 'The ID of the document to update',
+                        ],
+                        'content' => [
+                            'type' => 'string',
+                            'description' => 'The new content for the document',
+                        ],
+                    ],
+                    'required' => ['documentId', 'content'],
+                ],
+            ];
+        }
+
+        return $tools;
+    }
+
+    /**
+     * Execute tool calls and return results.
+     *
+     * @param array<array{id: string, name: string, input: array}> $toolCalls
+     *
+     * @return array<array{tool_use_id: string, content: string}>
+     */
+    private function executeToolCalls(array $toolCalls): array {
+        $results = [];
+
+        foreach ($toolCalls as $toolCall) {
+            $result = match ($toolCall['name']) {
+                'createDocument' => $this->createDocumentTool?->createDocument(
+                    $toolCall['input']['kind'] ?? 'text',
+                    $toolCall['input']['title'] ?? 'Untitled',
+                    $toolCall['input']['content'] ?? '',
+                    $toolCall['input']['language'] ?? null,
+                ) ?? 'Error: Tool not available',
+                'updateDocument' => $this->updateDocumentTool?->updateDocument(
+                    $toolCall['input']['documentId'] ?? '',
+                    $toolCall['input']['content'] ?? '',
+                ) ?? 'Error: Tool not available',
+                default => "Error: Unknown tool '{$toolCall['name']}'",
+            };
+
+            $results[] = [
+                'tool_use_id' => $toolCall['id'],
+                'content' => $result,
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Build assistant message content with tool use blocks.
+     *
+     * @param array<array{id: string, name: string, input: array}> $toolCalls
+     *
+     * @return array<array{type: string, id?: string, name?: string, input?: array}>
+     */
+    private function buildAssistantToolUseContent(array $toolCalls): array {
+        $content = [];
+
+        foreach ($toolCalls as $toolCall) {
+            $content[] = [
+                'type' => 'tool_use',
+                'id' => $toolCall['id'],
+                'name' => $toolCall['name'],
+                'input' => $toolCall['input'],
+            ];
+        }
+
+        return $content;
+    }
+
+    /**
+     * Build user message content with tool results.
+     *
+     * @param array<array{tool_use_id: string, content: string}> $toolResults
+     *
+     * @return array<array{type: string, tool_use_id: string, content: string}>
+     */
+    private function buildToolResultContent(array $toolResults): array {
+        $content = [];
+
+        foreach ($toolResults as $result) {
+            $content[] = [
+                'type' => 'tool_result',
+                'tool_use_id' => $result['tool_use_id'],
+                'content' => $result['content'],
+            ];
+        }
+
+        return $content;
     }
 
     /**
      * Format messages array for Anthropic API.
      *
-     * @param array<array{role: string, content: string}> $messages
+     * @param array<array{role: string, content: string|array}> $messages
      *
-     * @return array<array{role: string, content: string}>
+     * @return array<array{role: string, content: string|array}>
      */
     private function formatMessages(array $messages): array {
         $formatted = [];
 
         foreach ($messages as $msg) {
-            // Anthropic only accepts 'user' and 'assistant' roles in messages
-            // System messages should be passed via the 'system' parameter
             $role = $msg['role'];
 
             if ($role === 'system') {
-                // System messages are handled separately
                 continue;
             }
 
-            // Ensure role is valid
             if (!\in_array($role, ['user', 'assistant'], true)) {
                 $role = 'user';
             }

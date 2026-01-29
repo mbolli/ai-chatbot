@@ -12,52 +12,60 @@ use App\Infrastructure\AI\Tools\UpdateDocumentTool;
 use LLPhant\AnthropicConfig;
 use LLPhant\Chat\AnthropicChat;
 use LLPhant\Chat\ChatInterface;
-use LLPhant\Chat\Enums\OpenAIChatModel;
 use LLPhant\Chat\FunctionInfo\FunctionBuilder;
 use LLPhant\Chat\Message;
 use LLPhant\Chat\OpenAIChat;
 use LLPhant\OpenAIConfig;
 
 /**
- * AI Service implementation using LLPhant library.
+ * AI Service implementation using LLPhant library for OpenAI
+ * and custom AnthropicStreamingClient for Anthropic.
  *
- * Models are sourced from LLPhant's constants and enums,
- * filtered by which API keys are configured.
+ * Model IDs are defined here directly to support newer models
+ * that may not yet be in LLPhant.
  */
 final class LLPhantAIService implements AIServiceInterface {
     /**
-     * Anthropic models from LLPhant's AnthropicConfig constants.
-     * We select only the ones we want to expose in this app.
+     * Anthropic Claude models.
+     *
+     * Claude 4.5 (current generation - Jan 2026):
+     * - Sonnet: Best balance of speed and intelligence
+     * - Haiku: Fastest, most cost-effective
+     * - Opus: Maximum intelligence (premium pricing)
+     *
+     * Claude 3.5 (legacy):
+     * - Still available but recommend upgrading to 4.5
      */
     private const array ANTHROPIC_MODELS = [
-        AnthropicConfig::CLAUDE_3_5_SONNET_20241022 => 'Claude 3.5 Sonnet',
-        AnthropicConfig::CLAUDE_3_5_SONNET => 'Claude 3.5 Sonnet (June)',
-        AnthropicConfig::CLAUDE_3_OPUS => 'Claude 3 Opus',
-        AnthropicConfig::CLAUDE_3_SONNET => 'Claude 3 Sonnet',
-        AnthropicConfig::CLAUDE_3_HAIKU => 'Claude 3 Haiku',
+        // Claude 4.5 (current)
+        'claude-sonnet-4-5-20250929' => 'Claude 4.5 Sonnet',
+        'claude-haiku-4-5-20251001' => 'Claude 4.5 Haiku',
+        'claude-opus-4-5-20251101' => 'Claude 4.5 Opus',
+        // Claude 3.5 (legacy)
+        'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet',
+        'claude-3-haiku-20240307' => 'Claude 3 Haiku',
     ];
 
     /**
-     * OpenAI models from LLPhant's OpenAIChatModel enum.
-     * We select only the ones we want to expose in this app.
+     * OpenAI GPT models.
      */
     private const array OPENAI_MODELS = [
-        OpenAIChatModel::Gpt4Omni->value => 'GPT-4o',
-        OpenAIChatModel::Gpt4Omini->value => 'GPT-4o Mini',
-        OpenAIChatModel::Gpt4Turbo->value => 'GPT-4 Turbo',
-        OpenAIChatModel::Gpt4->value => 'GPT-4',
+        'gpt-4o' => 'GPT-4o',
+        'gpt-4o-mini' => 'GPT-4o Mini',
+        'gpt-4-turbo' => 'GPT-4 Turbo',
+        'gpt-4' => 'GPT-4',
     ];
 
     /**
      * Default model to use when requested model is not found.
      */
-    private const string DEFAULT_MODEL = AnthropicConfig::CLAUDE_3_HAIKU;
+    private const string DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 
     /**
      * Fast model for title generation (prefer Haiku for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = AnthropicConfig::CLAUDE_3_HAIKU;
-    private const string TITLE_MODEL_OPENAI = OpenAIChatModel::Gpt4Omini->value;
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5-20251001';
+    private const string TITLE_MODEL_OPENAI = 'gpt-4o-mini';
 
     private CreateDocumentTool $createDocumentTool;
     private UpdateDocumentTool $updateDocumentTool;
@@ -95,7 +103,23 @@ final class LLPhantAIService implements AIServiceInterface {
 
         // Use custom streaming client for Anthropic (true streaming)
         if ($provider === 'anthropic' && $this->anthropicClient !== null) {
+            // Configure tools on the streaming client
+            if (isset($this->createDocumentTool) && $chatId !== null) {
+                $this->createDocumentTool->setChatContext($chatId, $messageId);
+                $this->anthropicClient->setTools($this->createDocumentTool, $this->updateDocumentTool);
+            } else {
+                $this->anthropicClient->setTools(null, null);
+            }
+
             yield from $this->streamAnthropicChat($messages, $model);
+
+            // Collect any created documents
+            if (isset($this->createDocumentTool)) {
+                $doc = $this->createDocumentTool->getLastCreatedDocument();
+                if ($doc !== null) {
+                    $this->createdDocuments[] = $doc;
+                }
+            }
 
             return;
         }

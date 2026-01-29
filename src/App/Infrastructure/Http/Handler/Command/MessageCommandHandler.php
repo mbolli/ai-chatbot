@@ -21,10 +21,10 @@ use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Mezzio\Router\RouteResult;
+use OpenSwoole\Coroutine;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Swoole\Coroutine;
 
 final class MessageCommandHandler implements RequestHandlerInterface {
     /**
@@ -50,6 +50,8 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         private readonly AIServiceInterface $aiService,
         private readonly StreamingSessionManager $sessionManager,
         private readonly RateLimitService $rateLimitService,
+        private readonly int $contextRecentMessages = 6,
+        private readonly int $contextMaxOlderChars = 500,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
@@ -359,6 +361,19 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             $updatedMessage = $assistantMessage->appendContent($fullContent);
             $this->messageRepository->update($updatedMessage);
 
+            // Check for created documents and emit events
+            foreach ($this->aiService->getCreatedDocuments() as $document) {
+                $this->eventBus->emit($userId, new DocumentUpdatedEvent(
+                    documentId: $document->id,
+                    chatId: $chatId,
+                    userId: $userId,
+                    action: 'created',
+                    version: $document->currentVersion,
+                    kind: $document->kind,
+                    language: $document->language,
+                ));
+            }
+
             // Signal completion
             $this->eventBus->emit($userId, new MessageStreamingEvent(
                 chatId: $chatId,
@@ -436,7 +451,13 @@ final class MessageCommandHandler implements RequestHandlerInterface {
     }
 
     /**
-     * Build conversation history for AI context.
+     * Build conversation history for AI, with context compression.
+     *
+     * Compression strategy:
+     * - Always include full system message (if any)
+     * - Always include the last N messages in full (recent context)
+     * - Summarize/truncate older messages to reduce tokens
+     * - Estimate ~4 chars per token for rough limits
      *
      * @param list<Message> $messages
      *
@@ -444,16 +465,26 @@ final class MessageCommandHandler implements RequestHandlerInterface {
      */
     private function buildConversationHistory(array $messages): array {
         $history = [];
+        $totalMessages = \count($messages);
 
-        foreach ($messages as $msg) {
+        foreach ($messages as $index => $msg) {
             // Skip messages without content (like newly created assistant placeholders)
             if (empty($msg->content)) {
                 continue;
             }
 
+            $content = $msg->content;
+            $isRecent = ($totalMessages - $index) <= $this->contextRecentMessages;
+
+            // Compress older messages
+            if (!$isRecent && mb_strlen($content) > $this->contextMaxOlderChars) {
+                // Truncate with indicator
+                $content = mb_substr($content, 0, $this->contextMaxOlderChars) . '... [truncated]';
+            }
+
             $history[] = [
                 'role' => $msg->role,
-                'content' => $msg->content,
+                'content' => $content,
             ];
         }
 
@@ -531,7 +562,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 isComplete: false,
             ));
 
-            Coroutine::sleep(0.05); // 50ms between chunks
+            usleep(50000); // 50ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -562,7 +593,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 isComplete: false,
             ));
 
-            Coroutine::sleep(0.5); // 500ms between words
+            usleep(500000); // 500ms between words
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -585,7 +616,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 chunk: $chunk,
                 isComplete: false,
             ));
-            Coroutine::sleep(0.1);
+            usleep(100000); // 100ms
         }
 
         // Then emit an error
@@ -764,7 +795,7 @@ HELP;
                 isComplete: false,
             ));
 
-            Coroutine::sleep(0.02); // 20ms between chunks
+            usleep(20000); // 20ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
