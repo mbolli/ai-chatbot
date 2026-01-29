@@ -54,6 +54,7 @@ $isGuest = ($user['isGuest'] ?? true);
             "_output": "",
             "_message": "",
             "_isGenerating": false,
+            "_generatingMessageId": null,
             "_previewMarkdown": false,
             "_authModal": null,
             "_authEmail": "",

@@ -1,6 +1,6 @@
 <?php
 /**
- * Sidebar partial template.
+ * Sidebar partial template - 3x3 grid layout (left column).
  *
  * @var array $chats List of chat objects
  * @var null|string $currentChatId Currently active chat ID
@@ -9,72 +9,59 @@
  */
 $isGuest = ($user['isGuest'] ?? true);
 ?>
-<aside class="sidebar" data-class="{'sidebar-open': $_sidebarOpen, 'sidebar-closed': !$_sidebarOpen}">
-    <div class="sidebar-header">
-        <h2>AI Chatbot</h2>
-        <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
-            <i class="fas fa-plus"></i>
-        </button>
+<!-- Top Left: Title + New Chat -->
+<div class="sidebar-header" data-class="{'sidebar-closed': !$_sidebarOpen}">
+    <h2>AI Chatbot</h2>
+    <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
+        <i class="fas fa-plus"></i>
+    </button>
+</div>
+
+<!-- Middle Left: Conversations -->
+<nav class="sidebar-nav" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}">
+    <?php if (empty($chats)) { ?>
+        <p class="sidebar-empty animate-fade-in">No conversations yet</p>
+    <?php } else { ?>
+        <?php foreach ($chats as $chat) { ?>
+            <?php echo $this->partial('sidebar-item', [
+                'chatId' => $chat->id,
+                'title' => $chat->title ?? 'New Chat',
+                'isActive' => $chat->id === $currentChatId,
+                'e' => $e,
+            ]); ?>
+        <?php } ?>
+    <?php } ?>
+</nav>
+
+<!-- Bottom Left: Connection Status + Auth -->
+<div class="sidebar-footer" data-class="{'sidebar-closed': !$_sidebarOpen}">
+    <div id="connection-status" class="connection-indicator">
+        <span class="dot"></span>
+        <span>Connecting...</span>
     </div>
 
-    <nav class="sidebar-nav" id="chat-list">
-        <?php if (empty($chats)) { ?>
-            <p class="sidebar-empty animate-fade-in">No conversations yet</p>
-        <?php } else { ?>
-            <?php foreach ($chats as $chat) { ?>
-                <a href="/chat/<?php echo $e($chat->id); ?>"
-                   id="chat-link-<?php echo $e($chat->id); ?>"
-                   class="sidebar-item <?php echo ($chat->id === $currentChatId) ? 'active' : ''; ?>"
-                   data-chat-id="<?php echo $e($chat->id); ?>">
-                    <i class="fas fa-message"></i>
-                    <span class="chat-title"><?php echo $e($chat->title ?? 'New Chat'); ?></span>
-                    <button class="btn-icon btn-delete"
-                            data-on:click__stop="
-                                const item = this.closest('.sidebar-item');
-                                item.classList.add('deleting');
-                                setTimeout(() => {
-                                    @delete('/cmd/chat/<?php echo $e($chat->id); ?>');
-                                }, 250);
-                            "
-                            title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </a>
-            <?php } ?>
-        <?php } ?>
-    </nav>
-
-    <div class="sidebar-footer">
-        <div id="connection-status" class="connection-indicator">
-            <span class="dot"></span>
-            <span>Connecting...</span>
+    <?php if ($isGuest) { ?>
+        <div class="sidebar-auth">
+            <button class="btn btn-secondary btn-sm btn-block"
+                    data-on:click="$_authModal = 'upgrade'">
+                <i class="fas fa-user-plus"></i> Save Chats
+            </button>
+            <button class="btn-link btn-sm"
+                    data-on:click="$_authModal = 'login'">
+                Already have an account? Sign in
+            </button>
         </div>
-
-        <?php if ($isGuest) { ?>
-            <!-- Guest User Actions -->
-            <div class="sidebar-auth">
-                <button class="btn btn-secondary btn-sm btn-block"
-                        data-on:click="$_authModal = 'upgrade'">
-                    <i class="fas fa-user-plus"></i> Save Chats
-                </button>
-                <button class="btn-link btn-sm"
-                        data-on:click="$_authModal = 'login'">
-                    Already have an account? Sign in
-                </button>
+    <?php } else { ?>
+        <div class="sidebar-user">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
             </div>
-        <?php } else { ?>
-            <!-- Logged In User -->
-            <div class="sidebar-user">
-                <div class="user-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
-                </div>
-                <button class="btn-icon"
-                        data-on:click="@post('/auth/logout')"
-                        title="Sign out">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
-        <?php } ?>
-    </div>
-</aside>
+            <button class="btn-icon"
+                    data-on:click="@post('/auth/logout')"
+                    title="Sign out">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    <?php } ?>
+</div>

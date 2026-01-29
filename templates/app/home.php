@@ -14,24 +14,29 @@ $title = 'New Chat';
 $selectedModel = $defaultModel;
 ?>
 
+<!-- Left Column: Sidebar (3 grid areas) -->
 <?php include __DIR__ . '/../partials/sidebar.php'; ?>
 
-<main class="main-content">
-    <?php include __DIR__ . '/../partials/header.php'; ?>
+<!-- Center Column: Header, Messages, Input -->
+<?php include __DIR__ . '/../partials/header.php'; ?>
 
+<div class="main-content" id="messages-container">
     <?php
     $messages = [];
 $chatId = null;
 
 include __DIR__ . '/../partials/messages.php';
 ?>
+</div>
 
+<div class="main-input">
     <?php
 $chatId = null;
 
 include __DIR__ . '/../partials/chat-input.php';
 ?>
-</main>
+</div>
 
+<!-- Right Column: Artifact Panel (3 grid areas) -->
 <?php include __DIR__ . '/../partials/artifact-panel.php'; ?>
 

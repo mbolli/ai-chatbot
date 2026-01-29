@@ -55,7 +55,7 @@ $vote = $vote ?? null;
             <div class="message-actions" id="message-<?php echo $e($id); ?>-actions" style="display:none"></div>
         <?php } ?>
         <?php if ($streaming) { ?>
-            <div class="message-streaming-indicator">
+            <div class="message-streaming-indicator" id="message-<?php echo $e($id); ?>-indicator" data-show="$_generatingMessageId === '<?php echo $e($id); ?>'">
                 <span class="typing-indicator"><span></span><span></span><span></span></span>
             </div>
         <?php } ?>

@@ -1,26 +1,36 @@
 <?php
 /**
- * Artifact panel partial template.
+ * Artifact panel partial template - Right column of 3x3 grid.
  *
  * @var callable $e Escape function
  */
 ?>
-<aside class="artifact-panel" data-class="{'artifact-open': $_artifactOpen, 'artifact-closed': !$_artifactOpen}">
-    <div class="artifact-header">
+<!-- Top Right: Artifact Title + Actions -->
+<div class="artifact-header" data-class="{'artifact-closed': !$_artifactOpen}">
+    <span class="artifact-title">
+        <i class="fas fa-file-code"></i>
         <span id="artifact-title">Artifact</span>
-        <div class="artifact-actions">
-            <button class="btn-icon" id="artifact-download" title="Download" data-on:click="window.downloadArtifact()">
-                <i class="fas fa-download"></i>
-            </button>
-            <button class="btn-icon" data-on:click="$_artifactOpen = false" title="Close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
+    </span>
+    <div class="artifact-actions">
+        <button class="btn-icon" id="artifact-download" title="Download" data-on:click="window.downloadArtifact()">
+            <i class="fas fa-download"></i>
+        </button>
+        <button class="btn-icon" data-on:click="$_artifactOpen = false; $_artifactId = null" title="Close (Esc)">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
-    <div id="artifact-content" class="artifact-content">
-        <!-- Artifact content loaded via SSE -->
-    </div>
-</aside>
+</div>
+
+<!-- Middle Right: Artifact Content -->
+<div id="artifact-content" class="artifact-content" data-class="{'artifact-closed': !$_artifactOpen}">
+    <!-- Artifact content loaded via SSE -->
+</div>
+
+<!-- Bottom Right: Fun footer -->
+<div class="artifact-footer" data-class="{'artifact-closed': !$_artifactOpen}">
+    <i class="fas fa-wand-magic-sparkles"></i>
+    <span>Generated with AI magic ✨</span>
+</div>
 
 <script>
     // Download artifact functionality

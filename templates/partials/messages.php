@@ -12,9 +12,8 @@
 $messageDocuments = $messageDocuments ?? [];
 $votes = $votes ?? [];
 ?>
-<div class="messages-container" id="messages-container">
-    <div id="messages" class="messages">
-        <?php if (empty($messages)) { ?>
+<div id="messages" class="messages">
+    <?php if (empty($messages)) { ?>
             <div class="greeting">
                 <h1>How can I help you today?</h1>
                 <p>Start a conversation by typing a message below.</p>
@@ -48,6 +47,5 @@ $votes = $votes ?? [];
                     </div>
                 </div>
             <?php } ?>
-        <?php } ?>
-    </div>
+    <?php } ?>
 </div>
