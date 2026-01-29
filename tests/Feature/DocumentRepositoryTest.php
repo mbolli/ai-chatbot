@@ -140,5 +140,6 @@ it('stores code document with language', function (): void {
     $found = $this->documentRepository->find($doc->id);
 
     expect($found->kind)->toBe('code')
-        ->and($found->language)->toBe('python');
+        ->and($found->language)->toBe('python')
+    ;
 });

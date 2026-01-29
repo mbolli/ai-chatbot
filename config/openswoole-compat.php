@@ -11,8 +11,7 @@ declare(strict_types=1);
 
 // Polyfill for swoole_set_process_name() which doesn't exist in OpenSwoole
 if (!function_exists('swoole_set_process_name')) {
-    function swoole_set_process_name(string $name): bool
-    {
+    function swoole_set_process_name(string $name): bool {
         if (PHP_OS_FAMILY === 'Darwin') {
             // macOS doesn't support process renaming
             return false;

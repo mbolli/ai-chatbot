@@ -87,5 +87,6 @@ it('deserializes from array', function (): void {
     expect($doc->id)->toBe('doc-123')
         ->and($doc->messageId)->toBe('msg-789')
         ->and($doc->language)->toBe('javascript')
-        ->and($doc->currentVersion)->toBe(3);
+        ->and($doc->currentVersion)->toBe(3)
+    ;
 });

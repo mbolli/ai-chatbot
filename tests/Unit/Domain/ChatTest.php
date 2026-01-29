@@ -85,5 +85,6 @@ it('deserializes from array', function (): void {
         ->and($chat->userId)->toBe(5)
         ->and($chat->title)->toBe('From Array')
         ->and($chat->model)->toBe('claude-3')
-        ->and($chat->isPublic())->toBeTrue();
+        ->and($chat->isPublic())->toBeTrue()
+    ;
 });

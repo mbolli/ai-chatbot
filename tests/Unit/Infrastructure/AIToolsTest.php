@@ -116,6 +116,7 @@ describe('UpdateDocumentTool', function (): void {
         $result = $tool->updateDocument('non-existent', 'Content');
 
         expect($result)->toContain('Error')
-            ->and($result)->toContain('not found');
+            ->and($result)->toContain('not found')
+        ;
     });
 });

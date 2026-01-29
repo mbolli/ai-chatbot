@@ -99,5 +99,6 @@ it('deserializes from array', function (): void {
 
     expect($message->id)->toBe('msg-123')
         ->and($message->chatId)->toBe('chat-456')
-        ->and($message->parts)->toHaveCount(1);
+        ->and($message->parts)->toHaveCount(1)
+    ;
 });
