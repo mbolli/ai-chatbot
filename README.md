@@ -1,4 +1,4 @@
-# AI Chatbot
+# AI Chatbot — PHP/Swoole/Datastar Stack Showcase
 
 [![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Swoole](https://img.shields.io/badge/Swoole-5.0+-007EC6?logo=swoole&logoColor=white)](https://openswoole.com/)
@@ -8,9 +8,27 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Made by zweiundeins.gmbh](https://img.shields.io/badge/Made%20with%20%E2%98%95%20by-zweiundeins.gmbh-blue)](https://zweiundeins.gmbh)
 
-A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI without JavaScript frameworks.
+A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
 
-> This project demonstrates how to build a modern AI chat application using PHP's async capabilities with Swoole and Datastar's HTML-over-the-wire approach for real-time updates.
+> **🎯 Project Goal:** This is a side-by-side comparison with the [Vercel AI Chatbot (Next.js)](https://github.com/vercel/ai-chatbot), demonstrating that a lean PHP stack can deliver the same features with **dramatically less complexity** and **better performance**.
+
+## 🆚 The Comparison: Next.js vs PHP
+
+*To be completed* This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot feature-for-feature using PHP—and the results speak for themselves:
+
+| Aspect | Next.js / Vercel AI Chatbot | This PHP Stack |
+|--------|---------------------------|----------------|
+| **Dependencies** | ~1,200 npm packages | ~15 Composer packages |
+| **Build Step** | Required (Webpack/Turbopack) | None |
+| **Cold Start** | Seconds (serverless/edge) | Instant (persistent server) |
+| **Memory Usage** | ~150-300 MB | ~20-40 MB |
+| **Streaming** | Buffered (often laggy) | True token-by-token SSE |
+| **Frontend** | React + hydration + JS runtime | Datastar (HTML-over-the-wire) |
+| **Lines of Code** | ~15,000+ | ~3,000 |
+| **Learning Curve** | Steep (React, Next.js, Vercel) | Moderate (PHP, PSR standards) |
+| **Hosting** | Vercel / Node.js required | Any PHP host, VPS, Docker |
+
+**The takeaway:** Modern PHP with Swoole is a serious contender for real-time applications. No transpilation, no hydration, no serverless cold starts—just fast, efficient code.
 
 ## ✨ Features
 
@@ -61,7 +79,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 # OPENAI_API_KEY=sk-your-key-here
 
 # Optional: Model and token configuration
-AI_DEFAULT_MODEL=claude-3-5-sonnet-20241022
+AI_DEFAULT_MODEL=claude-sonnet-4-5-20250929
 AI_MAX_TOKENS=4096
 ```
 
@@ -224,12 +242,14 @@ The application follows the Command Query Responsibility Segregation pattern:
 
 ### Supported Models
 
-**Anthropic (Claude)**
-- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet (Latest)
-- `claude-3-5-sonnet` - Claude 3.5 Sonnet (June)
-- `claude-3-opus` - Claude 3 Opus
-- `claude-3-sonnet` - Claude 3 Sonnet
-- `claude-3-haiku` - Claude 3 Haiku (Fast/Cheap)
+**Anthropic (Claude 4.5 - Current)**
+- `claude-sonnet-4-5-20250929` - Claude 4.5 Sonnet (Best balance)
+- `claude-haiku-4-5-20251001` - Claude 4.5 Haiku (Fast/Cheap)
+- `claude-opus-4-5-20251101` - Claude 4.5 Opus (Maximum intelligence)
+
+**Anthropic (Legacy)**
+- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet
+- `claude-3-haiku-20240307` - Claude 3 Haiku
 
 **OpenAI (GPT)**
 - `gpt-4o` - GPT-4o
@@ -382,7 +402,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 OPENAI_API_KEY=sk-your-key-here
 
 # AI Model Configuration
-AI_DEFAULT_MODEL=claude-3-5-sonnet-20241022
+AI_DEFAULT_MODEL=claude-sonnet-4-5-20250929
 AI_MAX_TOKENS=4096
 
 # Application Settings
@@ -507,10 +527,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- Inspired by the [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot)
-- Built with [LLPhant](https://github.com/theodo-group/LLPhant) for AI integration
-- Real-time updates powered by [Datastar](https://data-star.dev/)
+- **Baseline:** [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) — the Next.js reference implementation we're comparing against
+- **AI Integration:** [LLPhant](https://github.com/theodo-group/LLPhant) — PHP library for LLM interactions
+- **Reactivity:** [Datastar](https://data-star.dev/) — HTML-over-the-wire without the JS framework tax
 
 ---
 
-*Need help taming complexity in your web stack?* [zwei und eins gmbh](https://zweiundeins.gmbh) specializes in high-performance web applications.
+*Tired of JavaScript complexity?* [zwei und eins gmbh](https://zweiundeins.gmbh) builds high-performance PHP applications that compete with (and often outperform) modern JS stacks.
