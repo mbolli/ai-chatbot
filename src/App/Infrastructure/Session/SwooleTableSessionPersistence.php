@@ -7,9 +7,9 @@ namespace App\Infrastructure\Session;
 use Mezzio\Session\Session;
 use Mezzio\Session\SessionInterface;
 use Mezzio\Session\SessionPersistenceInterface;
+use OpenSwoole\Table;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Swoole\Table;
 
 /**
  * Swoole Table-based session persistence.
