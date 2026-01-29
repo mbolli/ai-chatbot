@@ -48,6 +48,18 @@ final class Chat {
         );
     }
 
+    public function updateModel(string $model): self {
+        return new self(
+            id: $this->id,
+            userId: $this->userId,
+            title: $this->title,
+            model: $model,
+            visibility: $this->visibility,
+            createdAt: $this->createdAt,
+            updatedAt: new \DateTimeImmutable(),
+        );
+    }
+
     public function updateVisibility(string $visibility): self {
         return new self(
             id: $this->id,

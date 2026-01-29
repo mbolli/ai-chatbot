@@ -43,6 +43,7 @@ return static function (Application $app, MiddlewareFactory $factory, ContainerI
     $app->post('/cmd/chat', ChatCommandHandler::class, 'cmd.chat.create');
     $app->delete('/cmd/chat/{id:[a-f0-9-]+}', ChatCommandHandler::class, 'cmd.chat.delete');
     $app->patch('/cmd/chat/{id:[a-f0-9-]+}/visibility', ChatCommandHandler::class, 'cmd.chat.visibility');
+    $app->patch('/cmd/chat/{id:[a-f0-9-]+}/model', ChatCommandHandler::class, 'cmd.chat.model');
 
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/message', MessageCommandHandler::class, 'cmd.message.send');
     $app->post('/cmd/chat/{chatId:[a-f0-9-]+}/generate', MessageCommandHandler::class, 'cmd.message.generate');

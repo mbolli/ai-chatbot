@@ -34,6 +34,7 @@ final class ChatCommandHandler implements RequestHandlerInterface {
             str_ends_with($routeName, '.create') => $this->create($request),
             str_ends_with($routeName, '.delete') => $this->delete($request),
             str_ends_with($routeName, '.visibility') => $this->visibility($request),
+            str_ends_with($routeName, '.model') => $this->model($request),
             default => new EmptyResponse(404),
         };
     }
@@ -124,6 +125,37 @@ final class ChatCommandHandler implements RequestHandlerInterface {
             chatId: $chatId,
             userId: $userId,
             action: 'visibility_changed',
+        ));
+
+        return new EmptyResponse(204);
+    }
+
+    public function model(ServerRequestInterface $request): ResponseInterface {
+        $chatId = $request->getAttribute('id');
+
+        /** @var int $userId */
+        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
+
+        $chat = $this->chatRepository->find($chatId);
+
+        if ($chat === null) {
+            return new EmptyResponse(404);
+        }
+
+        if (!$chat->isOwnedBy($userId)) {
+            return new EmptyResponse(403);
+        }
+
+        $data = $this->getRequestData($request);
+        $model = $data['model'] ?? $data['_model'] ?? $chat->model;
+
+        $updatedChat = $chat->updateModel($model);
+        $this->chatRepository->save($updatedChat);
+
+        $this->eventBus->emit($userId, new ChatUpdatedEvent(
+            chatId: $chatId,
+            userId: $userId,
+            action: 'model_changed',
         ));
 
         return new EmptyResponse(204);
