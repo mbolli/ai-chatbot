@@ -15,15 +15,15 @@ use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
 use Mezzio\Swoole\Event\RequestEvent;
+use OpenSwoole\Coroutine\Channel;
+use OpenSwoole\Http\Request;
+use OpenSwoole\Http\Response as SwooleHttpResponse;
+use OpenSwoole\Timer;
 use starfederation\datastar\enums\ElementPatchMode;
 use starfederation\datastar\events\ExecuteScript;
 use starfederation\datastar\events\PatchElements;
 use starfederation\datastar\events\PatchSignals;
 use starfederation\datastar\ServerSentEventGenerator;
-use Swoole\Coroutine\Channel;
-use Swoole\Http\Request;
-use Swoole\Http\Response as SwooleHttpResponse;
-use Swoole\Timer;
 
 /**
  * SSE Request Listener for Datastar real-time updates.
@@ -197,7 +197,10 @@ final class SseRequestListener {
     private function sendNewMessage(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
         // If assistant started, set _isGenerating signal first
         if ($event->action === 'assistant_started') {
-            $this->sendPatchSignals($response, ['_isGenerating' => true]);
+            $this->sendPatchSignals($response, [
+                '_isGenerating' => true,
+                '_generatingMessageId' => $event->messageId,
+            ]);
         }
 
         $html = $event->action === 'assistant_started'
@@ -225,8 +228,11 @@ final class SseRequestListener {
 
     private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
         if ($event->isComplete) {
-            // Reset _isGenerating signal
-            $this->sendPatchSignals($response, ['_isGenerating' => false]);
+            // Reset _isGenerating signal and generatingMessageId
+            $this->sendPatchSignals($response, [
+                '_isGenerating' => false,
+                '_generatingMessageId' => null,
+            ]);
 
             // Look up artifact for this message (if any)
             $document = $this->documentRepository->findByMessageId($event->messageId);
@@ -252,7 +258,6 @@ final class SseRequestListener {
                 ]
             );
             $response->write($actionsPatch->getOutput());
-
         }
     }
 
@@ -314,7 +319,10 @@ final class SseRequestListener {
         $this->sendExecuteScript($response, "setTimeout(() => document.getElementById('toast-rate-limit')?.remove(), 5000)");
 
         // Reset generating state
-        $this->sendPatchSignals($response, ['_isGenerating' => false]);
+        $this->sendPatchSignals($response, [
+            '_isGenerating' => false,
+            '_generatingMessageId' => null,
+        ]);
 
         // If guest, also show the register modal
         if ($event->isGuest) {
@@ -351,7 +359,10 @@ final class SseRequestListener {
     private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
         // Handle generation_stopped by sending signal to reset _isGenerating
         if ($event->action === 'generation_stopped') {
-            $this->sendPatchSignals($response, ['_isGenerating' => false]);
+            $this->sendPatchSignals($response, [
+                '_isGenerating' => false,
+                '_generatingMessageId' => null,
+            ]);
 
             return null;
         }
@@ -415,17 +426,15 @@ final class SseRequestListener {
         );
         $response->write($headerPatch->getOutput());
 
-        // Update the sidebar chat link
-        $sidebarHtml = "<a id=\"chat-link-{$event->chatId}\" href=\"/chat/{$event->chatId}\" class=\"chat-link\"><span class=\"chat-title\">{$title}</span></a>";
-        $sidebarPatch = new PatchElements(
-            $sidebarHtml,
-            [
-                'selector' => '#chat-link-' . $event->chatId,
-                'mode' => ElementPatchMode::Outer,
-            ]
-        );
+        // Update the sidebar chat link using the shared partial
+        $sidebarHtml = $this->renderer->partial('sidebar-item', [
+            'chatId' => $event->chatId,
+            'title' => $event->title ?? 'New Chat',
+            'isActive' => true,
+            'e' => TemplateRenderer::escape(...),
+        ]);
+        $sidebarPatch = new PatchElements($sidebarHtml);
         $response->write($sidebarPatch->getOutput());
-
     }
 
     private function handleDocumentUpdated(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
@@ -454,7 +463,7 @@ final class SseRequestListener {
         // Render artifact content
         if ($document !== null) {
             $artifactHtml = $this->renderArtifactContent($document);
-            $html .= '<div id="artifact-content" class="artifact-content">' . $artifactHtml . '</div>';
+            $html .= '<div id="artifact-content" class="artifact-content" data-class="{\'artifact-closed\': !$_artifactOpen}">' . $artifactHtml . '</div>';
             $html .= '<span id="artifact-title">' . htmlspecialchars($document->title, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>';
 
             // Note: Artifact button is rendered as part of message-actions partial
