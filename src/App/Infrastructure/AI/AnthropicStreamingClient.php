@@ -110,16 +110,16 @@ final class AnthropicStreamingClient {
                     $buffer .= $data;
 
                     // Process complete lines
-                    while (($lineEnd = strpos($buffer, "\n")) !== false) {
-                        $line = substr($buffer, 0, $lineEnd);
-                        $buffer = substr($buffer, $lineEnd + 1);
-                        $line = trim($line);
+                    while (($lineEnd = mb_strpos($buffer, "\n")) !== false) {
+                        $line = mb_substr($buffer, 0, $lineEnd);
+                        $buffer = mb_substr($buffer, $lineEnd + 1);
+                        $line = mb_trim($line);
 
                         if ($line === '' || !str_starts_with($line, 'data: ')) {
                             continue;
                         }
 
-                        $jsonStr = substr($line, 6);
+                        $jsonStr = mb_substr($line, 6);
 
                         if ($jsonStr === '[DONE]') {
                             continue;
@@ -160,6 +160,7 @@ final class AnthropicStreamingClient {
                             // Finalize tool use block if active
                             if ($toolUseState['activeToolUse'] !== null) {
                                 $toolCall = $toolUseState['activeToolUse'];
+
                                 try {
                                     $toolCall['input'] = json_decode($toolCall['input_json'] ?: '{}', true, 512, JSON_THROW_ON_ERROR);
                                 } catch (\JsonException) {
@@ -180,7 +181,7 @@ final class AnthropicStreamingClient {
                         }
                     }
 
-                    return \strlen($data);
+                    return mb_strlen($data);
                 },
             ]);
 
@@ -418,9 +419,9 @@ final class AnthropicStreamingClient {
     /**
      * Format messages array for Anthropic API.
      *
-     * @param array<array{role: string, content: string|array}> $messages
+     * @param array<array{role: string, content: array|string}> $messages
      *
-     * @return array<array{role: string, content: string|array}>
+     * @return array<array{role: string, content: array|string}>
      */
     private function formatMessages(array $messages): array {
         $formatted = [];

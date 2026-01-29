@@ -27,12 +27,18 @@ return [
         'openai_api_key' => $_ENV['OPENAI_API_KEY'] ?? null,
 
         // Default model - Haiku is 12x cheaper than Sonnet!
-        // Options: claude-3-haiku-20240307, claude-3-5-sonnet-20241022, gpt-4o-mini
-        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-3-haiku-20240307',
+        // Options: claude-haiku-4-5-20251001, claude-sonnet-4-5-20250929, gpt-4o-mini
+        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-haiku-4-5-20251001',
 
         // Max output tokens per response (cost control)
         // Haiku: ~$1.25/1M output tokens, so 2048 tokens = ~$0.0025
         'max_tokens' => (int) ($_ENV['AI_MAX_TOKENS'] ?? 2048),
+
+        // Context compression - reduce token usage for long conversations
+        // Number of recent messages to keep in full
+        'context_recent_messages' => (int) ($_ENV['AI_CONTEXT_RECENT_MESSAGES'] ?? 6),
+        // Max chars for older messages before truncation (~4 chars = 1 token)
+        'context_max_older_chars' => (int) ($_ENV['AI_CONTEXT_MAX_OLDER_CHARS'] ?? 500),
     ],
 
     // Rate limits - protect your budget!

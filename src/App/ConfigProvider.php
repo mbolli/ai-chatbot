@@ -164,15 +164,22 @@ class ConfigProvider {
                     $container->get(MessageRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
                 ),
-                MessageCommandHandler::class => fn (ContainerInterface $container): MessageCommandHandler => new MessageCommandHandler(
-                    $container->get(ChatRepositoryInterface::class),
-                    $container->get(MessageRepositoryInterface::class),
-                    $container->get(DocumentRepositoryInterface::class),
-                    $container->get(EventBusInterface::class),
-                    $container->get(AIServiceInterface::class),
-                    $container->get(StreamingSessionManager::class),
-                    $container->get(RateLimitService::class),
-                ),
+                MessageCommandHandler::class => function (ContainerInterface $container): MessageCommandHandler {
+                    $config = $container->get('config');
+                    $aiConfig = $config['ai'] ?? [];
+
+                    return new MessageCommandHandler(
+                        $container->get(ChatRepositoryInterface::class),
+                        $container->get(MessageRepositoryInterface::class),
+                        $container->get(DocumentRepositoryInterface::class),
+                        $container->get(EventBusInterface::class),
+                        $container->get(AIServiceInterface::class),
+                        $container->get(StreamingSessionManager::class),
+                        $container->get(RateLimitService::class),
+                        contextRecentMessages: $aiConfig['context_recent_messages'] ?? 6,
+                        contextMaxOlderChars: $aiConfig['context_max_older_chars'] ?? 500,
+                    );
+                },
                 DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(
                     $container->get(DocumentRepositoryInterface::class),
                     $container->get(ChatRepositoryInterface::class),
