@@ -9,7 +9,6 @@ use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Event\VoteUpdatedEvent;
-use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
@@ -446,7 +445,7 @@ final class SseRequestListener {
         // Note: 'deleted' action is handled separately before this method is called
         return match ($event->action) {
             'created' => $this->renderDocumentCreated($response, $event),
-            'updated' => $this->renderDocumentUpdated($event),
+            'updated' => $this->renderDocumentUpdatedContent($response, $event),
             default => '<div id="document-update-signal" data-document-id="' . $event->documentId . '" data-action="' . $event->action . '"></div>',
         };
     }
@@ -454,6 +453,10 @@ final class SseRequestListener {
     private function renderDocumentCreated(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
         // Fetch the document to render its content
         $document = $this->documentRepository->findWithContent($event->documentId);
+
+        if ($document === null) {
+            return null;
+        }
 
         // Send signals to open artifact panel
         $this->sendPatchSignals($response, [
@@ -463,110 +466,42 @@ final class SseRequestListener {
             '_output' => '',
         ]);
 
-        $html = '';
-
-        // Render artifact content
-        if ($document !== null) {
-            $artifactHtml = $this->renderArtifactContent($document);
-            $html .= '<div id="artifact-content" class="artifact-content" data-class="{\'artifact-closed\': !$_artifactOpen}">' . $artifactHtml . '</div>';
-            $html .= '<span id="artifact-title">' . htmlspecialchars($document->title, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>';
-
-            // Note: Artifact button is rendered as part of message-actions partial
-            // when streaming completes (handleMessageStreaming) or on page load
-        }
+        // Render artifact content using the partial
+        $contentHtml = $this->renderer->partial('artifact-content', [
+            'document' => $document,
+            'renderer' => $this->renderer,
+        ]);
+        $titleHtml = '<span id="artifact-title">' . htmlspecialchars($document->title, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>';
 
         // If this is a Python code document, load Pyodide lazily
         if ($event->kind === 'code' && $event->language === 'python') {
             $this->sendExecuteScript($response, $this->getPyodideLoaderJs());
         }
 
-        return $html ?: null;
+        return $contentHtml . $titleHtml;
     }
 
-    /**
-     * Render the artifact content based on document kind.
-     */
-    private function renderArtifactContent(Document $document): string {
-        $e = fn (string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $content = $document->content ?? '';
+    private function renderDocumentUpdatedContent(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
+        // Fetch the updated document
+        $document = $this->documentRepository->findWithContent($event->documentId);
 
-        return match ($document->kind) {
-            'text' => $this->renderTextArtifact($document, $e),
-            'code' => $this->renderCodeArtifact($document, $e),
-            'sheet' => $this->renderSheetArtifact($document, $e),
-            'image' => $this->renderImageArtifact($document, $e),
-            default => '<pre>' . $e($content) . '</pre>',
-        };
-    }
-
-    private function renderTextArtifact(Document $document, callable $e): string {
-        $content = $document->content ?? '';
-        $parsedContent = TemplateRenderer::md($content);
-
-        return <<<HTML
-<div class="artifact-text markdown-content">
-    {$parsedContent}
-</div>
-HTML;
-    }
-
-    private function renderCodeArtifact(Document $document, callable $e): string {
-        $content = $e($document->content ?? '');
-        $language = $e($document->language ?? 'python');
-
-        return <<<HTML
-<div class="artifact-code">
-    <div class="code-header">
-        <span class="code-language">{$language}</span>
-        <button class="btn btn-sm btn-primary" data-on:click="window.runPythonCode()" title="Run code">
-            <i class="fas fa-play"></i> Run
-        </button>
-    </div>
-    <pre><code class="language-{$language}">{$content}</code></pre>
-    <div id="code-output" class="code-output"></div>
-</div>
-HTML;
-    }
-
-    private function renderSheetArtifact(Document $document, callable $e): string {
-        $content = $document->content ?? '';
-        $lines = explode("\n", $content);
-        $headers = [];
-        $rows = [];
-
-        foreach ($lines as $i => $line) {
-            $cells = str_getcsv($line);
-            if ($i === 0) {
-                $headers = $cells;
-            } else {
-                $rows[] = $cells;
-            }
+        if ($document === null) {
+            return null;
         }
 
-        $headerHtml = '<tr>' . implode('', array_map(fn (string $h): string => '<th>' . $e($h) . '</th>', $headers)) . '</tr>';
-        $rowsHtml = implode('', array_map(
-            fn (array $row): string => '<tr>' . implode('', array_map(fn (string $c): string => '<td>' . $e($c) . '</td>', $row)) . '</tr>',
-            $rows
-        ));
+        // Only update if this artifact is currently open
+        // The partial will replace #artifact-content with updated content
+        $contentHtml = $this->renderer->partial('artifact-content', [
+            'document' => $document,
+            'renderer' => $this->renderer,
+        ]);
 
-        return <<<HTML
-<div class="artifact-sheet">
-    <table class="sheet-table">
-        <thead>{$headerHtml}</thead>
-        <tbody>{$rowsHtml}</tbody>
-    </table>
-</div>
-HTML;
-    }
+        // If this is a Python code document, ensure Pyodide is loaded
+        if ($event->kind === 'code' && $event->language === 'python') {
+            $this->sendExecuteScript($response, $this->getPyodideLoaderJs());
+        }
 
-    private function renderImageArtifact(Document $document, callable $e): string {
-        $content = $e($document->content ?? '');
-
-        return <<<HTML
-<div class="artifact-image">
-    <img src="{$content}" alt="{$e($document->title)}" />
-</div>
-HTML;
+        return $contentHtml;
     }
 
     /**
@@ -668,24 +603,6 @@ sys.stderr = sys.__stderr__
     document.head.appendChild(script);
 })();
 JS;
-    }
-
-    private function renderDocumentUpdated(DocumentUpdatedEvent $event): string {
-        // Refresh the document content in the panel if it's open
-        return <<<HTML
-<div id="document-refresh-signal" data-document-id="{$event->documentId}" data-version="{$event->version}">
-    <script data-execute>
-        if (window.datastar?.signals?._artifactId === '{$event->documentId}') {
-            // Trigger a refresh of the artifact content
-            fetch('/api/documents/{$event->documentId}')
-                .then(r => r.json())
-                .then(doc => {
-                    // Document refreshed via SSE
-                });
-        }
-    </script>
-</div>
-HTML;
     }
 
     private function renderDocumentDeleted(SwooleHttpResponse $response, DocumentUpdatedEvent $event): void {
