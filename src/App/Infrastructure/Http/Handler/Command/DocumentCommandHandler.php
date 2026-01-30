@@ -174,7 +174,16 @@ final class DocumentCommandHandler implements RequestHandlerInterface {
             $body = (string) $request->getBody();
             $data = json_decode($body, true);
 
-            return \is_array($data) ? $data : [];
+            if (!\is_array($data)) {
+                return [];
+            }
+
+            // Datastar wraps signals in 'datastar' key
+            if (isset($data['datastar'])) {
+                $data = $data['datastar'];
+            }
+
+            return $data;
         }
 
         $parsed = $request->getParsedBody();

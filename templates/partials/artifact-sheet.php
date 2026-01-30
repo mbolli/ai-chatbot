@@ -22,12 +22,6 @@ $headers = $rows[0] ?? [];
 $dataRows = array_slice($rows, 1);
 ?>
 <div class="artifact-sheet">
-    <div class="artifact-sheet-toolbar">
-        <button class="btn btn-sm" data-on:click="window.downloadCsv(<?php echo htmlspecialchars(json_encode($content), ENT_QUOTES); ?>, '<?php echo $e($document->title); ?>.csv')">
-            <i class="fas fa-download"></i> Download CSV
-        </button>
-    </div>
-
     <div class="artifact-sheet-container">
         <table class="sheet-table" id="artifact-content-text">
             <?php if (!empty($headers)) { ?>
@@ -66,14 +60,14 @@ $dataRows = array_slice($rows, 1);
                 Cancel
             </button>
             <button class="btn btn-primary"
-                    data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
+                    data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {payload: {content: $_artifactContent}}); $_artifactEditing = false">
                 Save
             </button>
         </div>
     </div>
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
-            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($content); ?>">
+            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
         <i class="fas fa-edit"></i> Edit Data
     </button>
 </div>

@@ -52,7 +52,7 @@ $content = $document->content ?? '';
                 Cancel
             </button>
             <button class="btn btn-primary"
-                    data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
+                    data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {payload: {content: $_artifactContent}}); $_artifactEditing = false">
                 Save
             </button>
         </div>

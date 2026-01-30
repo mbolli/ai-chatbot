@@ -18,7 +18,7 @@ $downvoted = $vote === false ? 'voted' : '';
 ?>
 <div class="message-actions" id="message-<?php echo $e($messageId); ?>-actions">
     <?php if ($artifact !== null) { ?>
-    <button id="artifact-btn-<?php echo $e($messageId); ?>" class="btn-icon" title="Open artifact: <?php echo $e($artifact['title']); ?>" data-on:click="window.openArtifact('<?php echo $e($artifact['id']); ?>')">
+    <button id="artifact-btn-<?php echo $e($messageId); ?>" class="btn-icon" title="Open artifact: <?php echo $e($artifact['title']); ?>" data-on:click="@post('/api/documents/<?php echo $e($artifact['id']); ?>/open')">
         <i class="fas fa-file-alt"></i>
     </button>
     <?php } ?>

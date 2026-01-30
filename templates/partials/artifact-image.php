@@ -13,18 +13,6 @@ $isSvg = str_starts_with(mb_trim($content), '<svg') || str_starts_with(mb_trim($
 $isBase64 = str_starts_with($content, 'data:image/');
 ?>
 <div class="artifact-image">
-    <div class="artifact-image-toolbar">
-        <?php if ($isSvg) { ?>
-            <button class="btn btn-sm" data-on:click="window.downloadSvg(<?php echo htmlspecialchars(json_encode($content), ENT_QUOTES); ?>, '<?php echo $e($document->title); ?>.svg')">
-                <i class="fas fa-download"></i> Download SVG
-            </button>
-        <?php } elseif ($isBase64) { ?>
-            <button class="btn btn-sm" data-on:click="window.downloadBase64Image(<?php echo htmlspecialchars(json_encode($content), ENT_QUOTES); ?>, '<?php echo $e($document->title); ?>')">
-                <i class="fas fa-download"></i> Download Image
-            </button>
-        <?php } ?>
-    </div>
-
     <div class="artifact-image-preview">
         <?php if ($isSvg) { ?>
             <div class="svg-container" id="artifact-content-text">
@@ -54,7 +42,7 @@ $isBase64 = str_starts_with($content, 'data:image/');
                     Cancel
                 </button>
                 <button class="btn btn-primary"
-                        data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {body: {content: $_artifactContent}}); $_artifactEditing = false">
+                        data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {payload: {content: $_artifactContent}}); $_artifactEditing = false">
                     Save
                 </button>
             </div>
