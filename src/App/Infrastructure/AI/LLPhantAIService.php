@@ -29,7 +29,7 @@ final class LLPhantAIService implements AIServiceInterface {
      * Default model to use when requested model is not found.
      * Using Haiku 3 as it's the cheapest option.
      */
-    public const string DEFAULT_MODEL = 'claude-3-haiku';
+    public const string DEFAULT_MODEL = 'claude-haiku-3';
 
     /**
      * Anthropic Claude models (current + previous generation).
@@ -51,12 +51,11 @@ final class LLPhantAIService implements AIServiceInterface {
         'claude-opus-4-5' => 'Claude Opus 4.5',
         'claude-sonnet-4-5' => 'Claude Sonnet 4.5',
         'claude-haiku-4-5' => 'Claude Haiku 4.5',
+        'claude-opus-4-1' => 'Claude Opus 4.1',
+        'claude-opus-4' => 'Claude Opus 4',
         'claude-sonnet-4' => 'Claude Sonnet 4',
-        'claude-haiku-4' => 'Claude Haiku 4',
-        // Claude 3.x
-        'claude-3-5-sonnet' => 'Claude Sonnet 3.5',
-        'claude-3-5-haiku' => 'Claude Haiku 3.5',
-        'claude-3-haiku' => 'Claude Haiku 3',
+        'claude-haiku-3-5' => 'Claude Haiku 3.5',
+        'claude-haiku-3' => 'Claude Haiku 3',
     ];
 
     /**
@@ -64,8 +63,9 @@ final class LLPhantAIService implements AIServiceInterface {
      * Sorted by cost: Haiku 3 < 3.5 < 4.5.
      */
     private const array ANTHROPIC_MODELS_PROD = [
-        'claude-3-haiku' => 'Claude Haiku 3',       // $0.25/$1.25 - cheapest
-        'claude-3-5-haiku' => 'Claude Haiku 3.5',   // $0.80/$4
+        'claude-haiku-4-5' => 'Claude Haiku 4.5',       // $1/$5
+        'claude-haiku-3-5' => 'Claude Haiku 3.5',   // $0.80/$4
+        'claude-haiku-3' => 'Claude Haiku 3',       // $0.25/$1.25
     ];
 
     /**
@@ -110,7 +110,7 @@ final class LLPhantAIService implements AIServiceInterface {
     /**
      * Fast model for title generation (prefer cheapest for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku';
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-3';
     private const string TITLE_MODEL_OPENAI = 'gpt-5-nano';
 
     private CreateDocumentTool $createDocumentTool;

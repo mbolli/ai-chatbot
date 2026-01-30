@@ -264,8 +264,8 @@ The application follows the Command Query Responsibility Segregation pattern:
 - `claude-opus-4-1` - Claude Opus 4.1
 - `claude-opus-4` - Claude Opus 4
 - `claude-sonnet-4` - Claude Sonnet 4
-- `claude-3-5-haiku` - Claude Haiku 3.5
-- `claude-3-haiku` - Claude Haiku 3
+- `claude-haiku-3-5` - Claude Haiku 3.5
+- `claude-haiku-3` - Claude Haiku 3
 
 **OpenAI (GPT-5.x)**
 - `gpt-5.2` / `gpt-5.1` / `gpt-5` - Full capability

@@ -25,7 +25,7 @@ return [
 
     // AI Configuration - tune these for cost control
     // NOTE: In production mode (APP_ENV=production), only cost-effective models are available:
-    //   - Anthropic: claude-3-haiku, claude-3-5-haiku, claude-haiku-4-5
+    //   - Anthropic: claude-haiku-3, claude-haiku-3-5, claude-haiku-4-5
     //   - OpenAI: gpt-5-nano, gpt-5-mini, gpt-4o-mini, gpt-4.1-nano, gpt-4.1-mini
     'ai' => [
         // API Keys (required - set in .env)
@@ -33,9 +33,9 @@ return [
         'openai_api_key' => $_ENV['OPENAI_API_KEY'] ?? null,
 
         // Default model - Haiku 3 / GPT-5 Nano are cheapest!
-        // Anthropic: claude-3-haiku ($0.25/$1.25), claude-sonnet-4-5 ($3/$15)
+        // Anthropic: claude-haiku-3 ($0.25/$1.25), claude-haiku-4-5 ($1/$5)
         // OpenAI: gpt-5-nano ($0.05/$0.40), gpt-5 ($1.25/$10)
-        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-3-haiku',
+        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-haiku-3',
 
         // Max output tokens per response (cost control)
         // Haiku 3: ~$1.25/1M output tokens, so 2048 tokens = ~$0.0025
