@@ -153,6 +153,143 @@
     50% { transform: scale(1.05); opacity: 0.8; }
 }
 
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-2);
+    padding: var(--size-2) var(--size-4);
+    border-radius: var(--radius-2);
+    border: none;
+    font-family: inherit;
+    font-size: var(--font-size-1);
+    font-weight: var(--font-weight-5);
+    cursor: pointer;
+    transition: transform 0.2s var(--ease-spring-2),
+                background 0.15s var(--ease-3),
+                box-shadow 0.15s var(--ease-3);
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    background: var(--red-7);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--red-8);
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s var(--ease-spring-3),
+                background 0.15s var(--ease-3),
+                color 0.15s var(--ease-3);
+}
+
+.btn-icon:hover {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.btn-icon:active {
+    transform: scale(0.95);
+}
+
+/* Vote button active state */
+.btn-icon.vote-btn.voted {
+    color: var(--blue-6);
+}
+
+.btn-icon.vote-btn.voted:hover {
+    color: var(--blue-5);
+}
+
+
+.btn-preview {
+    opacity: 0.6;
+}
+
+.btn-preview:hover,
+.btn-preview[aria-pressed="true"] {
+    opacity: 1;
+}
+
+.btn-preview[aria-pressed="true"] {
+    color: var(--accent);
+}
+
+.disclaimer {
+    text-align: center;
+    font-size: var(--font-size-0);
+    color: var(--text-secondary);
+    margin-top: var(--size-2);
+    margin-bottom: 0;
+}
+
+/* Send button with hover glow */
+.btn-send {
+    position: relative;
+}
+
+.btn-send:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.4);
+}
+
+.btn-send:active:not(:disabled) {
+    animation: send-press 0.2s var(--ease-out-2);
+}
+
+@keyframes send-press {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.9); }
+    100% { transform: scale(1) translateY(-1px); }
+}
+
+/* Stop button pulse */
+.btn-stop {
+    animation: stop-pulse 1.5s var(--ease-in-out-2) infinite;
+}
+
+@keyframes stop-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 /* Shake animation for errors */
 .shake {
     animation: var(--animation-shake-x);
@@ -302,6 +439,22 @@ html, body {
     padding: var(--size-3) 0;
     overflow: hidden;
     border-right-color: transparent;
+}
+
+/* Sidebar header actions (new chat + close button) */
+.sidebar-header-actions {
+    display: flex;
+    gap: var(--size-1);
+}
+
+/* Close button hidden by default on desktop */
+.sidebar-close {
+    display: none;
+}
+
+/* Sidebar backdrop overlay (hidden by default, shown on mobile when open) */
+.sidebar-backdrop {
+    display: none;
 }
 
 .sidebar-header {
@@ -656,141 +809,6 @@ html, body {
     align-items: center;
 }
 
-.btn-preview {
-    opacity: 0.6;
-}
-
-.btn-preview:hover,
-.btn-preview[aria-pressed="true"] {
-    opacity: 1;
-}
-
-.btn-preview[aria-pressed="true"] {
-    color: var(--accent);
-}
-
-.disclaimer {
-    text-align: center;
-    font-size: var(--font-size-0);
-    color: var(--text-secondary);
-    margin-top: var(--size-2);
-    margin-bottom: 0;
-}
-
-/* Send button with hover glow */
-.btn-send {
-    position: relative;
-}
-
-.btn-send:hover:not(:disabled) {
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.4);
-}
-
-.btn-send:active:not(:disabled) {
-    animation: send-press 0.2s var(--ease-out-2);
-}
-
-@keyframes send-press {
-    0% { transform: scale(1); }
-    50% { transform: scale(0.9); }
-    100% { transform: scale(1) translateY(-1px); }
-}
-
-/* Stop button pulse */
-.btn-stop {
-    animation: stop-pulse 1.5s var(--ease-in-out-2) infinite;
-}
-
-@keyframes stop-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--size-2);
-    padding: var(--size-2) var(--size-4);
-    border-radius: var(--radius-2);
-    border: none;
-    font-family: inherit;
-    font-size: var(--font-size-1);
-    font-weight: var(--font-weight-5);
-    cursor: pointer;
-    transition: transform 0.2s var(--ease-spring-2),
-                background 0.15s var(--ease-3),
-                box-shadow 0.15s var(--ease-3);
-}
-
-.btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-}
-
-.btn-primary {
-    background: var(--accent);
-    color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-}
-
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-danger {
-    background: var(--red-7);
-    color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-    background: var(--red-8);
-}
-
-.btn-icon {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-2);
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s var(--ease-spring-3),
-                background 0.15s var(--ease-3),
-                color 0.15s var(--ease-3);
-}
-
-.btn-icon:hover {
-    background: var(--surface-3);
-    color: var(--text-primary);
-    transform: scale(1.1);
-}
-
-.btn-icon:active {
-    transform: scale(0.95);
-}
-
-/* Vote button active state */
-.btn-icon.vote-btn.voted {
-    color: var(--blue-6);
-}
-
-.btn-icon.vote-btn.voted:hover {
-    color: var(--blue-5);
-}
-
 /* Old artifact panel styles moved to Artifact Panel Styles section below */
 
 .artifact-header {
@@ -915,6 +933,28 @@ html, body {
         display: flex;
         flex-direction: column;
         grid-template-areas: none;
+    }
+
+    /* Show sidebar close button on mobile */
+    .sidebar-close {
+        display: flex;
+    }
+
+    /* Sidebar backdrop overlay on mobile */
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s var(--ease-2), visibility 0.3s var(--ease-2);
+    }
+
+    .sidebar-backdrop.visible {
+        opacity: 1;
+        visibility: visible;
     }
 
     /* Sidebar becomes fixed overlay on mobile */

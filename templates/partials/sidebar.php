@@ -9,12 +9,22 @@
  */
 $isGuest = ($user['isGuest'] ?? true);
 ?>
+<!-- Sidebar backdrop overlay (mobile only) -->
+<div class="sidebar-backdrop"
+     data-class="{'visible': $_sidebarOpen}"
+     data-on:click="$_sidebarOpen = false"></div>
+
 <!-- Top Left: Title + New Chat -->
 <div class="sidebar-header" data-class="{'sidebar-closed': !$_sidebarOpen}">
     <h2>AI Chatbot</h2>
-    <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
-        <i class="fas fa-plus"></i>
-    </button>
+    <div class="sidebar-header-actions">
+        <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="btn-icon sidebar-close" data-on:click="$_sidebarOpen = false" title="Close sidebar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
 </div>
 
 <!-- Middle Left: Conversations -->

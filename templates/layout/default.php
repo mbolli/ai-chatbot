@@ -61,7 +61,7 @@ $isGuest = ($user['isGuest'] ?? true);
     <div id="app"
          class="app-container"
          data-signals='{
-            "_sidebarOpen": true,
+            "_sidebarOpen": <?php echo json_encode(!isset($_SERVER['HTTP_USER_AGENT']) || !preg_match('/Mobile|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT'])); ?>,
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
             "_model": <?php echo json_encode($defaultModel ?? LLPhantAIService::DEFAULT_MODEL); ?>,
             "_artifactOpen": false,
@@ -71,7 +71,7 @@ $isGuest = ($user['isGuest'] ?? true);
             "_documentVersion": 1,
             "_output": "",
             "_message": "",
-            "_generatingMessage": null,
+            "_generatingMessage": "",
             "_previewMarkdown": false,
             "_authModal": null,
             "_authEmail": "",

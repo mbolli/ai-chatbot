@@ -12,7 +12,8 @@ $isActive = $isActive ?? false;
 <a href="/chat/<?php echo $e($chatId); ?>"
    id="chat-link-<?php echo $e($chatId); ?>"
    class="sidebar-item <?php echo $isActive ? 'active' : ''; ?>"
-   data-chat-id="<?php echo $e($chatId); ?>">
+   data-chat-id="<?php echo $e($chatId); ?>"
+   data-on:click="window.innerWidth <= 768 && ($_sidebarOpen = false)">
     <i class="fas fa-message"></i>
     <span class="sidebar-item-title"><?php echo $e($title); ?></span>
     <button class="btn-icon btn-delete"
