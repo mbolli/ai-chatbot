@@ -5,6 +5,11 @@
  * @var callable $e Escape function
  */
 ?>
+<!-- Artifact backdrop overlay (mobile only) -->
+<div class="artifact-backdrop"
+     data-class="{'visible': $_artifactOpen}"
+     data-on:click="$_artifactOpen = false; $_artifactId = null"></div>
+
 <!-- Top Right: Artifact Title + Actions -->
 <div class="artifact-header artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
     <span class="artifact-title">

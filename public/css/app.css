@@ -811,6 +811,11 @@ html, body {
 
 /* Old artifact panel styles moved to Artifact Panel Styles section below */
 
+/* Artifact backdrop overlay (hidden by default, shown on mobile when open) */
+.artifact-backdrop {
+    display: none;
+}
+
 .artifact-header {
     display: flex;
     align-items: center;
@@ -824,6 +829,7 @@ html, body {
     flex: 1;
     overflow: auto;
     padding: var(--size-4);
+    min-height: calc(100vh - 120px); /* Subtract header (60px) + footer (60px) */
 }
 
 /* Artifact Content Styles */
@@ -993,28 +999,8 @@ html, body {
     .main-input {
         order: 3;
     }
-    
-    /* Artifact panel becomes full-width overlay on mobile */
-    .artifact-header,
-    .artifact-content,
-    .artifact-footer {
-        position: fixed;
-        right: 0;
-        width: 100%;
-        max-width: none;
-        z-index: 100;
-        transition: transform 0.4s var(--ease-spring-3);
-    }
 
-    .artifact-header { top: 0; }
-    .artifact-content { top: 60px; bottom: 60px; }
-    .artifact-footer { bottom: 0; }
-
-    .artifact-header.artifact-closed,
-    .artifact-content.artifact-closed,
-    .artifact-footer.artifact-closed {
-        display: none;
-    }
+    /* Artifact mobile styles are defined after desktop artifact styles for proper override */
 
     /* Chat area adjustments */
     .main-content {
@@ -1048,6 +1034,28 @@ html, body {
     .input-form {
         padding: var(--size-2);
         gap: var(--size-2);
+    }
+
+    /* Input toolbar wraps on mobile */
+    .input-toolbar {
+        flex-wrap: wrap;
+        gap: var(--size-2);
+    }
+
+    .input-toolbar-left {
+        order: 1;
+    }
+
+    .input-toolbar .disclaimer {
+        order: 3;
+        flex-basis: 100%;
+        text-align: center;
+        white-space: normal;
+        font-size: var(--font-size-00);
+    }
+
+    .input-actions {
+        order: 2;
     }
 
     .input-textarea {
@@ -1756,6 +1764,59 @@ html, body {
     border-radius: var(--radius-1);
     color: var(--text-primary);
     font-size: var(--font-size-0);
+}
+
+/* Artifact Mobile Overrides - must come after desktop artifact styles */
+@media (max-width: 768px) {
+    .artifact-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s var(--ease-2), visibility 0.3s var(--ease-2);
+    }
+
+    .artifact-backdrop.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .artifact-header,
+    .artifact-content,
+    .artifact-footer {
+        position: fixed;
+        right: 0;
+        width: 280px;
+        max-width: 100%;
+        z-index: 100;
+        background: var(--surface-1);
+        transition: transform 0.4s var(--ease-spring-3);
+    }
+
+    .artifact-header { 
+        top: 0; 
+        height: 60px; 
+    }
+    
+    .artifact-content { 
+        top: 60px; 
+        bottom: 60px; 
+        min-height: calc(100vh - 120px);
+    }
+    
+    .artifact-footer { 
+        bottom: 0; 
+        height: 60px; 
+    }
+
+    .artifact-header.artifact-closed,
+    .artifact-content.artifact-closed,
+    .artifact-footer.artifact-closed {
+        transform: translateX(100%);
+    }
 }
 
 /* ================================
