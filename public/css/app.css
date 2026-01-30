@@ -60,8 +60,7 @@
 
 /* Sidebar item animations */
 .sidebar-item {
-    animation: var(--animation-fade-in) forwards,
-               var(--animation-slide-in-left) forwards;
+    animation: var(--animation-fade-in) forwards;
     animation-duration: 0.3s;
     animation-timing-function: var(--ease-out-3);
 }
@@ -276,6 +275,7 @@ html, body {
     background: var(--surface-1);
     border-right: 1px solid var(--surface-3);
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--size-2);
     transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3);
 }
@@ -349,6 +349,7 @@ html, body {
 
 .sidebar-item.active {
     background: var(--surface-3);
+    view-transition-name: active-chat;
 }
 
 .sidebar-item-title {
@@ -2061,4 +2062,53 @@ html, body {
     animation: var(--animation-fade-in) forwards;
     animation-duration: 0.3s;
     animation-timing-function: var(--ease-out-2);
+}
+
+/* ================================
+   View Transitions
+   ================================ */
+
+@view-transition {
+    navigation: auto;
+}
+
+/* Smooth crossfade transition */
+::view-transition-old(root) {
+    animation: 300ms var(--ease-out-3) both vt-fade-out;
+}
+
+::view-transition-new(root) {
+    animation: 300ms var(--ease-out-3) both vt-fade-in;
+}
+
+@keyframes vt-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes vt-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Keep sidebar stable during transitions */
+.sidebar {
+    view-transition-name: sidebar;
+}
+
+::view-transition-old(sidebar),
+::view-transition-new(sidebar) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/* Animate active chat indicator moving between items */
+::view-transition-old(active-chat),
+::view-transition-new(active-chat) {
+    animation: 300ms var(--ease-out-3) both;
+    height: 100%;
+}
+
+::view-transition-group(active-chat) {
+    animation: 300ms var(--ease-out-3) both;
 }

@@ -13,6 +13,7 @@ $isGuest = ($user['isGuest'] ?? true);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
 
     <!-- Open Props CSS -->
@@ -27,7 +28,7 @@ $isGuest = ($user['isGuest'] ?? true);
     <!-- Custom styles -->
     <link rel="stylesheet" href="/css/app.css">
 
-    <!-- Datastar from CDN -->
+    <!-- Datastar -->
     <script type="importmap">
     {
         "imports": {
@@ -45,7 +46,7 @@ $isGuest = ($user['isGuest'] ?? true);
          data-signals='{
             "_sidebarOpen": true,
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
-            "_model": <?php echo json_encode($defaultModel ?? 'claude-3-5-sonnet-20241022'); ?>,
+            "_model": <?php echo json_encode($defaultModel ?? \App\Infrastructure\AI\LLPhantAIService::DEFAULT_MODEL); ?>,
             "_artifactOpen": false,
             "_artifactId": null,
             "_artifactEditing": false,
@@ -53,8 +54,7 @@ $isGuest = ($user['isGuest'] ?? true);
             "_documentVersion": 1,
             "_output": "",
             "_message": "",
-            "_isGenerating": false,
-            "_generatingMessageId": null,
+            "_generatingMessage": null,
             "_previewMarkdown": false,
             "_authModal": null,
             "_authEmail": "",
@@ -74,6 +74,14 @@ $isGuest = ($user['isGuest'] ?? true);
 
         <!-- Toast Notifications -->
         <?php include __DIR__ . '/../partials/toast.php'; ?>
+
+        <!-- Signal Debug Bar (dev only) -->
+        <?php if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') { ?>
+        <details class="signal-debug" style="position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface-1); border-top: var(--border-size-1) solid var(--surface-4); max-height: var(--size-13); overflow: auto; font-size: var(--font-size-0); z-index: var(--layer-important); box-shadow: var(--shadow-3);">
+            <summary style="padding: var(--size-1) var(--size-2); cursor: pointer; background: var(--surface-2); font-weight: var(--font-weight-5);">🔧 Signals</summary>
+            <pre data-json-signals style="padding: var(--size-2); margin: 0; white-space: pre-wrap; font-family: var(--font-mono); color: var(--text-2);"></pre>
+        </details>
+        <?php } ?>
 
     </div>
 
