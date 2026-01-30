@@ -117,6 +117,11 @@ final class SseRequestListener {
     }
 
     private function sendEvent(SwooleHttpResponse $response, object $event): void {
+        // Early exit if client disconnected
+        if (!$response->isWritable()) {
+            return;
+        }
+
         $eventClass = basename(str_replace('\\', '/', \get_class($event)));
 
         // Handle MessageStreamingEvent specially with append mode
@@ -692,20 +697,12 @@ HTML;
     }
 
     private function sendDatastarFragment(SwooleHttpResponse $response, string $html): void {
-        if (!$response->isWritable()) {
-            return;
-        }
-
         // Use Datastar SDK's MergeFragments event
         $event = new PatchElements($html);
         $response->write($event->getOutput());
     }
 
     private function sendExecuteScript(SwooleHttpResponse $response, string $script): void {
-        if (!$response->isWritable()) {
-            return;
-        }
-
         $event = new ExecuteScript($script);
         $response->write($event->getOutput());
     }
@@ -714,10 +711,6 @@ HTML;
      * @param array<string, mixed> $signals
      */
     private function sendPatchSignals(SwooleHttpResponse $response, array $signals): void {
-        if (!$response->isWritable()) {
-            return;
-        }
-
         $event = new PatchSignals($signals);
         $response->write($event->getOutput());
     }
