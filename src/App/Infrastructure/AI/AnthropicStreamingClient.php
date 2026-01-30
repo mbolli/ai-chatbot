@@ -74,6 +74,9 @@ final class AnthropicStreamingClient {
     /**
      * Execute a streaming request to Anthropic API using raw socket for true streaming.
      *
+     * @param array<string, mixed>                                     $payload
+     * @param array<array{role: string, content: array<mixed>|string}> $originalMessages
+     *
      * @return \Generator<string>
      */
     private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
@@ -330,7 +333,7 @@ final class AnthropicStreamingClient {
     /**
      * Build the tools array for the API request.
      *
-     * @return array<array{name: string, description: string, input_schema: array}>
+     * @return array<array{name: string, description: string, input_schema: array<string, mixed>}>
      */
     private function buildToolsArray(): array {
         $tools = [];
@@ -392,7 +395,7 @@ final class AnthropicStreamingClient {
     /**
      * Execute tool calls and return results.
      *
-     * @param array<array{id: string, name: string, input: array}> $toolCalls
+     * @param array<array{id: string, name: string, input: array<string, mixed>}> $toolCalls
      *
      * @return array<array{tool_use_id: string, content: string}>
      */
@@ -426,9 +429,9 @@ final class AnthropicStreamingClient {
     /**
      * Build assistant message content with tool use blocks.
      *
-     * @param array<array{id: string, name: string, input: array}> $toolCalls
+     * @param array<array{id: string, name: string, input: array<string, mixed>}> $toolCalls
      *
-     * @return array<array{type: string, id?: string, name?: string, input?: array}>
+     * @return array<array{type: string, id?: string, name?: string, input?: array<string, mixed>}>
      */
     private function buildAssistantToolUseContent(array $toolCalls): array {
         $content = [];
@@ -469,9 +472,9 @@ final class AnthropicStreamingClient {
     /**
      * Format messages array for Anthropic API.
      *
-     * @param array<array{role: string, content: array|string}> $messages
+     * @param array<array{role: string, content: array<mixed>|string}> $messages
      *
-     * @return array<array{role: string, content: array|string}>
+     * @return array<array{role: string, content: array<mixed>|string}>
      */
     private function formatMessages(array $messages): array {
         $formatted = [];

@@ -16,5 +16,7 @@ parameters:
   ignoreErrors:
     # Mezzio Session interface deprecation - will be fixed in v2.0
     - '#has typehint with deprecated interface Mezzio\\Session\\SessionIdentifierAwareInterface#'
+    # PHPStan doesn't have proper stubs for OpenSwoole Timer
+    - '#Static method OpenSwoole\\Timer::clear\(\) invoked with 1 parameter, 0 required#'
 includes:
   - vendor/phpstan/phpstan/conf/bleedingEdge.neon
