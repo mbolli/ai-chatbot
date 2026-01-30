@@ -11,6 +11,9 @@ use Mezzio\Router\RouteResult;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use starfederation\datastar\events\ExecuteScript;
+use starfederation\datastar\events\PatchSignals;
+use starfederation\datastar\ServerSentEventGenerator;
 
 /**
  * Handles authentication actions: login, register, logout, upgrade.
@@ -37,8 +40,8 @@ final class AuthHandler implements RequestHandlerInterface {
         $session = AuthMiddleware::getSession($request);
         $data = $this->getRequestData($request);
 
-        $email = $data['_authEmail'] ?? $data['email'] ?? '';
-        $password = $data['_authPassword'] ?? $data['password'] ?? '';
+        $email = $data['email'] ?? '';
+        $password = $data['password'] ?? '';
 
         if (empty($email) || empty($password)) {
             return $this->errorResponse('Email and password required');
@@ -58,8 +61,8 @@ final class AuthHandler implements RequestHandlerInterface {
         $session = AuthMiddleware::getSession($request);
         $data = $this->getRequestData($request);
 
-        $email = $data['_authEmail'] ?? $data['email'] ?? '';
-        $password = $data['_authPassword'] ?? $data['password'] ?? '';
+        $email = $data['email'] ?? '';
+        $password = $data['password'] ?? '';
 
         if (empty($email) || empty($password)) {
             return $this->errorResponse('Email and password required');
@@ -99,8 +102,8 @@ final class AuthHandler implements RequestHandlerInterface {
             return $this->errorResponse('Only guest accounts can be upgraded');
         }
 
-        $email = $data['_authEmail'] ?? $data['email'] ?? '';
-        $password = $data['_authPassword'] ?? $data['password'] ?? '';
+        $email = $data['email'] ?? '';
+        $password = $data['password'] ?? '';
 
         if (empty($email) || empty($password)) {
             return $this->errorResponse('Email and password required');
@@ -118,15 +121,15 @@ final class AuthHandler implements RequestHandlerInterface {
     public function status(ServerRequestInterface $request): ResponseInterface {
         $user = AuthMiddleware::getUser($request);
 
-        $signals = [
+        $signalsEvent = new PatchSignals([
             '_authModal' => null,
             '_authLoading' => false,
             '_authError' => '',
             '_userEmail' => $user->email,
             '_isGuest' => $user->isGuest,
-        ];
+        ]);
 
-        return $this->sseResponse($this->buildPatchSignalsEvent($signals));
+        return $this->sseResponse($signalsEvent->getOutput());
     }
 
     /**
@@ -154,7 +157,7 @@ final class AuthHandler implements RequestHandlerInterface {
      * Return SSE response that closes modal and reloads page.
      */
     private function successResponse(): ResponseInterface {
-        $events = $this->buildPatchSignalsEvent([
+        $signalsEvent = new PatchSignals([
             '_authModal' => null,
             '_authLoading' => false,
             '_authError' => '',
@@ -163,21 +166,21 @@ final class AuthHandler implements RequestHandlerInterface {
         ]);
 
         // Reload page to get fresh user state
-        $events .= $this->buildExecuteScriptEvent('window.location.reload()');
+        $scriptEvent = new ExecuteScript('window.location.reload()');
 
-        return $this->sseResponse($events);
+        return $this->sseResponse($signalsEvent->getOutput() . $scriptEvent->getOutput());
     }
 
     /**
      * Return SSE response with error message.
      */
     private function errorResponse(string $message): ResponseInterface {
-        $events = $this->buildPatchSignalsEvent([
+        $signalsEvent = new PatchSignals([
             '_authLoading' => false,
             '_authError' => $message,
         ]);
 
-        return $this->sseResponse($events);
+        return $this->sseResponse($signalsEvent->getOutput());
     }
 
     /**
@@ -185,29 +188,12 @@ final class AuthHandler implements RequestHandlerInterface {
      */
     private function sseResponse(string $eventData): ResponseInterface {
         $response = new Response();
-        $response = $response->withHeader('Content-Type', 'text/event-stream');
-        $response = $response->withHeader('Cache-Control', 'no-cache');
+        foreach (ServerSentEventGenerator::headers() as $name => $value) {
+            $response = $response->withHeader($name, $value);
+        }
 
         $response->getBody()->write($eventData);
 
         return $response;
-    }
-
-    /**
-     * Build a Datastar patch-signals SSE event.
-     *
-     * @param array<string, mixed> $signals
-     */
-    private function buildPatchSignalsEvent(array $signals): string {
-        $data = json_encode($signals, JSON_THROW_ON_ERROR);
-
-        return "event: datastar-patch-signals\ndata: signals {$data}\n\n";
-    }
-
-    /**
-     * Build a Datastar execute-script SSE event.
-     */
-    private function buildExecuteScriptEvent(string $script): string {
-        return "event: datastar-execute-script\ndata: script {$script}\n\n";
     }
 }
