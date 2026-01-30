@@ -46,6 +46,11 @@ return [
         'context_recent_messages' => (int) ($_ENV['AI_CONTEXT_RECENT_MESSAGES'] ?? 6),
         // Max chars for older messages before truncation (~4 chars = 1 token)
         'context_max_older_chars' => (int) ($_ENV['AI_CONTEXT_MAX_OLDER_CHARS'] ?? 500),
+
+        // Response format: 'markdown' (default) or 'plain'
+        // Markdown responses are rendered with formatting (headers, code blocks, lists)
+        // Plain responses are simpler text without heavy formatting
+        'response_format' => $_ENV['AI_RESPONSE_FORMAT'] ?? 'markdown',
     ],
 
     // Rate limits - protect your budget!

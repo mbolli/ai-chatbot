@@ -130,6 +130,7 @@ final class LLPhantAIService implements AIServiceInterface {
         private readonly int $maxTokens = 2048,
         private readonly ?string $defaultModel = null,
         private readonly bool $productionMode = false,
+        private readonly string $responseFormat = 'markdown',
     ) {
         // Initialize tools if repository is provided
         if ($documentRepository !== null) {
@@ -450,12 +451,16 @@ final class LLPhantAIService implements AIServiceInterface {
     }
 
     private function getSystemPrompt(): string {
-        return <<<'PROMPT'
+        $formatInstructions = $this->responseFormat === 'plain'
+            ? "- Keep responses as plain text without markdown formatting\n- Use simple line breaks for structure\n- Avoid headers, bullet points, and code blocks unless specifically requested"
+            : "- Use markdown formatting when helpful (headers, lists, code blocks)\n- Format code with appropriate language syntax highlighting";
+
+        return <<<PROMPT
 You are a helpful AI assistant. You provide clear, accurate, and helpful responses.
 
 Guidelines:
 - Be concise but thorough
-- Use markdown formatting when helpful
+{$formatInstructions}
 - If you're unsure, say so
 - Be friendly and professional
 

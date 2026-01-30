@@ -140,6 +140,7 @@ class ConfigProvider {
                         maxTokens: $aiConfig['max_tokens'] ?? 2048,
                         defaultModel: $aiConfig['default_model'] ?? null,
                         productionMode: $isProduction,
+                        responseFormat: $aiConfig['response_format'] ?? 'markdown',
                     );
                 },
 
