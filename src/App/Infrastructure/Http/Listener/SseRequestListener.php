@@ -17,7 +17,6 @@ use Mezzio\Swoole\Event\RequestEvent;
 use OpenSwoole\Coroutine\Channel;
 use OpenSwoole\Http\Request;
 use OpenSwoole\Http\Response as SwooleHttpResponse;
-use OpenSwoole\Timer;
 use starfederation\datastar\enums\ElementPatchMode;
 use starfederation\datastar\events\ExecuteScript;
 use starfederation\datastar\events\PatchElements;
@@ -35,7 +34,6 @@ use starfederation\datastar\ServerSentEventGenerator;
  */
 final class SseRequestListener {
     private const string SSE_PATH = '/updates';
-    private const int KEEP_ALIVE_INTERVAL_MS = 30000; // 30 seconds
 
     public function __construct(
         private readonly EventBusInterface $eventBus,
@@ -79,16 +77,6 @@ final class SseRequestListener {
         // Send initial connection event
         $this->sendDatastarFragment($response, '<div id="connection-status" data-connected="true"><span class="dot connected"></span><span>Connected</span></div>');
 
-        // Keep-alive timer
-        $timerId = Timer::tick(self::KEEP_ALIVE_INTERVAL_MS, function () use ($response, $channel): void {
-            if (!$response->isWritable()) {
-                $channel->push(true);
-
-                return;
-            }
-            $response->write(": keep-alive\n\n");
-        });
-
         // Mark response as sent BEFORE blocking - stops propagation to other listeners
         $event->responseSent();
 
@@ -96,7 +84,6 @@ final class SseRequestListener {
         $channel->pop();
 
         // Cleanup
-        Timer::clear($timerId);
         $this->eventBus->unsubscribe($subscriptionId);
     }
 
@@ -370,15 +357,10 @@ final class SseRequestListener {
         // Handle title_updated with combined patch events
         if ($event->action === 'title_updated') {
             $this->sendTitleUpdatePatches($response, $event);
-
-            return null;
         }
 
-        return match ($event->action) {
-            'message_added' => $this->renderMessage($event),
-            'assistant_started' => $this->renderAssistantPlaceholder($event),
-            default => '<div id="chat-update-signal" data-chat-id="' . $event->chatId . '" data-action="' . $event->action . '"></div>',
-        };
+        // Other actions (deleted, visibility_changed, model_changed) don't need SSE response
+        return null;
     }
 
     private function renderMessage(ChatUpdatedEvent $event): string {
@@ -442,7 +424,7 @@ final class SseRequestListener {
         return match ($event->action) {
             'created' => $this->renderDocumentCreated($response, $event),
             'updated' => $this->renderDocumentUpdatedContent($response, $event),
-            default => '<div id="document-update-signal" data-document-id="' . $event->documentId . '" data-action="' . $event->action . '"></div>',
+            default => null, // Other actions don't need SSE response
         };
     }
 
@@ -454,13 +436,17 @@ final class SseRequestListener {
             return null;
         }
 
-        // Send signals to open artifact panel
-        $this->sendPatchSignals($response, [
-            '_artifactOpen' => true,
-            '_artifactId' => $event->documentId,
-            '_artifactEditing' => false,
-            '_output' => '',
-        ]);
+        // Only auto-open the artifact panel if the document was just created (within last 10 seconds)
+        // This prevents re-opening when asking follow-up questions in the same chat
+        $secondsSinceCreation = time() - $document->createdAt->getTimestamp();
+        if ($secondsSinceCreation <= 10) {
+            $this->sendPatchSignals($response, [
+                '_artifactOpen' => true,
+                '_artifactId' => $event->documentId,
+                '_artifactEditing' => false,
+                '_output' => '',
+            ]);
+        }
 
         // Render artifact content using the partial
         $contentHtml = $this->renderer->partial('artifact-content', [
