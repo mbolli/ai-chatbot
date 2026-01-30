@@ -119,11 +119,12 @@ final class StreamingSessionManager {
     }
 
     /**
-     * Clean up stale sessions (older than 5 minutes).
+     * Clean up stale sessions (older than 2 minutes).
+     * Normal AI responses should complete within seconds/minutes.
      */
     public function cleanupStaleSessions(): int {
         $table = self::getTable();
-        $staleTime = time() - 300;
+        $staleTime = time() - 120; // 2 minutes
         $cleaned = 0;
 
         foreach ($table as $key => $row) {

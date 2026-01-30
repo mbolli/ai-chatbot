@@ -28,6 +28,7 @@ use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
 use App\Infrastructure\Http\Handler\Query\DocumentQueryHandler;
 use App\Infrastructure\Http\Handler\Query\HistoryQueryHandler;
+use App\Infrastructure\Http\Listener\CleanupTimerListener;
 use App\Infrastructure\Http\Listener\SseRequestListener;
 use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
@@ -127,6 +128,10 @@ class ConfigProvider {
                 AIServiceInterface::class => function (ContainerInterface $container): AIServiceInterface {
                     $config = $container->get('config');
                     $aiConfig = $config['ai'] ?? [];
+                    $appConfig = $config['app'] ?? [];
+
+                    // Production mode limits model selection to cost-effective options
+                    $isProduction = ($appConfig['env'] ?? 'production') === 'production';
 
                     return new LLPhantAIService(
                         anthropicApiKey: $aiConfig['anthropic_api_key'] ?? null,
@@ -134,6 +139,7 @@ class ConfigProvider {
                         documentRepository: $container->get(DocumentRepositoryInterface::class),
                         maxTokens: $aiConfig['max_tokens'] ?? 2048,
                         defaultModel: $aiConfig['default_model'] ?? null,
+                        productionMode: $isProduction,
                     );
                 },
 
@@ -212,6 +218,12 @@ class ConfigProvider {
                     $container->get(SwooleTableSessionPersistence::class),
                     $container->get(TemplateRenderer::class),
                     $container->get(DocumentRepositoryInterface::class),
+                ),
+
+                // Cleanup Timer Listener (for mezzio-swoole WorkerStartEvent)
+                CleanupTimerListener::class => fn (ContainerInterface $container): CleanupTimerListener => new CleanupTimerListener(
+                    $container->get(StreamingSessionManager::class),
+                    $container->get(SwooleTableSessionPersistence::class),
                 ),
             ],
             'aliases' => [],
