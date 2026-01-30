@@ -92,7 +92,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 # OPENAI_API_KEY=sk-your-key-here
 
 # Optional: Model and token configuration
-AI_DEFAULT_MODEL=claude-sonnet-4-5-20250514
+AI_DEFAULT_MODEL=claude-sonnet-4-5
 AI_MAX_TOKENS=4096
 ```
 
@@ -256,16 +256,16 @@ The application follows the Command Query Responsibility Segregation pattern:
 ### Supported Models
 
 **Anthropic (Claude 4.5)**
-- `claude-opus-4-5-20250501` - Claude Opus 4.5 (Maximum intelligence)
-- `claude-sonnet-4-5-20250514` - Claude Sonnet 4.5 (Best balance)
-- `claude-haiku-4-5-20250501` - Claude Haiku 4.5 (Fast/Cheap)
+- `claude-opus-4-5` - Claude Opus 4.5 (Maximum intelligence)
+- `claude-sonnet-4-5` - Claude Sonnet 4.5 (Best balance)
+- `claude-haiku-4-5` - Claude Haiku 4.5 (Fast/Cheap)
 
 **Anthropic (Legacy)**
-- `claude-opus-4-1-20250415` - Claude Opus 4.1
-- `claude-opus-4-20250401` - Claude Opus 4
-- `claude-sonnet-4-20250401` - Claude Sonnet 4
-- `claude-3-5-haiku-20241022` - Claude Haiku 3.5
-- `claude-3-haiku-20240307` - Claude Haiku 3
+- `claude-opus-4-1` - Claude Opus 4.1
+- `claude-opus-4` - Claude Opus 4
+- `claude-sonnet-4` - Claude Sonnet 4
+- `claude-3-5-haiku` - Claude Haiku 3.5
+- `claude-3-haiku` - Claude Haiku 3
 
 **OpenAI (GPT-5.x)**
 - `gpt-5.2` / `gpt-5.1` / `gpt-5` - Full capability
@@ -421,7 +421,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 OPENAI_API_KEY=sk-your-key-here
 
 # AI Model Configuration
-AI_DEFAULT_MODEL=claude-sonnet-4-5-20250929
+AI_DEFAULT_MODEL=claude-sonnet-4-5
 AI_MAX_TOKENS=4096
 
 # Application Settings

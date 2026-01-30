@@ -26,6 +26,12 @@ use LLPhant\OpenAIConfig;
  */
 final class LLPhantAIService implements AIServiceInterface {
     /**
+     * Default model to use when requested model is not found.
+     * Using Haiku 3 as it's the cheapest option.
+     */
+    public const string DEFAULT_MODEL = 'claude-3-haiku';
+
+    /**
      * Anthropic Claude models (current + previous generation).
      *
      * Opus: Maximum intelligence (premium)
@@ -41,17 +47,16 @@ final class LLPhantAIService implements AIServiceInterface {
      * - 3: $0.25/$1.25 per MTok (cheapest!)
      */
     private const array ANTHROPIC_MODELS = [
-        // Claude 4.5 (current)
-        'claude-opus-4-5-20250501' => 'Claude Opus 4.5',
-        'claude-sonnet-4-5-20250514' => 'Claude Sonnet 4.5',
-        'claude-haiku-4-5-20250501' => 'Claude Haiku 4.5',
         // Claude 4.x
-        'claude-opus-4-1-20250415' => 'Claude Opus 4.1',
-        'claude-opus-4-20250401' => 'Claude Opus 4',
-        'claude-sonnet-4-20250401' => 'Claude Sonnet 4',
-        // Claude 3.x (still available, Haiku 3 is cheapest)
-        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',
-        'claude-3-haiku-20240307' => 'Claude Haiku 3',
+        'claude-opus-4-5' => 'Claude Opus 4.5',
+        'claude-sonnet-4-5' => 'Claude Sonnet 4.5',
+        'claude-haiku-4-5' => 'Claude Haiku 4.5',
+        'claude-sonnet-4' => 'Claude Sonnet 4',
+        'claude-haiku-4' => 'Claude Haiku 4',
+        // Claude 3.x
+        'claude-3-5-sonnet' => 'Claude Sonnet 3.5',
+        'claude-3-5-haiku' => 'Claude Haiku 3.5',
+        'claude-3-haiku' => 'Claude Haiku 3',
     ];
 
     /**
@@ -59,9 +64,8 @@ final class LLPhantAIService implements AIServiceInterface {
      * Sorted by cost: Haiku 3 < 3.5 < 4.5.
      */
     private const array ANTHROPIC_MODELS_PROD = [
-        'claude-3-haiku-20240307' => 'Claude Haiku 3',       // $0.25/$1.25 - cheapest
-        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',   // $0.80/$4
-        'claude-haiku-4-5-20250501' => 'Claude Haiku 4.5',   // $1/$5
+        'claude-3-haiku' => 'Claude Haiku 3',       // $0.25/$1.25 - cheapest
+        'claude-3-5-haiku' => 'Claude Haiku 3.5',   // $0.80/$4
     ];
 
     /**
@@ -104,15 +108,9 @@ final class LLPhantAIService implements AIServiceInterface {
     ];
 
     /**
-     * Default model to use when requested model is not found.
-     * Using Haiku 3 as it's the cheapest option.
-     */
-    public const string DEFAULT_MODEL = 'claude-3-haiku-20240307';
-
-    /**
      * Fast model for title generation (prefer cheapest for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku-20240307';
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku';
     private const string TITLE_MODEL_OPENAI = 'gpt-5-nano';
 
     private CreateDocumentTool $createDocumentTool;

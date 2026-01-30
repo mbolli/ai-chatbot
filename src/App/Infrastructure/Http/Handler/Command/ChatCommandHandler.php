@@ -9,6 +9,7 @@ use App\Domain\Model\Chat;
 use App\Domain\Model\Message;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
+use App\Infrastructure\AI\LLPhantAIService;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
@@ -47,7 +48,7 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
         $chat = Chat::create(
             userId: $userId,
-            model: $data['_model'] ?? $data['model'] ?? 'claude-3-5-sonnet-20241022',
+            model: $data['_model'] ?? $data['model'] ?? LLPhantAIService::DEFAULT_MODEL,
             visibility: $data['_visibility'] ?? $data['visibility'] ?? 'private',
             title: $data['_title'] ?? $data['title'] ?? null,
         );
@@ -147,7 +148,7 @@ final class ChatCommandHandler implements RequestHandlerInterface {
         }
 
         $data = $this->getRequestData($request);
-        $model = $data['model'] ?? $data['_model'] ?? $chat->model;
+        $model = $data['model'] ?? $chat->model;
 
         $updatedChat = $chat->updateModel($model);
         $this->chatRepository->save($updatedChat);

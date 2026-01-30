@@ -33,9 +33,9 @@ return [
         'openai_api_key' => $_ENV['OPENAI_API_KEY'] ?? null,
 
         // Default model - Haiku 3 / GPT-5 Nano are cheapest!
-        // Anthropic: claude-3-haiku-20240307 ($0.25/$1.25), claude-sonnet-4-5-20250514 ($3/$15)
+        // Anthropic: claude-3-haiku ($0.25/$1.25), claude-sonnet-4-5 ($3/$15)
         // OpenAI: gpt-5-nano ($0.05/$0.40), gpt-5 ($1.25/$10)
-        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-3-haiku-20240307',
+        'default_model' => $_ENV['AI_DEFAULT_MODEL'] ?? 'claude-3-haiku',
 
         // Max output tokens per response (cost control)
         // Haiku 3: ~$1.25/1M output tokens, so 2048 tokens = ~$0.0025
