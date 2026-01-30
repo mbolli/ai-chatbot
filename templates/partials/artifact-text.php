@@ -42,7 +42,7 @@ $content = nl2br($e($content));
     </div>
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
-            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($document->content ?? ''); ?>">
+            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($document->content ?? '')); ?>">
         <i class="fas fa-edit"></i> Edit
     </button>
 </div>

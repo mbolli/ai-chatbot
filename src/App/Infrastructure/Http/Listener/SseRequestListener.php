@@ -186,10 +186,11 @@ final class SseRequestListener {
     }
 
     private function sendNewMessage(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
-        // If assistant started, set _generatingMessage to the message ID
+        // If assistant started, set _generatingMessage to the element ID (with "message-" prefix)
+        // This allows data-attr:data-streaming="$_generatingMessage === el.id" to match correctly
         if ($event->action === 'assistant_started') {
             $this->sendPatchSignals($response, [
-                '_generatingMessage' => $event->messageId,
+                '_generatingMessage' => 'message-' . $event->messageId,
             ]);
         }
 
@@ -218,9 +219,9 @@ final class SseRequestListener {
 
     private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
         if ($event->isComplete) {
-            // Reset _generatingMessage signal
+            // Reset _generatingMessage signal (use empty string, not null - null means delete in Datastar)
             $this->sendPatchSignals($response, [
-                '_generatingMessage' => null,
+                '_generatingMessage' => '',
             ]);
 
             // Look up artifact for this message (if any)
@@ -307,9 +308,9 @@ final class SseRequestListener {
         // Auto-remove toast after 5 seconds
         $this->sendExecuteScript($response, "setTimeout(() => document.getElementById('toast-rate-limit')?.remove(), 5000)");
 
-        // Reset generating state
+        // Reset generating state (use empty string, not null - null means delete in Datastar)
         $this->sendPatchSignals($response, [
-            '_generatingMessage' => null,
+            '_generatingMessage' => '',
         ]);
 
         // If guest, also show the register modal
@@ -347,8 +348,9 @@ final class SseRequestListener {
     private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
         // Handle generation_stopped by sending signal to reset _generatingMessage
         if ($event->action === 'generation_stopped') {
+            // Use empty string, not null - null means delete in Datastar
             $this->sendPatchSignals($response, [
-                '_generatingMessage' => null,
+                '_generatingMessage' => '',
             ]);
 
             return null;
@@ -471,7 +473,13 @@ final class SseRequestListener {
             return null;
         }
 
-        // Only update if this artifact is currently open
+        $this->sendPatchSignals($response, [
+            '_artifactOpen' => true,
+            '_artifactId' => $event->documentId,
+            '_artifactEditing' => false,
+            '_output' => '',
+        ]);
+
         // The partial will replace #artifact-content with updated content
         $contentHtml = $this->renderer->partial('artifact-content', [
             'document' => $document,

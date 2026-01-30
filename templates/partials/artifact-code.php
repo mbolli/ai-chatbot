@@ -59,7 +59,7 @@ $content = $document->content ?? '';
     </div>
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
-            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo json_encode($content); ?>">
+            data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
         <i class="fas fa-edit"></i> Edit Code
     </button>
 

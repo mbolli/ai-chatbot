@@ -107,7 +107,7 @@ final class DocumentQueryHandler implements RequestHandlerInterface {
             documentId: $document->id,
             chatId: $document->chatId,
             userId: $userId,
-            action: 'created', // Re-use created action to render the artifact
+            action: 'updated', // Re-use created action to render the artifact
             kind: $document->kind,
             language: $document->language,
         ));
