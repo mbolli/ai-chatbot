@@ -42,6 +42,20 @@ $isGuest = ($user['isGuest'] ?? true);
     </script>
     <script type="module" src="/js/datastar.js"></script>
     <script type="module" src="/js/datastar-on-keys.js"></script>
+
+    <!-- Speculation Rules for prefetching chat pages on hover -->
+    <script type="speculationrules">
+    {
+        "prefetch": [{
+            "where": { "href_matches": "/chat/*" },
+            "eagerness": "moderate"
+        }],
+        "prerender": [{
+            "where": { "href_matches": "/chat/*" },
+            "eagerness": "moderate"
+        }]
+    }
+    </script>
 </head>
 <body>
     <div id="app"
