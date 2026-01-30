@@ -50,6 +50,12 @@ interface UserRepositoryInterface {
     public function upgradeGuestUser(int $guestId, string $email, string $password): User;
 
     /**
+     * Delete orphaned guest users (guests with no chats).
+     * Returns the number of deleted users.
+     */
+    public function cleanupOrphanedGuests(): int;
+
+    /**
      * Update a user's password.
      */
     public function updatePassword(int $userId, string $newPassword): void;

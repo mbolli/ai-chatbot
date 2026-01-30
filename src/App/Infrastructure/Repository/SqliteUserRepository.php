@@ -141,4 +141,13 @@ final class SqliteUserRepository implements UserRepositoryInterface {
         $stmt = $this->pdo->prepare('DELETE FROM users WHERE id = ?');
         $stmt->execute([$userId]);
     }
+
+    public function cleanupOrphanedGuests(): int {
+        $stmt = $this->pdo->prepare(
+            'DELETE FROM users WHERE is_guest = 1 AND id NOT IN (SELECT DISTINCT user_id FROM chats)'
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
 }

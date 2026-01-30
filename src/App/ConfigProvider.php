@@ -225,6 +225,7 @@ class ConfigProvider {
                 CleanupTimerListener::class => fn (ContainerInterface $container): CleanupTimerListener => new CleanupTimerListener(
                     $container->get(StreamingSessionManager::class),
                     $container->get(SwooleTableSessionPersistence::class),
+                    $container->get(UserRepositoryInterface::class),
                 ),
             ],
             'aliases' => [],
