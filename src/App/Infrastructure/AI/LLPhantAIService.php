@@ -26,50 +26,99 @@ use LLPhant\OpenAIConfig;
  */
 final class LLPhantAIService implements AIServiceInterface {
     /**
-     * Anthropic Claude models.
+     * Anthropic Claude models (current + previous generation).
      *
-     * Claude 4.5 (current generation - Jan 2026):
-     * - Sonnet: Best balance of speed and intelligence
-     * - Haiku: Fastest, most cost-effective
-     * - Opus: Maximum intelligence (premium pricing)
+     * Opus: Maximum intelligence (premium)
+     * - 4.5: $5/$25 per MTok (newest, best value for Opus)
+     * - 4.1/4: $15/$75 per MTok
      *
-     * Claude 3.5 (legacy):
-     * - Still available but recommend upgrading to 4.5
+     * Sonnet: Best balance of speed and intelligence
+     * - 4.5/4: $3/$15 per MTok
+     *
+     * Haiku: Fastest, most cost-effective
+     * - 4.5: $1/$5 per MTok
+     * - 3.5: $0.80/$4 per MTok
+     * - 3: $0.25/$1.25 per MTok (cheapest!)
      */
     private const array ANTHROPIC_MODELS = [
         // Claude 4.5 (current)
-        'claude-sonnet-4-5-20250929' => 'Claude 4.5 Sonnet',
-        'claude-haiku-4-5-20251001' => 'Claude 4.5 Haiku',
-        'claude-opus-4-5-20251101' => 'Claude 4.5 Opus',
-        // Claude 3.5 (legacy)
-        'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet',
-        'claude-3-haiku-20240307' => 'Claude 3 Haiku',
+        'claude-opus-4-5-20250501' => 'Claude Opus 4.5',
+        'claude-sonnet-4-5-20250514' => 'Claude Sonnet 4.5',
+        'claude-haiku-4-5-20250501' => 'Claude Haiku 4.5',
+        // Claude 4.x
+        'claude-opus-4-1-20250415' => 'Claude Opus 4.1',
+        'claude-opus-4-20250401' => 'Claude Opus 4',
+        'claude-sonnet-4-20250401' => 'Claude Sonnet 4',
+        // Claude 3.x (still available, Haiku 3 is cheapest)
+        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',
+        'claude-3-haiku-20240307' => 'Claude Haiku 3',
     ];
 
     /**
-     * OpenAI GPT models.
+     * Production-allowed Anthropic models (cost-effective Haiku only).
+     * Sorted by cost: Haiku 3 < 3.5 < 4.5.
+     */
+    private const array ANTHROPIC_MODELS_PROD = [
+        'claude-3-haiku-20240307' => 'Claude Haiku 3',       // $0.25/$1.25 - cheapest
+        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',   // $0.80/$4
+        'claude-haiku-4-5-20250501' => 'Claude Haiku 4.5',   // $1/$5
+    ];
+
+    /**
+     * OpenAI GPT models (current + previous generation).
+     *
+     * GPT-5.x (current generation - 2025):
+     * - gpt-5.2/5.1/5: Full capability ($1.25-1.75 input / $10-14 output)
+     * - gpt-5-mini: Balanced ($0.25 input / $2 output)
+     * - gpt-5-nano: Cheapest ($0.05 input / $0.40 output)
+     *
+     * GPT-4.x (previous generation):
+     * - gpt-4.1/mini/nano: Latest GPT-4 series
+     * - gpt-4o/mini: Omni models
      */
     private const array OPENAI_MODELS = [
+        // GPT-5.x (current)
+        'gpt-5.2' => 'GPT-5.2',
+        'gpt-5.1' => 'GPT-5.1',
+        'gpt-5' => 'GPT-5',
+        'gpt-5-mini' => 'GPT-5 Mini',
+        'gpt-5-nano' => 'GPT-5 Nano',
+        // GPT-4.x (previous gen)
+        'gpt-4.1' => 'GPT-4.1',
+        'gpt-4.1-mini' => 'GPT-4.1 Mini',
+        'gpt-4.1-nano' => 'GPT-4.1 Nano',
         'gpt-4o' => 'GPT-4o',
         'gpt-4o-mini' => 'GPT-4o Mini',
-        'gpt-4-turbo' => 'GPT-4 Turbo',
-        'gpt-4' => 'GPT-4',
+    ];
+
+    /**
+     * Production-allowed OpenAI models (cost-effective only).
+     * Sorted by cost (cheapest first): nano < mini < 4o-mini < 4.1-nano.
+     */
+    private const array OPENAI_MODELS_PROD = [
+        'gpt-5-nano' => 'GPT-5 Nano',       // $0.05/$0.40 - cheapest
+        'gpt-5-mini' => 'GPT-5 Mini',       // $0.25/$2.00
+        'gpt-4o-mini' => 'GPT-4o Mini',     // $0.15/$0.60
+        'gpt-4.1-nano' => 'GPT-4.1 Nano',   // $0.10/$0.40
+        'gpt-4.1-mini' => 'GPT-4.1 Mini',   // $0.40/$1.60
     ];
 
     /**
      * Default model to use when requested model is not found.
+     * Using Haiku 3 as it's the cheapest option.
      */
-    private const string DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+    public const string DEFAULT_MODEL = 'claude-3-haiku-20240307';
 
     /**
-     * Fast model for title generation (prefer Haiku for speed/cost).
+     * Fast model for title generation (prefer cheapest for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5-20251001';
-    private const string TITLE_MODEL_OPENAI = 'gpt-4o-mini';
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku-20240307';
+    private const string TITLE_MODEL_OPENAI = 'gpt-5-nano';
 
     private CreateDocumentTool $createDocumentTool;
     private UpdateDocumentTool $updateDocumentTool;
     private ?AnthropicStreamingClient $anthropicClient = null;
+    private ?OpenAIStreamingClient $openaiClient = null;
 
     /** @var list<Document> */
     private array $createdDocuments = [];
@@ -80,6 +129,7 @@ final class LLPhantAIService implements AIServiceInterface {
         ?DocumentRepositoryInterface $documentRepository = null,
         private readonly int $maxTokens = 2048,
         private readonly ?string $defaultModel = null,
+        private readonly bool $productionMode = false,
     ) {
         // Initialize tools if repository is provided
         if ($documentRepository !== null) {
@@ -91,6 +141,14 @@ final class LLPhantAIService implements AIServiceInterface {
         if ($this->anthropicApiKey !== null) {
             $this->anthropicClient = new AnthropicStreamingClient(
                 $this->anthropicApiKey,
+                $this->maxTokens,
+            );
+        }
+
+        // Initialize custom OpenAI client for true streaming
+        if ($this->openaiApiKey !== null) {
+            $this->openaiClient = new OpenAIStreamingClient(
+                $this->openaiApiKey,
                 $this->maxTokens,
             );
         }
@@ -124,7 +182,30 @@ final class LLPhantAIService implements AIServiceInterface {
             return;
         }
 
-        // Fallback to LLPhant for OpenAI (which has better streaming support)
+        // Use custom streaming client for OpenAI (true streaming)
+        if ($provider === 'openai' && $this->openaiClient !== null) {
+            // Configure tools on the streaming client
+            if (isset($this->createDocumentTool) && $chatId !== null) {
+                $this->createDocumentTool->setChatContext($chatId, $messageId);
+                $this->openaiClient->setTools($this->createDocumentTool, $this->updateDocumentTool);
+            } else {
+                $this->openaiClient->setTools(null, null);
+            }
+
+            yield from $this->streamOpenAIChat($messages, $model);
+
+            // Collect any created documents
+            if (isset($this->createDocumentTool)) {
+                $doc = $this->createDocumentTool->getLastCreatedDocument();
+                if ($doc !== null) {
+                    $this->createdDocuments[] = $doc;
+                }
+            }
+
+            return;
+        }
+
+        // Fallback to LLPhant (when custom clients unavailable)
         $chat = $this->createChat($model);
         $llMessages = $this->convertMessages($messages);
 
@@ -199,8 +280,12 @@ final class LLPhantAIService implements AIServiceInterface {
     public function getAvailableModels(): array {
         $models = [];
 
-        // Add all Anthropic models, marking availability
-        foreach (self::ANTHROPIC_MODELS as $id => $name) {
+        // Select model list based on production mode
+        $anthropicModels = $this->productionMode ? self::ANTHROPIC_MODELS_PROD : self::ANTHROPIC_MODELS;
+        $openaiModels = $this->productionMode ? self::OPENAI_MODELS_PROD : self::OPENAI_MODELS;
+
+        // Add Anthropic models, marking availability
+        foreach ($anthropicModels as $id => $name) {
             $models[$id] = [
                 'name' => $name,
                 'provider' => 'anthropic',
@@ -208,8 +293,8 @@ final class LLPhantAIService implements AIServiceInterface {
             ];
         }
 
-        // Add all OpenAI models, marking availability
-        foreach (self::OPENAI_MODELS as $id => $name) {
+        // Add OpenAI models, marking availability
+        foreach ($openaiModels as $id => $name) {
             $models[$id] = [
                 'name' => $name,
                 'provider' => 'openai',
@@ -239,6 +324,25 @@ final class LLPhantAIService implements AIServiceInterface {
         );
     }
 
+    /**
+     * Stream chat using custom OpenAI client for true real-time streaming.
+     *
+     * @param array<array{role: string, content: string}> $messages
+     *
+     * @return \Generator<string>
+     */
+    private function streamOpenAIChat(array $messages, string $model): \Generator {
+        if ($this->openaiClient === null) {
+            throw new \RuntimeException('OpenAI API key not configured');
+        }
+
+        yield from $this->openaiClient->streamChatRealtime(
+            $messages,
+            $model,
+            $this->getSystemPrompt(),
+        );
+    }
+
     private function configureTools(ChatInterface $chat): void {
         // Build function info for tools
         $createDocFn = FunctionBuilder::buildFunctionInfo($this->createDocumentTool, 'createDocument');
@@ -255,11 +359,12 @@ final class LLPhantAIService implements AIServiceInterface {
     }
 
     private function getProvider(string $model): string {
-        if (\array_key_exists($model, self::ANTHROPIC_MODELS)) {
+        // Check all model lists (including prod variants for complete coverage)
+        if (\array_key_exists($model, self::ANTHROPIC_MODELS) || \array_key_exists($model, self::ANTHROPIC_MODELS_PROD)) {
             return 'anthropic';
         }
 
-        if (\array_key_exists($model, self::OPENAI_MODELS)) {
+        if (\array_key_exists($model, self::OPENAI_MODELS) || \array_key_exists($model, self::OPENAI_MODELS_PROD)) {
             return 'openai';
         }
 
@@ -267,11 +372,21 @@ final class LLPhantAIService implements AIServiceInterface {
         return 'anthropic';
     }
 
+    /**
+     * Check if a model ID is valid (exists in any model list).
+     */
+    private function isValidModel(string $model): bool {
+        return \array_key_exists($model, self::ANTHROPIC_MODELS)
+            || \array_key_exists($model, self::ANTHROPIC_MODELS_PROD)
+            || \array_key_exists($model, self::OPENAI_MODELS)
+            || \array_key_exists($model, self::OPENAI_MODELS_PROD);
+    }
+
     private function createChat(string $model): ChatInterface {
         $provider = $this->getProvider($model);
 
         // If model not found in our lists, use configured default or fallback
-        if (!\array_key_exists($model, self::ANTHROPIC_MODELS) && !\array_key_exists($model, self::OPENAI_MODELS)) {
+        if (!$this->isValidModel($model)) {
             $model = $this->defaultModel ?? self::DEFAULT_MODEL;
             $provider = $this->getProvider($model);
         }
