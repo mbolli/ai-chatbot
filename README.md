@@ -8,27 +8,40 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Made by zweiundeins.gmbh](https://img.shields.io/badge/Made%20with%20%E2%98%95%20by-zweiundeins.gmbh-blue)](https://zweiundeins.gmbh)
 
+**[🚀 Live Demo](https://chat.zweiundeins.gmbh)** | **[📊 Benchmark Results](benchmarks/RESULTS.md)**
+
 A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
 
 > **🎯 Project Goal:** This is a side-by-side comparison with the [Vercel AI Chatbot (Next.js)](https://github.com/vercel/ai-chatbot), demonstrating that a lean PHP stack can deliver the same features with **dramatically less complexity** and **better performance**.
 
 ## 🆚 The Comparison: Next.js vs PHP
 
-*To be completed* This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot feature-for-feature using PHP—and the results speak for themselves:
+This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot using PHP—and the results speak for themselves.
 
-| Aspect | Next.js / Vercel AI Chatbot | This PHP Stack |
-|--------|---------------------------|----------------|
-| **Dependencies** | ~1,200 npm packages | ~15 Composer packages |
-| **Build Step** | Required (Webpack/Turbopack) | None |
-| **Cold Start** | Seconds (serverless/edge) | Instant (persistent server) |
-| **Memory Usage** | ~150-300 MB | ~20-40 MB |
-| **Streaming** | Buffered (often laggy) | True token-by-token SSE |
-| **Frontend** | React + hydration + JS runtime | Datastar (HTML-over-the-wire) |
-| **Lines of Code** | ~15,000+ | ~3,000 |
-| **Learning Curve** | Steep (React, Next.js, Vercel) | Moderate (PHP, PSR standards) |
-| **Hosting** | Vercel / Node.js required | Any PHP host, VPS, Docker |
+> **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization—yet outperforms on most metrics.
+
+### Measured Performance (January 2026)
+
+| Metric | Next.js (Vercel) | PHP/Swoole | Difference |
+|--------|------------------|------------|------------|
+| **Lighthouse Score** | 92 | **100** | 🏆 PHP |
+| **Time to Interactive** | 1.6s | **0.7s** | 2.3x faster |
+| **Total Blocking Time** | 130ms | **0ms** | ∞ better |
+| **JavaScript Sent** | 1.09 MB | **28 KB** | **39x less** |
+| **Cold Start** | 1.85s | **0ms** | No serverless penalty |
+
+### Codebase Comparison
+
+| Aspect | Next.js | PHP/Swoole | Ratio |
+|--------|---------|------------|-------|
+| **Dependencies (installed)** | 921 packages | **140 packages** | 6.6x fewer |
+| **node_modules / vendor** | 986 MB | **76 MB** | **13x smaller** |
+| **Build Step** | Required | **None** | — |
+| **Hosting Cost** | Usage-based | **$20/year VPS** | — |
 
 **The takeaway:** Modern PHP with Swoole is a serious contender for real-time applications. No transpilation, no hydration, no serverless cold starts—just fast, efficient code.
+
+> ⚠️ **Feature Completeness:** This is a **working proof-of-concept**, not a production-ready clone. Core features (chat, streaming, artifacts, auth, voting) work. Missing: file attachments, edit/regenerate messages. See the [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) for the full-featured original.
 
 ## ✨ Features
 
@@ -79,7 +92,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 # OPENAI_API_KEY=sk-your-key-here
 
 # Optional: Model and token configuration
-AI_DEFAULT_MODEL=claude-sonnet-4-5-20250929
+AI_DEFAULT_MODEL=claude-sonnet-4-5-20250514
 AI_MAX_TOKENS=4096
 ```
 
@@ -242,20 +255,26 @@ The application follows the Command Query Responsibility Segregation pattern:
 
 ### Supported Models
 
-**Anthropic (Claude 4.5 - Current)**
-- `claude-sonnet-4-5-20250929` - Claude 4.5 Sonnet (Best balance)
-- `claude-haiku-4-5-20251001` - Claude 4.5 Haiku (Fast/Cheap)
-- `claude-opus-4-5-20251101` - Claude 4.5 Opus (Maximum intelligence)
+**Anthropic (Claude 4.5)**
+- `claude-opus-4-5-20250501` - Claude Opus 4.5 (Maximum intelligence)
+- `claude-sonnet-4-5-20250514` - Claude Sonnet 4.5 (Best balance)
+- `claude-haiku-4-5-20250501` - Claude Haiku 4.5 (Fast/Cheap)
 
 **Anthropic (Legacy)**
-- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet
-- `claude-3-haiku-20240307` - Claude 3 Haiku
+- `claude-opus-4-1-20250415` - Claude Opus 4.1
+- `claude-opus-4-20250401` - Claude Opus 4
+- `claude-sonnet-4-20250401` - Claude Sonnet 4
+- `claude-3-5-haiku-20241022` - Claude Haiku 3.5
+- `claude-3-haiku-20240307` - Claude Haiku 3
 
-**OpenAI (GPT)**
-- `gpt-4o` - GPT-4o
-- `gpt-4o-mini` - GPT-4o Mini
-- `gpt-4-turbo` - GPT-4 Turbo
-- `gpt-4` - GPT-4
+**OpenAI (GPT-5.x)**
+- `gpt-5.2` / `gpt-5.1` / `gpt-5` - Full capability
+- `gpt-5-mini` - Balanced (cost-effective)
+- `gpt-5-nano` - Cheapest
+
+**OpenAI (GPT-4.x)**
+- `gpt-4.1` / `gpt-4.1-mini` / `gpt-4.1-nano`
+- `gpt-4o` / `gpt-4o-mini`
 
 ### AI Tools
 
