@@ -199,11 +199,10 @@ final class SseRequestListener {
     }
 
     private function sendNewMessage(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
-        // If assistant started, set _isGenerating signal first
+        // If assistant started, set _generatingMessage to the message ID
         if ($event->action === 'assistant_started') {
             $this->sendPatchSignals($response, [
-                '_isGenerating' => true,
-                '_generatingMessageId' => $event->messageId,
+                '_generatingMessage' => $event->messageId,
             ]);
         }
 
@@ -224,7 +223,7 @@ final class SseRequestListener {
             ]
         );
 
-        $response->write($patchEvent->getOutput());
+        $this->safeWrite($response, $patchEvent->getOutput());
 
         // Auto-scroll to bottom after adding new message
         $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
@@ -232,10 +231,9 @@ final class SseRequestListener {
 
     private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
         if ($event->isComplete) {
-            // Reset _isGenerating signal and generatingMessageId
+            // Reset _generatingMessage signal
             $this->sendPatchSignals($response, [
-                '_isGenerating' => false,
-                '_generatingMessageId' => null,
+                '_generatingMessage' => null,
             ]);
 
             // Look up artifact for this message (if any)
@@ -261,12 +259,12 @@ final class SseRequestListener {
                     'mode' => ElementPatchMode::Outer,
                 ]
             );
-            $response->write($actionsPatch->getOutput());
+            $this->safeWrite($response, $actionsPatch->getOutput());
         }
     }
 
     private function sendMessageChunk(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
-        if (empty($event->chunk)) {
+        if (empty($event->chunk) || !$response->isWritable()) {
             return;
         }
 
@@ -288,7 +286,7 @@ final class SseRequestListener {
                 'mode' => ElementPatchMode::Append,
             ]
         );
-        $response->write($patch->getOutput());
+        $this->safeWrite($response, $patch->getOutput());
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
@@ -317,15 +315,14 @@ final class SseRequestListener {
                 'mode' => ElementPatchMode::Append,
             ],
         );
-        $response->write($patchEvent->getOutput());
+        $this->safeWrite($response, $patchEvent->getOutput());
 
         // Auto-remove toast after 5 seconds
         $this->sendExecuteScript($response, "setTimeout(() => document.getElementById('toast-rate-limit')?.remove(), 5000)");
 
         // Reset generating state
         $this->sendPatchSignals($response, [
-            '_isGenerating' => false,
-            '_generatingMessageId' => null,
+            '_generatingMessage' => null,
         ]);
 
         // If guest, also show the register modal
@@ -357,15 +354,14 @@ final class SseRequestListener {
                 'mode' => ElementPatchMode::Outer,
             ],
         );
-        $response->write($patchEvent->getOutput());
+        $this->safeWrite($response, $patchEvent->getOutput());
     }
 
     private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
-        // Handle generation_stopped by sending signal to reset _isGenerating
+        // Handle generation_stopped by sending signal to reset _generatingMessage
         if ($event->action === 'generation_stopped') {
             $this->sendPatchSignals($response, [
-                '_isGenerating' => false,
-                '_generatingMessageId' => null,
+                '_generatingMessage' => null,
             ]);
 
             return null;
@@ -428,7 +424,7 @@ final class SseRequestListener {
                 'mode' => ElementPatchMode::Inner,
             ]
         );
-        $response->write($headerPatch->getOutput());
+        $this->safeWrite($response, $headerPatch->getOutput());
 
         // Update the sidebar chat link using the shared partial
         $sidebarHtml = $this->renderer->partial('sidebar-item', [
@@ -438,7 +434,7 @@ final class SseRequestListener {
             'e' => TemplateRenderer::escape(...),
         ]);
         $sidebarPatch = new PatchElements($sidebarHtml);
-        $response->write($sidebarPatch->getOutput());
+        $this->safeWrite($response, $sidebarPatch->getOutput());
     }
 
     private function handleDocumentUpdated(SwooleHttpResponse $response, DocumentUpdatedEvent $event): ?string {
@@ -613,22 +609,36 @@ JS;
         ]);
     }
 
-    private function sendDatastarFragment(SwooleHttpResponse $response, string $html): void {
+    private function sendDatastarFragment(SwooleHttpResponse $response, string $html): bool {
         // Use Datastar SDK's MergeFragments event
         $event = new PatchElements($html);
-        $response->write($event->getOutput());
+
+        return $this->safeWrite($response, $event->getOutput());
     }
 
-    private function sendExecuteScript(SwooleHttpResponse $response, string $script): void {
+    private function sendExecuteScript(SwooleHttpResponse $response, string $script): bool {
         $event = new ExecuteScript($script);
-        $response->write($event->getOutput());
+
+        return $this->safeWrite($response, $event->getOutput());
     }
 
     /**
      * @param array<string, mixed> $signals
      */
-    private function sendPatchSignals(SwooleHttpResponse $response, array $signals): void {
+    private function sendPatchSignals(SwooleHttpResponse $response, array $signals): bool {
         $event = new PatchSignals($signals);
-        $response->write($event->getOutput());
+
+        return $this->safeWrite($response, $event->getOutput());
+    }
+
+    /**
+     * Safe write to response - checks writability first.
+     */
+    private function safeWrite(SwooleHttpResponse $response, string $data): bool {
+        if (!$response->isWritable()) {
+            return false;
+        }
+
+        return $response->write($data) !== false;
     }
 }
