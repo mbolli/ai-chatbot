@@ -25,7 +25,7 @@ beforeEach(function (): void {
 
 it('creates an upvote', function (): void {
     // Create chat and message
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message = Message::assistant($chat->id);
@@ -42,7 +42,7 @@ it('creates an upvote', function (): void {
 });
 
 it('creates a downvote', function (): void {
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message = Message::assistant($chat->id);
@@ -57,7 +57,7 @@ it('creates a downvote', function (): void {
 });
 
 it('updates vote from upvote to downvote', function (): void {
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message = Message::assistant($chat->id);
@@ -81,7 +81,7 @@ it('updates vote from upvote to downvote', function (): void {
 });
 
 it('deletes a vote', function (): void {
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message = Message::assistant($chat->id);
@@ -98,7 +98,7 @@ it('deletes a vote', function (): void {
 });
 
 it('finds votes by chat', function (): void {
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message1 = Message::assistant($chat->id);
@@ -115,7 +115,7 @@ it('finds votes by chat', function (): void {
 });
 
 it('deletes all votes by chat', function (): void {
-    $chat = Chat::create(1, 'claude-3-5-sonnet');
+    $chat = Chat::create(1);
     $this->chatRepo->save($chat);
 
     $message1 = Message::assistant($chat->id);
