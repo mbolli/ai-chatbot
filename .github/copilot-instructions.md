@@ -51,7 +51,7 @@ This is a **PHP/Swoole** AI chatbot application using **CQRS** pattern with real
 - Empty responses should trigger retry or error notification
 
 ### Datastar Frontend Conventions
-- Signals are **only for client state** (e.g., form inputs, modal visibility, `_isGenerating`)
+- Signals are **only for client state** (e.g., form inputs, modal visibility, `_generatingMessage`)
 - Server responses should return **HTML via PatchElements**, not signals
 - Always use the **Datastar SDK** (`starfederation/datastar`) for SSE responses
 - SSE connection via `data-init="@get('/updates')"`

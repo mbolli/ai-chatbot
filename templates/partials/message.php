@@ -21,7 +21,7 @@ $vote = $vote ?? null;
 <div class="message message-<?php echo $e($role); ?>"
      id="message-<?php echo $e($id); ?>"
      <?php if ($streaming) { ?>
-     data-attr:data-streaming="$_isGenerating ? 'true' : 'false'"
+     data-attr:data-streaming="$_generatingMessage === el.id ? 'true' : 'false'"
      <?php } ?>>
     <div class="message-avatar">
         <?php if ($isUser) { ?>
@@ -55,7 +55,7 @@ $vote = $vote ?? null;
             <div class="message-actions" id="message-<?php echo $e($id); ?>-actions" style="display:none"></div>
         <?php } ?>
         <?php if ($streaming) { ?>
-            <div class="message-streaming-indicator" id="message-<?php echo $e($id); ?>-indicator" data-show="$_generatingMessageId === '<?php echo $e($id); ?>'">
+            <div class="message-streaming-indicator" id="message-<?php echo $e($id); ?>-indicator">
                 <span class="typing-indicator"><span></span><span></span><span></span></span>
             </div>
         <?php } ?>
