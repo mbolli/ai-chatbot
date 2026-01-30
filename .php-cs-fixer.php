@@ -23,7 +23,7 @@ return (new Config())
         'control_structure_continuation_position' => ['position' => 'same_line'],
         'declare_strict_types' => false,
         'final_internal_class' => false,
-        'mb_str_functions' => true,
+        'mb_str_functions' => false,
         'nullable_type_declaration_for_default_null_value' => true,
         'operator_linebreak' => true,
         'phpdoc_align' => ['align' => 'vertical', 'tags' => ['method', 'param', 'return', 'property', 'return', 'throws', 'type']],
