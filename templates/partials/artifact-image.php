@@ -32,7 +32,7 @@ $isBase64 = str_starts_with($content, 'data:image/');
         <div class="artifact-image-edit" data-show="$_artifactEditing">
             <textarea
                 class="artifact-svg-textarea"
-                data-bind="$_artifactContent"
+                data-bind="_artifactContent"
                 placeholder="Enter SVG code..."
                 spellcheck="false"
             ><?php echo $e($content); ?></textarea>

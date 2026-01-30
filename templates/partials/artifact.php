@@ -32,7 +32,7 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 <i class="fas fa-copy"></i>
             </button>
             <?php if (count($versions) > 1) { ?>
-                <select class="version-selector" data-bind="$_documentVersion"
+                <select class="version-selector" data-bind="_documentVersion"
                         data-on:change="@get('/api/documents/<?php echo $e($document->id); ?>?version=' + $_documentVersion)">
                     <?php foreach ($versions as $v) { ?>
                         <option value="<?php echo $v['version']; ?>" <?php echo $v['version'] === $currentVersion ? 'selected' : ''; ?>>

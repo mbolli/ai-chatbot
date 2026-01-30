@@ -1,4 +1,7 @@
 <?php
+
+use App\Infrastructure\AI\LLPhantAIService;
+
 /**
  * @var null|string $title
  * @var null|string $content
@@ -46,7 +49,7 @@ $isGuest = ($user['isGuest'] ?? true);
          data-signals='{
             "_sidebarOpen": true,
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
-            "_model": <?php echo json_encode($defaultModel ?? \App\Infrastructure\AI\LLPhantAIService::DEFAULT_MODEL); ?>,
+            "_model": <?php echo json_encode($defaultModel ?? LLPhantAIService::DEFAULT_MODEL); ?>,
             "_artifactOpen": false,
             "_artifactId": null,
             "_artifactEditing": false,

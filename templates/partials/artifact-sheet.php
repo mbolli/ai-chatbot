@@ -50,7 +50,7 @@ $dataRows = array_slice($rows, 1);
     <div class="artifact-sheet-edit" data-show="$_artifactEditing">
         <textarea
             class="artifact-csv-textarea"
-            data-bind="$_artifactContent"
+            data-bind="_artifactContent"
             placeholder="Enter CSV data..."
             spellcheck="false"
         ><?php echo $e($content); ?></textarea>

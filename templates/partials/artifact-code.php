@@ -43,7 +43,7 @@ $content = $document->content ?? '';
     <div class="artifact-code-edit" data-show="$_artifactEditing">
         <textarea
             class="artifact-code-textarea"
-            data-bind="$_artifactContent"
+            data-bind="_artifactContent"
             spellcheck="false"
         ><?php echo $e($content); ?></textarea>
 

@@ -28,14 +28,14 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
               data-on:submit__prevent="
                   $_authLoading = true;
                   $_authError = '';
-                  @post('/auth/login', {contentType: 'json'})
+                  @post('/auth/login', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
               ">
             <div class="form-group">
                 <label for="login-email">Email</label>
                 <input type="email"
                        id="login-email"
                        name="email"
-                       data-bind="$_authEmail"
+                       data-bind="_authEmail"
                        placeholder="you@example.com"
                        required
                        autocomplete="email">
@@ -46,7 +46,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <input type="password"
                        id="login-password"
                        name="password"
-                       data-bind="$_authPassword"
+                       data-bind="_authPassword"
                        placeholder="••••••••"
                        required
                        autocomplete="current-password">
@@ -101,14 +101,14 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
               data-on:submit__prevent="
                   $_authLoading = true;
                   $_authError = '';
-                  @post('/auth/register', {contentType: 'json'})
+                  @post('/auth/register', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
               ">
             <div class="form-group">
                 <label for="register-email">Email</label>
                 <input type="email"
                        id="register-email"
                        name="email"
-                       data-bind="$_authEmail"
+                       data-bind="_authEmail"
                        placeholder="you@example.com"
                        required
                        autocomplete="email">
@@ -119,7 +119,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <input type="password"
                        id="register-password"
                        name="password"
-                       data-bind="$_authPassword"
+                       data-bind="_authPassword"
                        placeholder="••••••••"
                        required
                        minlength="8"
@@ -181,14 +181,14 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
               data-on:submit__prevent="
                   $_authLoading = true;
                   $_authError = '';
-                  @post('/auth/upgrade', {contentType: 'json'})
+                  @post('/auth/upgrade', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
               ">
             <div class="form-group">
                 <label for="upgrade-email">Email</label>
                 <input type="email"
                        id="upgrade-email"
                        name="email"
-                       data-bind="$_authEmail"
+                       data-bind="_authEmail"
                        placeholder="you@example.com"
                        required
                        autocomplete="email">
@@ -199,7 +199,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <input type="password"
                        id="upgrade-password"
                        name="password"
-                       data-bind="$_authPassword"
+                       data-bind="_authPassword"
                        placeholder="••••••••"
                        required
                        minlength="8"

@@ -26,7 +26,7 @@ $content = nl2br($e($content));
     <div class="artifact-text-edit" data-show="$_artifactEditing">
         <textarea
             class="artifact-textarea"
-            data-bind="$_artifactContent"
+            data-bind="_artifactContent"
             placeholder="Enter content..."
         ><?php echo $e($document->content ?? ''); ?></textarea>
 
