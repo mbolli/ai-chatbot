@@ -11,9 +11,12 @@ importers:
       '@mbolli/datastar-attribute-on-keys':
         specifier: ^1.1.0
         version: 1.1.0
-      starfederation/datastar:
+      '@starfederation/datastar':
         specifier: github:starfederation/datastar
         version: https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f
+      marked:
+        specifier: ^17.0.1
+        version: 17.0.1
     devDependencies:
       esbuild:
         specifier: ^0.27.2
@@ -183,14 +186,19 @@ packages:
   '@mbolli/datastar-attribute-on-keys@1.1.0':
     resolution: {integrity: sha512-Vl+c4lmQLms1T7CZ6VgxO4ncghnizi+w2y7JwoXD7BwxZsGxu4xGIEG0sg5g1e4p1M1iTXpmaifk8xVli8Vg2w==}
 
+  '@starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f':
+    resolution: {tarball: https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f}
+    version: 0.0.0
+
   esbuild@0.27.2:
     resolution: {integrity: sha512-HyNQImnsOC7X9PMNaCIeAm4ISCQXs5a5YasTXVliKv4uuBo1dKrG0A+uQS8M5eXjVMnLg3WgXaKvprHlFJQffw==}
     engines: {node: '>=18'}
     hasBin: true
 
-  starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f:
-    resolution: {tarball: https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f}
-    version: 0.0.0
+  marked@17.0.1:
+    resolution: {integrity: sha512-boeBdiS0ghpWcSwoNm/jJBwdpFaMnZWRzjA6SkUMYb40SVaN1x7mmfGKp0jvexGcx+7y2La5zRZsYFZI6Qpypg==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -279,6 +287,8 @@ snapshots:
 
   '@mbolli/datastar-attribute-on-keys@1.1.0': {}
 
+  '@starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f': {}
+
   esbuild@0.27.2:
     optionalDependencies:
       '@esbuild/aix-ppc64': 0.27.2
@@ -308,6 +318,6 @@ snapshots:
       '@esbuild/win32-ia32': 0.27.2
       '@esbuild/win32-x64': 0.27.2
 
-  starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/bb9ed6fbe78cf5690f5ad23a5faf86407a44982f: {}
+  marked@17.0.1: {}
 
   typescript@5.9.3: {}

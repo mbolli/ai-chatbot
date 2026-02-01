@@ -6,14 +6,15 @@
         "build": "esbuild src/ts/main.ts --bundle --outfile=public/js/app.js --minify --sourcemap",
         "watch": "esbuild src/ts/main.ts --bundle --outfile=public/js/app.js --watch --sourcemap",
         "typecheck": "tsc --noEmit",
-        "postinstall": "cp node_modules/starfederation/datastar/bundles/datastar.js public/js/datastar.js && cp node_modules/@mbolli/datastar-attribute-on-keys/dist/index.js public/js/datastar-on-keys.js"
+        "postinstall": "cp node_modules/@starfederation/datastar/bundles/datastar.js public/js/datastar.js && cp node_modules/@mbolli/datastar-attribute-on-keys/dist/index.js public/js/datastar-on-keys.js && cp node_modules/marked/lib/marked.esm.js public/js/marked.min.js"
     },
     "devDependencies": {
         "esbuild": "^0.27.2",
         "typescript": "^5.9.3"
     },
     "dependencies": {
-        "starfederation/datastar": "github:starfederation/datastar",
-        "@mbolli/datastar-attribute-on-keys": "^1.1.0"
+        "@starfederation/datastar": "github:starfederation/datastar",
+        "@mbolli/datastar-attribute-on-keys": "^1.1.0",
+        "marked": "^17.0.1"
     }
 }
