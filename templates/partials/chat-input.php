@@ -59,8 +59,8 @@ $formSubmit = $isNewChat
                         data-on:click="$_previewMarkdown = !$_previewMarkdown; if ($_previewMarkdown) document.getElementById('message-preview').innerHTML = window.marked?.parse($_message) || $_message"
                         data-attr-title="$_previewMarkdown ? 'Edit' : 'Preview'"
                         data-attr-aria-pressed="$_previewMarkdown">
-                    <svg class="icon">
-                        <use data-attr-href="$_previewMarkdown ? '#icon-edit' : '#icon-eye'"></use>
+                    <svg class="icon" data-show="!$_previewMarkdown"><use href="#icon-eye"></svg>
+                    <svg class="icon" data-show="$_previewMarkdown"><use href="#icon-edit"></svg>
                     </svg>
                 </button>
                 <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr-disabled="!$_message.trim()">
