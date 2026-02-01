@@ -19,10 +19,10 @@ $isGuest = ($user['isGuest'] ?? true);
     <h2>AI Chatbot</h2>
     <div class="sidebar-header-actions">
         <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
-            <i class="fas fa-plus"></i>
+            <svg class="icon"><use href="#icon-plus"></use></svg>
         </button>
         <button class="btn-icon sidebar-close" data-on:click="$_sidebarOpen = false" title="Close sidebar">
-            <i class="fas fa-times"></i>
+            <svg class="icon"><use href="#icon-times"></use></svg>
         </button>
     </div>
 </div>
@@ -54,7 +54,7 @@ $isGuest = ($user['isGuest'] ?? true);
         <div class="sidebar-auth">
             <button class="btn btn-secondary btn-sm btn-block"
                     data-on:click="$_authModal = 'upgrade'">
-                <i class="fas fa-user-plus"></i> Save Chats
+                <svg class="icon"><use href="#icon-user-plus"></use></svg> Save Chats
             </button>
             <button class="btn-link btn-sm"
                     data-on:click="$_authModal = 'login'">
@@ -64,13 +64,13 @@ $isGuest = ($user['isGuest'] ?? true);
     <?php } else { ?>
         <div class="sidebar-user">
             <div class="user-info">
-                <i class="fas fa-user-circle"></i>
+                <svg class="icon"><use href="#icon-user-circle"></use></svg>
                 <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
             </div>
             <button class="btn-icon"
                     data-on:click="@post('/auth/logout')"
                     title="Sign out">
-                <i class="fas fa-sign-out-alt"></i>
+                <svg class="icon"><use href="#icon-sign-out-alt"></use></svg>
             </button>
         </div>
     <?php } ?>

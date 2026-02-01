@@ -36,12 +36,14 @@
              data-on-signal-patch-filter="{include: /^_toasts$/}">
 
             <div class="toast-icon">
-                <i data-attr-class="
-                    toast.type === 'success' ? 'fas fa-check-circle' :
-                    toast.type === 'error' ? 'fas fa-exclamation-circle' :
-                    toast.type === 'warning' ? 'fas fa-exclamation-triangle' :
-                    'fas fa-info-circle'
-                "></i>
+                <svg class="icon">
+                    <use data-attr-href="
+                        toast.type === 'success' ? '#icon-check-circle' :
+                        toast.type === 'error' ? '#icon-exclamation-circle' :
+                        toast.type === 'warning' ? '#icon-exclamation-triangle' :
+                        '#icon-info-circle'
+                    "></use>
+                </svg>
             </div>
 
             <span class="toast-message" data-text="toast.message"></span>
@@ -50,7 +52,7 @@
                     class="toast-close btn-icon"
                     data-on:click="$_toasts = $_toasts.filter(t => t.id !== toast.id)"
                     aria-label="Dismiss">
-                <i class="fas fa-times"></i>
+                <svg class="icon"><use href="#icon-times"></use></svg>
             </button>
         </div>
     </template>

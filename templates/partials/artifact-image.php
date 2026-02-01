@@ -22,7 +22,7 @@ $isBase64 = str_starts_with($content, 'data:image/');
             <img src="<?php echo $e($content); ?>" alt="<?php echo $e($document->title); ?>" />
         <?php } else { ?>
             <div class="image-placeholder">
-                <i class="fas fa-image"></i>
+                <svg class="icon"><use href="#icon-image"></use></svg>
                 <p>No image content</p>
             </div>
         <?php } ?>
@@ -50,7 +50,7 @@ $isBase64 = str_starts_with($content, 'data:image/');
 
         <button class="btn btn-edit" data-show="!$_artifactEditing"
                 data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
-            <i class="fas fa-edit"></i> Edit SVG
+            <svg class="icon"><use href="#icon-edit"></use></svg> Edit SVG
         </button>
     <?php } ?>
 </div>

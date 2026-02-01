@@ -15,24 +15,51 @@ $content = $document->content ?? '';
         <?php if ($language === 'python') { ?>
             <button class="btn btn-run"
                     id="run-btn-<?php echo $e($document->id); ?>"
+                    disabled
+                    title="Loading Python runtime..."
                     data-on:click="
+                        if (!window.pyodide) {
+                            $_output = 'Error: Python runtime not loaded yet. Please wait...';
+                            return;
+                        }
                         const btn = document.getElementById('run-btn-<?php echo $e($document->id); ?>');
                         btn.disabled = true;
-                        btn.innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i> Running...';
+                        btn.innerHTML = '<svg class=\'icon icon-spin\'><use href=\'#icon-spinner\'></use></svg> Running...';
                         window.runPythonCode(document.getElementById('artifact-code-content').textContent)
                             .then(r => {
                                 $_output = r.success ? String(r.output ?? '') : ('Error: ' + (r.error ?? 'Unknown error'));
                                 btn.disabled = false;
-                                btn.innerHTML = '<i class=\'fas fa-play\'></i> Run';
+                                btn.innerHTML = '<svg class=\'icon\'><use href=\'#icon-play\'></use></svg> Run';
                             })
                             .catch(e => {
                                 $_output = 'Error: ' + e.message;
                                 btn.disabled = false;
-                                btn.innerHTML = '<i class=\'fas fa-play\'></i> Run';
+                                btn.innerHTML = '<svg class=\'icon\'><use href=\'#icon-play\'></use></svg> Run';
                             });
                     ">
-                <i class="fas fa-play"></i> Run
+                <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Loading...
             </button>
+            <script>
+                // Enable button when Pyodide is ready
+                (function() {
+                    const btn = document.getElementById('run-btn-<?php echo $e($document->id); ?>');
+                    if (!btn) return;
+
+                    function enableButton() {
+                        btn.disabled = false;
+                        btn.title = 'Run Python code';
+                        btn.innerHTML = '<svg class="icon"><use href="#icon-play"></use></svg> Run';
+                    }
+
+                    // Check if already loaded
+                    if (window.pyodide) {
+                        enableButton();
+                    } else {
+                        // Listen for pyodide-ready event
+                        window.addEventListener('pyodide-ready', enableButton, { once: true });
+                    }
+                })();
+            </script>
         <?php } ?>
     </div>
 
@@ -60,15 +87,15 @@ $content = $document->content ?? '';
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
             data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
-        <i class="fas fa-edit"></i> Edit Code
+        <svg class="icon"><use href="#icon-edit"></use></svg> Edit Code
     </button>
 
     <?php if ($language === 'python') { ?>
         <div class="artifact-console" data-show="$_output">
             <div class="console-header">
-                <span><i class="fas fa-terminal"></i> Output</span>
+                <span><svg class="icon"><use href="#icon-terminal"></use></svg> Output</span>
                 <button class="btn-icon" data-on:click="$_output = ''">
-                    <i class="fas fa-times"></i>
+                    <svg class="icon"><use href="#icon-times"></use></svg>
                 </button>
             </div>
             <pre class="console-output" data-text="$_output"></pre>

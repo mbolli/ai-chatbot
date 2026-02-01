@@ -12,24 +12,24 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 <div class="artifact" id="artifact-<?php echo $e($document->id); ?>" data-document-id="<?php echo $e($document->id); ?>">
     <div class="artifact-header">
         <div class="artifact-title">
-            <i class="fas <?php echo match ($document->kind) {
-                'code' => 'fa-code',
-                'sheet' => 'fa-table',
-                'image' => 'fa-image',
-                default => 'fa-file-alt',
-            }; ?>"></i>
+            <svg class="icon"><use href="#icon-<?php echo match ($document->kind) {
+                'code' => 'code',
+                'sheet' => 'table',
+                'image' => 'image',
+                default => 'file-alt',
+            }; ?>"></use></svg>
             <span id="artifact-title-text"><?php echo $e($document->title); ?></span>
         </div>
         <div class="artifact-actions">
             <?php if ($document->kind === 'code') { ?>
                 <button class="btn-icon" title="Run code"
                         data-on:click="window.runPythonCode(document.getElementById('artifact-code-content').textContent).then(r => $_output = r.success ? r.output : r.error)">
-                    <i class="fas fa-play"></i>
+                    <svg class="icon"><use href="#icon-play"></use></svg>
                 </button>
             <?php } ?>
             <button class="btn-icon" title="Copy content"
                     data-on:click="navigator.clipboard.writeText(document.getElementById('artifact-content-text').textContent || document.getElementById('artifact-code-content')?.textContent || '')">
-                <i class="fas fa-copy"></i>
+                <svg class="icon"><use href="#icon-copy"></use></svg>
             </button>
             <?php if (count($versions) > 1) { ?>
                 <select class="version-selector" data-bind="_documentVersion"
@@ -42,7 +42,7 @@ $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 </select>
             <?php } ?>
             <button class="btn-icon" title="Close" data-on:click="$_artifactOpen = false; $_artifactId = null">
-                <i class="fas fa-times"></i>
+                <svg class="icon"><use href="#icon-times"></use></svg>
             </button>
         </div>
     </div>

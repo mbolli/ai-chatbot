@@ -13,15 +13,15 @@
 <!-- Top Right: Artifact Title + Actions -->
 <div class="artifact-header artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
     <span class="artifact-title">
-        <i class="fas fa-file-code"></i>
+        <svg class="icon"><use href="#icon-file-code"></use></svg>
         <span id="artifact-title">Artifact</span>
     </span>
     <div class="artifact-actions">
         <button class="btn-icon" id="artifact-download" title="Download" data-on:click="window.downloadArtifact($_artifactId)">
-            <i class="fas fa-download"></i>
+            <svg class="icon"><use href="#icon-download"></use></svg>
         </button>
         <button class="btn-icon" data-on:click="$_artifactOpen = false; $_artifactId = null" title="Close (Esc)">
-            <i class="fas fa-times"></i>
+            <svg class="icon"><use href="#icon-times"></use></svg>
         </button>
     </div>
 </div>
@@ -33,7 +33,7 @@
 
 <!-- Bottom Right: Fun footer -->
 <div class="artifact-footer artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
-    <i class="fas fa-wand-magic-sparkles"></i>
+    <svg class="icon"><use href="#icon-wand-magic-sparkles"></use></svg>
     <span>Generated with AI magic ✨</span>
 </div>
 

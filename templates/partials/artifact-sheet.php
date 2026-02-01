@@ -68,6 +68,6 @@ $dataRows = array_slice($rows, 1);
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
             data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
-        <i class="fas fa-edit"></i> Edit Data
+        <svg class="icon"><use href="#icon-edit"></use></svg> Edit Data
     </button>
 </div>

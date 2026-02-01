@@ -43,6 +43,6 @@ $content = nl2br($e($content));
 
     <button class="btn btn-edit" data-show="!$_artifactEditing"
             data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($document->content ?? '')); ?>">
-        <i class="fas fa-edit"></i> Edit
+        <svg class="icon"><use href="#icon-edit"></use></svg> Edit
     </button>
 </div>

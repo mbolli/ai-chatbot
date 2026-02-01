@@ -25,9 +25,9 @@ $vote = $vote ?? null;
      <?php } ?>>
     <div class="message-avatar">
         <?php if ($isUser) { ?>
-            <i class="fas fa-user"></i>
+            <svg class="icon"><use href="#icon-user"></use></svg>
         <?php } else { ?>
-            <i class="fas fa-robot"></i>
+            <svg class="icon"><use href="#icon-robot"></use></svg>
         <?php } ?>
     </div>
     <div class="message-content">

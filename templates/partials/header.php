@@ -12,7 +12,7 @@
 <!-- Top Center: Sidebar toggle + Chat title -->
 <header class="main-header">
     <button class="btn-icon" data-on:click="$_sidebarOpen = !$_sidebarOpen" title="Toggle sidebar (Ctrl+B)">
-        <i class="fas fa-bars"></i>
+        <svg class="icon"><use href="#icon-bars"></use></svg>
     </button>
 
     <div class="header-title">
@@ -22,7 +22,7 @@
     <div class="header-actions">
         <?php if (isset($chatId)) { ?>
             <button class="btn-icon" title="Share" data-on:click="$_showShareModal = true">
-                <i class="fas fa-share-alt"></i>
+                <svg class="icon"><use href="#icon-share-alt"></use></svg>
             </button>
         <?php } ?>
     </div>

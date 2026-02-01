@@ -20,7 +20,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     type="button"
                     popovertarget="login-modal"
                     popovertargetaction="hide">
-                <i class="fas fa-times"></i>
+                <svg class="icon"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -53,7 +53,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </div>
 
             <div class="form-error" data-show="$_authError">
-                <i class="fas fa-exclamation-circle"></i>
+                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
@@ -62,7 +62,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     data-attr-disabled="$_authLoading">
                 <span data-show="!$_authLoading">Sign In</span>
                 <span data-show="$_authLoading">
-                    <i class="fas fa-spinner fa-spin"></i> Signing in...
+                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Signing in...
                 </span>
             </button>
         </form>
@@ -93,7 +93,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     type="button"
                     popovertarget="register-modal"
                     popovertargetaction="hide">
-                <i class="fas fa-times"></i>
+                <svg class="icon"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -128,7 +128,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </div>
 
             <div class="form-error" data-show="$_authError">
-                <i class="fas fa-exclamation-circle"></i>
+                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
@@ -137,7 +137,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     data-attr-disabled="$_authLoading">
                 <span data-show="!$_authLoading">Create Account</span>
                 <span data-show="$_authLoading">
-                    <i class="fas fa-spinner fa-spin"></i> Creating...
+                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Creating...
                 </span>
             </button>
         </form>
@@ -168,7 +168,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     type="button"
                     popovertarget="upgrade-modal"
                     popovertargetaction="hide">
-                <i class="fas fa-times"></i>
+                <svg class="icon"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -208,7 +208,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </div>
 
             <div class="form-error" data-show="$_authError">
-                <i class="fas fa-exclamation-circle"></i>
+                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
@@ -217,7 +217,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                     data-attr-disabled="$_authLoading">
                 <span data-show="!$_authLoading">Create Account & Save Chats</span>
                 <span data-show="$_authLoading">
-                    <i class="fas fa-spinner fa-spin"></i> Creating...
+                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Creating...
                 </span>
             </button>
         </form>

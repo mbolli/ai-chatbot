@@ -19,7 +19,7 @@ $downvoted = $vote === false ? 'voted' : '';
 <div class="message-actions" id="message-<?php echo $e($messageId); ?>-actions">
     <?php if ($artifact !== null) { ?>
     <button id="artifact-btn-<?php echo $e($messageId); ?>" class="btn-icon" title="Open artifact: <?php echo $e($artifact['title']); ?>" data-on:click="@post('/api/documents/<?php echo $e($artifact['id']); ?>/open')">
-        <i class="fas fa-file-alt"></i>
+        <svg class="icon"><use href="#icon-file-alt"></use></svg>
     </button>
     <?php } ?>
     <button class="btn-icon btn-copy" title="Copy" data-on:click="
@@ -27,18 +27,18 @@ $downvoted = $vote === false ? 'voted' : '';
         this.classList.add('btn-copy-success');
         setTimeout(() => this.classList.remove('btn-copy-success'), 600);
     ">
-        <i class="fas fa-copy"></i>
+        <svg class="icon"><use href="#icon-copy"></use></svg>
     </button>
     <button class="btn-icon vote-btn <?php echo $upvoted; ?>"
             id="vote-up-<?php echo $e($messageId); ?>"
             title="Good response"
             data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($messageId); ?>', {payload: {isUpvote: true}})">
-        <i class="fas fa-thumbs-up"></i>
+        <svg class="icon"><use href="#icon-thumbs-up"></use></svg>
     </button>
     <button class="btn-icon vote-btn <?php echo $downvoted; ?>"
             id="vote-down-<?php echo $e($messageId); ?>"
             title="Bad response"
             data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($messageId); ?>', {payload: {isUpvote: false}})">
-        <i class="fas fa-thumbs-down"></i>
+        <svg class="icon"><use href="#icon-thumbs-down"></use></svg>
     </button>
 </div>

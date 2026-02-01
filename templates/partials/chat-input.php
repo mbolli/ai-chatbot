@@ -59,18 +59,20 @@ $formSubmit = $isNewChat
                         data-on:click="$_previewMarkdown = !$_previewMarkdown; if ($_previewMarkdown) document.getElementById('message-preview').innerHTML = window.marked?.parse($_message) || $_message"
                         data-attr-title="$_previewMarkdown ? 'Edit' : 'Preview'"
                         data-attr-aria-pressed="$_previewMarkdown">
-                    <i class="fas fa-eye" data-class="{'fa-edit': $_previewMarkdown, 'fa-eye': !$_previewMarkdown}"></i>
+                    <svg class="icon">
+                        <use data-attr-href="$_previewMarkdown ? '#icon-edit' : '#icon-eye'"></use>
+                    </svg>
                 </button>
                 <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr-disabled="!$_message.trim()">
-                    <i class="fas fa-paper-plane"></i>
+                    <svg class="icon"><use href="#icon-paper-plane"></use></svg>
                 </button>
                 <?php if ($chatId) { ?>
                     <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating">
-                        <i class="fas fa-stop"></i>
+                        <svg class="icon"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } else { ?>
                     <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" title="Stop generating">
-                        <i class="fas fa-stop"></i>
+                        <svg class="icon"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } ?>
             </div>
