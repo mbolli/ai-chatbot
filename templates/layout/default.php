@@ -19,14 +19,8 @@ $isGuest = ($user['isGuest'] ?? true);
     <meta name="view-transition" content="same-origin">
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
 
-    <!-- Open Props CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/open-props">
-    <link rel="stylesheet" href="https://unpkg.com/open-props/normalize.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/open-props/buttons.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/open-props/animations.min.css">
-
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Open Props CSS (bundled) -->
+    <link rel="stylesheet" href="/css/open-props-bundle.css">
 
     <!-- Custom styles -->
     <link rel="stylesheet" href="/css/app.css">
@@ -58,6 +52,9 @@ $isGuest = ($user['isGuest'] ?? true);
     </script>
 </head>
 <body>
+    <!-- SVG Icon Sprite -->
+    <?php include __DIR__ . '/../../public/icons.svg'; ?>
+
     <div id="app"
          class="app-container"
          data-signals='{
@@ -105,16 +102,27 @@ $isGuest = ($user['isGuest'] ?? true);
     <!-- App JS -->
     <script type="module" src="/js/app.js"></script>
 
-    <!-- Marked.js for markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Marked.js for markdown parsing (local, ES module) -->
     <script>
+        // Queue for markdown parsing requests before module loads
+        window._markdownQueue = [];
+        window.parseMessageMarkdown = function(messageId) {
+            window._markdownQueue.push(messageId);
+        };
+    </script>
+    <script type="module">
+        import { marked } from '/js/marked.min.js';
+
         // Configure marked for safe rendering
         marked.setOptions({
             breaks: true,
             gfm: true
         });
 
-        // Parse markdown for a message element
+        // Expose to window for use in templates
+        window.marked = marked;
+
+        // Real implementation
         window.parseMessageMarkdown = function(messageId) {
             const raw = document.getElementById(messageId + '-raw');
             const content = document.getElementById(messageId + '-content');
@@ -122,6 +130,10 @@ $isGuest = ($user['isGuest'] ?? true);
                 content.innerHTML = marked.parse(raw.textContent || '');
             }
         };
+
+        // Process any queued requests
+        window._markdownQueue.forEach(id => window.parseMessageMarkdown(id));
+        window._markdownQueue = [];
     </script>
 </body>
 </html>
