@@ -15,6 +15,35 @@
 }
 
 /* ================================
+   SVG Icon System
+   ================================ */
+
+.icon {
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+/* Icon sizes */
+.icon-sm { width: 0.875em; height: 0.875em; }
+.icon-lg { width: 1.25em; height: 1.25em; }
+.icon-xl { width: 1.5em; height: 1.5em; }
+.icon-2x { width: 2em; height: 2em; }
+
+/* Spinning animation (replaces fa-spin) */
+.icon-spin {
+    animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ================================
    Animation & Motion System
    ================================ */
 
@@ -825,12 +854,7 @@ html, body {
     font-weight: var(--font-weight-5);
 }
 
-.artifact-content {
-    flex: 1;
-    overflow: auto;
-    padding: var(--size-4);
-    min-height: calc(100vh - 120px); /* Subtract header (60px) + footer (60px) */
-}
+/* Note: main .artifact-content styles are in "Right Column - Artifact Panel" section below */
 
 /* Artifact Content Styles */
 .artifact-text {
@@ -1411,6 +1435,7 @@ html, body {
     grid-area: artifact-content;
     width: 50vw;
     max-width: 700px;
+    min-height: 0; /* Critical: allow grid item to shrink below content size */
     background: var(--surface-1);
     border-left: 1px solid var(--surface-3);
     overflow-y: auto;
