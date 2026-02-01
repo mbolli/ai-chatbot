@@ -51,10 +51,19 @@ Tested from Windows desktop via Chrome DevTools.
 
 ### 4. Codebase Size
 
+**Production (no dev dependencies):**
+
+| Metric | PHP/Swoole | Next.js | Ratio |
+|--------|------------|---------|-------|
+| **Dependencies (installed)** | **69** | 799 | **11.6x** |
+| **Disk size (vendor/node_modules)** | **25 MB** | 793 MB | **31.7x** |
+
+**With dev dependencies:**
+
 | Metric | PHP/Swoole | Next.js | Ratio |
 |--------|------------|---------|-------|
 | **Dependencies (installed)** | **140** | 921 | 6.6x |
-| **Disk size (vendor/node_modules)** | **76 MB** | 986 MB | **13x** |
+| **Disk size (vendor/node_modules)** | **76 MB** | 986 MB | 13x |
 | **Direct dependencies** | 32 | 97 | 3x |
 
 ### 5. Load Test (k6, PHP only)
@@ -100,6 +109,7 @@ Tested from Windows desktop via Chrome DevTools.
 | **Memory profiling** | No system access to Vercel serverless |
 | **SSE overhead** | Needs coordinated server-side instrumentation |
 | **Authenticated endpoints** | Different auth systems, not comparable |
+| **Mobile (4G slow/3G)** | TODO: Add throttled Lighthouse tests |
 
 > A fair comparison of these metrics would require self-hosted instances of both applications on identical hardware.
 
@@ -107,11 +117,21 @@ Tested from Windows desktop via Chrome DevTools.
 
 ## Reproduce These Results
 
-### Lighthouse
+### Lighthouse (Desktop)
 ```bash
 # Run from Chrome DevTools > Lighthouse tab, or:
 npx lighthouse https://chat.zweiundeins.gmbh/ --output=json
 npx lighthouse https://demo.chat-sdk.dev/ --output=json
+```
+
+### Lighthouse (Mobile with Slow 4G)
+```bash
+# Simulate slow 4G network conditions (1.6 Mbps, 150ms RTT)
+npx lighthouse https://chat.zweiundeins.gmbh/ --preset=desktop --throttling.cpuSlowdownMultiplier=4 --throttling.throughputKbps=1600 --throttling.rttMs=150 --output=json
+npx lighthouse https://demo.chat-sdk.dev/ --preset=desktop --throttling.cpuSlowdownMultiplier=4 --throttling.throughputKbps=1600 --throttling.rttMs=150 --output=json
+
+# Or use mobile preset (includes 4G throttling by default)
+npx lighthouse https://chat.zweiundeins.gmbh/ --preset=perf --output=json
 ```
 
 ### TTFB
@@ -121,12 +141,19 @@ for i in (seq 5); curl -s -o /dev/null -w "%{time_starttransfer}s\n" https://cha
 for i in (seq 5); curl -s -o /dev/null -w "%{time_starttransfer}s\n" -L https://demo.chat-sdk.dev/; end
 ```
 
-### Codebase Size
+### Codebase Size (Production)
 ```bash
-du -sh vendor                    # PHP: 76M
-du -sh ai-chatbot/node_modules   # Next.js: 986M
-composer show | wc -l            # PHP: 140 packages
-find ai-chatbot/node_modules -name 'package.json' | wc -l  # Next.js: 921 packages
+# Production builds (no dev dependencies) - more accurate comparison
+# PHP
+composer install --no-dev --optimize-autoloader
+du -sh vendor                    # PHP: ~50M (production)
+composer show | wc -l            # PHP: ~90 packages
+
+# Next.js  
+pnpm install --prod
+du -sh ai-chatbot/node_modules   # Next.js: ~500M (production, estimate)
+
+# Note: Original benchmarks used dev dependencies which inflates both numbers
 ```
 
 ### k6 Load Test

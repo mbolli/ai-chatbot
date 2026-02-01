@@ -30,12 +30,12 @@ This project exists to challenge the assumption that modern AI chat apps require
 | **JavaScript Sent** | 1.09 MB | **28 KB** | **39x less** |
 | **Cold Start** | 1.85s | **0ms** | No serverless penalty |
 
-### Codebase Comparison
+### Codebase Comparison (Production)
 
 | Aspect | Next.js | PHP/Swoole | Ratio |
 |--------|---------|------------|-------|
-| **Dependencies (installed)** | 921 packages | **140 packages** | 6.6x fewer |
-| **node_modules / vendor** | 986 MB | **76 MB** | **13x smaller** |
+| **Dependencies (prod)** | 799 packages | **69 packages** | **11.6x fewer** |
+| **node_modules / vendor** | 793 MB | **25 MB** | **31.7x smaller** |
 | **Build Step** | Required | **None** | — |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | — |
 
@@ -53,6 +53,7 @@ This project exists to challenge the assumption that modern AI chat apps require
 - **Rate Limiting** - Configurable daily message limits for guests and registered users
 - **Responsive UI** - Mobile-friendly design with sidebar navigation
 - **No Build Required** - Datastar provides reactivity without complex JS bundling
+- **Zero CDN Dependencies** - All assets served locally (Open Props, marked.js, SVG icons)
 
 ## 📋 Requirements
 
@@ -181,10 +182,14 @@ The application follows the Command Query Responsibility Segregation pattern:
 │   ├── schema.sql            # Database schema
 │   └── db.sqlite             # SQLite database (created on init)
 ├── public/
-│   ├── css/app.css           # Styles
+│   ├── css/
+│   │   ├── app.css               # Custom styles
+│   │   └── open-props-bundle.css # Open Props CSS (bundled)
+│   ├── icons.svg             # SVG icon sprite
 │   └── js/
 │       ├── app.js            # Custom TypeScript (compiled)
-│       └── datastar.js       # Datastar library
+│       ├── datastar.js       # Datastar library
+│       └── marked.min.js     # Markdown parser
 ├── src/App/
 │   ├── ConfigProvider.php    # DI factories
 │   ├── Domain/
@@ -264,8 +269,8 @@ The application follows the Command Query Responsibility Segregation pattern:
 - `claude-opus-4-1` - Claude Opus 4.1
 - `claude-opus-4` - Claude Opus 4
 - `claude-sonnet-4` - Claude Sonnet 4
-- `claude-haiku-3-5` - Claude Haiku 3.5
-- `claude-haiku-3` - Claude Haiku 3
+- `claude-3-5-haiku-20241022` - Claude Haiku 3.5
+- `claude-3-haiku-20240307` - Claude Haiku 3 (Cheapest!)
 
 **OpenAI (GPT-5.x)**
 - `gpt-5.2` / `gpt-5.1` / `gpt-5` - Full capability
