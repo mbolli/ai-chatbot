@@ -29,7 +29,7 @@ final class LLPhantAIService implements AIServiceInterface {
      * Default model to use when requested model is not found.
      * Using Haiku 3 as it's the cheapest option.
      */
-    public const string DEFAULT_MODEL = 'claude-haiku-3';
+    public const string DEFAULT_MODEL = 'claude-3-haiku-20240307';
 
     /**
      * Anthropic Claude models (current + previous generation).
@@ -54,8 +54,8 @@ final class LLPhantAIService implements AIServiceInterface {
         'claude-opus-4-1' => 'Claude Opus 4.1',
         'claude-opus-4' => 'Claude Opus 4',
         'claude-sonnet-4' => 'Claude Sonnet 4',
-        'claude-haiku-3-5' => 'Claude Haiku 3.5',
-        'claude-haiku-3' => 'Claude Haiku 3',
+        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',
+        'claude-3-haiku-20240307' => 'Claude Haiku 3',
     ];
 
     /**
@@ -64,8 +64,8 @@ final class LLPhantAIService implements AIServiceInterface {
      */
     private const array ANTHROPIC_MODELS_PROD = [
         'claude-haiku-4-5' => 'Claude Haiku 4.5',       // $1/$5
-        'claude-haiku-3-5' => 'Claude Haiku 3.5',   // $0.80/$4
-        'claude-haiku-3' => 'Claude Haiku 3',       // $0.25/$1.25
+        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',   // $0.80/$4
+        'claude-3-haiku-20240307' => 'Claude Haiku 3',       // $0.25/$1.25
     ];
 
     /**
@@ -110,7 +110,7 @@ final class LLPhantAIService implements AIServiceInterface {
     /**
      * Fast model for title generation (prefer cheapest for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-3';
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku-20240307';
     private const string TITLE_MODEL_OPENAI = 'gpt-5-nano';
 
     private CreateDocumentTool $createDocumentTool;
