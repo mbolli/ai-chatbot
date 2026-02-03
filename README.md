@@ -20,15 +20,27 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 > **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization—yet outperforms on most metrics.
 
-### Measured Performance (January 2026)
+### Measured Performance (February 2026)
+
+**Desktop (Chrome 144):**
 
 | Metric | Next.js (Vercel) | PHP/Swoole | Difference |
 |--------|------------------|------------|------------|
 | **Lighthouse Score** | 92 | **100** | 🏆 PHP |
-| **Time to Interactive** | 1.6s | **0.7s** | 2.3x faster |
-| **Total Blocking Time** | 130ms | **0ms** | ∞ better |
-| **JavaScript Sent** | 1.09 MB | **28 KB** | **39x less** |
-| **Cold Start** | 1.85s | **0ms** | No serverless penalty |
+| **Time to Interactive** | 1.58s | **0.29s** | **5.4x faster** |
+| **Total Blocking Time** | 134ms | **0ms** | ∞ better |
+| **JavaScript Sent** | ~1.1 MB | **~28 KB** | **39x less** |
+| **HTTP Requests** | 48 | **8** | **6x fewer** |
+| **Page Weight** | 1.3 MB | **60 KB** | **22x smaller** |
+
+**Mobile (Slow 4G + 4x CPU throttling):**
+
+| Metric | Next.js (Vercel) | PHP/Swoole | Difference |
+|--------|------------------|------------|------------|
+| **Lighthouse Score** | 44 | **100** | 🏆 PHP |
+| **Time to Interactive** | 7.9s | **1.2s** | **6.6x faster** |
+| **Total Blocking Time** | 1,995ms | **19ms** | **105x less** |
+| **Largest Contentful Paint** | 7.7s | **1.2s** | **6.4x faster** |
 
 ### Codebase Comparison (Production)
 
