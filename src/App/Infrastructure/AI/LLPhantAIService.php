@@ -466,7 +466,7 @@ Guidelines:
 
 When the user asks you to create, write, or generate content that would benefit from being in a separate document (code, articles, data, etc.), use the createDocument tool:
 
-- **text**: For articles, essays, documentation, markdown content
+- **text**: For articles, essays, documentation, markdown content. Use markdown syntax (# headers, **bold**, etc.), NOT raw HTML tags.
 - **code**: For programming code (specify the language: python, javascript, php, etc.)
 - **sheet**: For tabular data in CSV format
 - **image**: For SVG graphics or image content
