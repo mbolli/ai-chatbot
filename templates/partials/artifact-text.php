@@ -1,22 +1,15 @@
 <?php
 
 use App\Domain\Model\Document;
+use App\Infrastructure\Template\TemplateRenderer;
 
 /**
  * @var Document $document
  */
 $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-// Convert markdown to HTML (simple conversion for now)
-$content = $document->content ?? '';
-// Basic markdown conversion
-$content = preg_replace('/^### (.*)$/m', '<h3>$1</h3>', $content);
-$content = preg_replace('/^## (.*)$/m', '<h2>$1</h2>', $content);
-$content = preg_replace('/^# (.*)$/m', '<h1>$1</h1>', $content);
-$content = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $content);
-$content = preg_replace('/\*(.+?)\*/', '<em>$1</em>', $content);
-$content = preg_replace('/`([^`]+)`/', '<code>$1</code>', $content);
-$content = nl2br($e($content));
+// Use proper markdown parser (handles escaping internally)
+$content = TemplateRenderer::md($document->content ?? '');
 ?>
 <div class="artifact-text">
     <div class="artifact-text-content markdown" id="artifact-content-text">
