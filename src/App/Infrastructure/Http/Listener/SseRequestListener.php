@@ -212,9 +212,7 @@ final class SseRequestListener {
         );
 
         $this->safeWrite($response, $patchEvent->getOutput());
-
-        // Auto-scroll to bottom after adding new message
-        $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
+        // Scrolling handled client-side via data-on:datastar-fetch__window
     }
 
     private function handleMessageStreaming(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
@@ -256,25 +254,19 @@ final class SseRequestListener {
             return;
         }
 
-        // Escape for safe insertion into HTML
-        $escaped = htmlspecialchars($event->chunk, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $messageId = $event->messageId;
 
-        // Single combined patch: append chunk + trigger markdown + scroll
-        // The script uses data-effect to execute, then el.remove() cleans up
-        $combinedHtml = '<span>' . $escaped . '</span>'
-            . '<script data-effect="window.parseMessageMarkdown(\'message-' . $messageId . '\'); '
-            . 'requestAnimationFrame(() => { const c = document.getElementById(\'messages-container\'); if (c) c.scrollTop = c.scrollHeight; }); '
-            . 'el.remove()"></script>';
+        // Fat morph: send full accumulated content with server-side markdown
+        // Brotli compression makes this efficient, morph diffs the DOM
+        $html = '<div class="message-text markdown-content" id="message-' . $messageId . '-content">'
+            . TemplateRenderer::md($event->fullContent)
+            . '</div>';
 
-        $patch = new PatchElements(
-            $combinedHtml,
-            [
-                'selector' => '#message-' . $messageId . '-raw',
-                'mode' => ElementPatchMode::Append,
-            ]
-        );
+        $patch = new PatchElements($html);
         $this->safeWrite($response, $patch->getOutput());
+
+        // Auto-scroll
+        $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
@@ -345,7 +337,7 @@ final class SseRequestListener {
         $this->safeWrite($response, $patchEvent->getOutput());
     }
 
-    private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): ?string {
+    private function handleChatUpdated(SwooleHttpResponse $response, ChatUpdatedEvent $event): void {
         // Handle generation_stopped by sending signal to reset _generatingMessage
         if ($event->action === 'generation_stopped') {
             // Use empty string, not null - null means delete in Datastar
@@ -353,7 +345,7 @@ final class SseRequestListener {
                 '_generatingMessage' => '',
             ]);
 
-            return null;
+            return;
         }
 
         // Handle title_updated with combined patch events
@@ -362,7 +354,6 @@ final class SseRequestListener {
         }
 
         // Other actions (deleted, visibility_changed, model_changed) don't need SSE response
-        return null;
     }
 
     private function renderMessage(ChatUpdatedEvent $event): string {

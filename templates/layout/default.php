@@ -102,14 +102,7 @@ $isGuest = ($user['isGuest'] ?? true);
     <!-- App JS -->
     <script type="module" src="/js/app.js"></script>
 
-    <!-- Marked.js for markdown parsing (local, ES module) -->
-    <script>
-        // Queue for markdown parsing requests before module loads
-        window._markdownQueue = [];
-        window.parseMessageMarkdown = function(messageId) {
-            window._markdownQueue.push(messageId);
-        };
-    </script>
+    <!-- Marked.js for markdown preview in chat input -->
     <script type="module">
         import { marked } from '/js/marked.min.js';
 
@@ -119,21 +112,8 @@ $isGuest = ($user['isGuest'] ?? true);
             gfm: true
         });
 
-        // Expose to window for use in templates
+        // Expose to window for use in templates (message preview)
         window.marked = marked;
-
-        // Real implementation
-        window.parseMessageMarkdown = function(messageId) {
-            const raw = document.getElementById(messageId + '-raw');
-            const content = document.getElementById(messageId + '-content');
-            if (raw && content) {
-                content.innerHTML = marked.parse(raw.textContent || '');
-            }
-        };
-
-        // Process any queued requests
-        window._markdownQueue.forEach(id => window.parseMessageMarkdown(id));
-        window._markdownQueue = [];
     </script>
 </body>
 </html>

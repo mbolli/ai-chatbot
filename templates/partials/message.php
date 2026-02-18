@@ -43,9 +43,6 @@ $vote = $vote ?? null;
                 }
             }
 ?></div>
-        <?php if ($isAssistant && $streaming) { ?>
-            <div id="message-<?php echo $e($id); ?>-raw" style="display:none"></div>
-        <?php } ?>
         <?php if ($isAssistant && !$streaming && $chatId) {
             $messageId = $id;
 

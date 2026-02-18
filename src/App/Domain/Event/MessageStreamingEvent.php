@@ -11,5 +11,6 @@ final class MessageStreamingEvent {
         public readonly int $userId,
         public readonly string $chunk,
         public readonly bool $isComplete = false,
+        public readonly string $fullContent = '',
     ) {}
 }

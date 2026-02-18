@@ -20,7 +20,8 @@ $selectedModel = $defaultModel;
 <!-- Center Column: Header, Messages, Input -->
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
-<div class="main-content" id="messages-container">
+<div class="main-content" id="messages-container"
+     data-on:datastar-fetch__window="this.scrollTop = this.scrollHeight">
     <?php
     $messages = [];
 $chatId = null;

@@ -335,6 +335,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                     userId: $userId,
                     chunk: $chunk,
                     isComplete: false,
+                    fullContent: $fullContent,
                 ));
             }
 
@@ -560,6 +561,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 userId: $userId,
                 chunk: $chunk,
                 isComplete: false,
+                fullContent: $fullContent,
             ));
 
             usleep(50000); // 50ms between chunks
@@ -591,6 +593,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 userId: $userId,
                 chunk: $word,
                 isComplete: false,
+                fullContent: $fullContent,
             ));
 
             usleep(500000); // 500ms between words
@@ -615,6 +618,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 userId: $userId,
                 chunk: $chunk,
                 isComplete: false,
+                fullContent: $fullContent,
             ));
             usleep(100000); // 100ms
         }
@@ -793,6 +797,7 @@ HELP;
                 userId: $userId,
                 chunk: $chunk,
                 isComplete: false,
+                fullContent: $fullContent,
             ));
 
             usleep(20000); // 20ms between chunks
@@ -814,6 +819,7 @@ HELP;
             userId: $userId,
             chunk: '',
             isComplete: true,
+            fullContent: $content,
         ));
     }
 }
