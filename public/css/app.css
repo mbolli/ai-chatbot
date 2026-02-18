@@ -1503,6 +1503,7 @@ html, body {
 .artifact-text-content {
     flex: 1;
     overflow-y: auto;
+    padding: var(--size-4);
     line-height: var(--line-height-4);
 }
 
