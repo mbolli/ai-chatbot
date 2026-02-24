@@ -20,20 +20,20 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
      data-on:click="$_sidebarOpen = false"></div>
 
 <!-- Top Left: Title + New Chat -->
-<div class="sidebar-header<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<div class="sidebar-header<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}" role="banner">
     <h2>AI Chatbot</h2>
     <div class="sidebar-header-actions">
-        <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
-            <svg class="icon"><use href="#icon-plus"></use></svg>
+        <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat" aria-label="New Chat">
+            <svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
         </button>
-        <button class="btn-icon sidebar-close" data-on:click="$_sidebarOpen = false" title="Close sidebar">
-            <svg class="icon"><use href="#icon-times"></use></svg>
+        <button class="btn-icon sidebar-close" data-on:click="$_sidebarOpen = false" title="Close sidebar" aria-label="Close sidebar">
+            <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
         </button>
     </div>
 </div>
 
 <!-- Middle Left: Conversations -->
-<nav class="sidebar-nav<?php echo $sidebarClosedClass; ?>" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<nav class="sidebar-nav<?php echo $sidebarClosedClass; ?>" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}" aria-label="Chat history">
     <?php if (empty($chats)) { ?>
         <p class="sidebar-empty animate-fade-in">No conversations yet</p>
     <?php } else { ?>
@@ -49,7 +49,7 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
 </nav>
 
 <!-- Bottom Left: Connection Status + Auth -->
-<div class="sidebar-footer<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<div class="sidebar-footer<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}" role="contentinfo">
     <div id="connection-status" class="connection-indicator">
         <span class="dot"></span>
         <span>Connecting...</span>
@@ -74,9 +74,10 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
             </div>
             <button class="btn-icon"
                     data-on:click="@post('/auth/logout')"
-                    title="Sign out">
-                <svg class="icon"><use href="#icon-sign-out-alt"></use></svg>
+                    title="Sign out"
+                    aria-label="Sign out">
+                <svg class="icon" aria-hidden="true"><use href="#icon-sign-out-alt"></use></svg>
             </button>
         </div>
     <?php } ?>
-</div>
+</div></aside>

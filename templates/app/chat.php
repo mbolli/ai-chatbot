@@ -25,12 +25,12 @@ $selectedModel = $chat->model;
 <!-- Center Column: Header, Messages, Input -->
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
-<div class="main-content" id="messages-container"
+<div class="main-content" id="messages-container" role="main" aria-label="Chat messages"
      data-on:datastar-fetch__window="el.scrollTop = el.scrollHeight">
     <?php include __DIR__ . '/../partials/messages.php'; ?>
 </div>
 
-<div class="main-input">
+<div class="main-input" role="region" aria-label="Message input area">
     <?php include __DIR__ . '/../partials/chat-input.php'; ?>
 </div>
 

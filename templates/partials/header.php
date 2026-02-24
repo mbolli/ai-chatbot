@@ -11,8 +11,8 @@
 ?>
 <!-- Top Center: Sidebar toggle + Chat title -->
 <header class="main-header">
-    <button class="btn-icon" data-on:click="$_sidebarOpen = !$_sidebarOpen" title="Toggle sidebar (Ctrl+B)">
-        <svg class="icon"><use href="#icon-bars"></use></svg>
+    <button class="btn-icon" data-on:click="$_sidebarOpen = !$_sidebarOpen" title="Toggle sidebar (Ctrl+B)" aria-label="Toggle sidebar">
+        <svg class="icon" aria-hidden="true"><use href="#icon-bars"></use></svg>
     </button>
 
     <div class="header-title">
@@ -21,8 +21,8 @@
 
     <div class="header-actions">
         <?php if (isset($chatId)) { ?>
-            <button class="btn-icon" title="Share" data-on:click="$_showShareModal = true">
-                <svg class="icon"><use href="#icon-share-alt"></use></svg>
+            <button class="btn-icon" title="Share" aria-label="Share chat" data-on:click="$_showShareModal = true">
+                <svg class="icon" aria-hidden="true"><use href="#icon-share-alt"></use></svg>
             </button>
         <?php } ?>
     </div>

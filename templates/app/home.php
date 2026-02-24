@@ -20,7 +20,7 @@ $selectedModel = $defaultModel;
 <!-- Center Column: Header, Messages, Input -->
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
-<div class="main-content" id="messages-container"
+<div class="main-content" id="messages-container" role="main" aria-label="Chat messages"
      data-on:datastar-fetch__window="el.scrollTop = el.scrollHeight">
     <?php
     $messages = [];
@@ -30,7 +30,7 @@ include __DIR__ . '/../partials/messages.php';
 ?>
 </div>
 
-<div class="main-input">
+<div class="main-input" role="region" aria-label="Message input area">
     <?php
 $chatId = null;
 

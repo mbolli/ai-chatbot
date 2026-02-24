@@ -11,28 +11,28 @@
      data-on:click="$_artifactOpen = false; $_artifactId = null"></div>
 
 <!-- Top Right: Artifact Title + Actions -->
-<div class="artifact-header artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
+<div class="artifact-header artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}" role="region" aria-label="Artifact panel">
     <span class="artifact-title">
         <svg class="icon"><use href="#icon-file-code"></use></svg>
         <span id="artifact-title">Artifact</span>
     </span>
     <div class="artifact-actions">
-        <button class="btn-icon" id="artifact-download" title="Download" data-on:click="window.downloadArtifact($_artifactId)">
-            <svg class="icon"><use href="#icon-download"></use></svg>
+        <button class="btn-icon" id="artifact-download" title="Download" aria-label="Download artifact" data-on:click="window.downloadArtifact($_artifactId)">
+            <svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg>
         </button>
-        <button class="btn-icon" data-on:click="$_artifactOpen = false; $_artifactId = null" title="Close (Esc)">
-            <svg class="icon"><use href="#icon-times"></use></svg>
+        <button class="btn-icon" data-on:click="$_artifactOpen = false; $_artifactId = null" title="Close (Esc)" aria-label="Close artifact panel">
+            <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
         </button>
     </div>
 </div>
 
 <!-- Middle Right: Artifact Content -->
-<div id="artifact-content" class="artifact-content artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
+<div id="artifact-content" class="artifact-content artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}" role="region" aria-label="Artifact content">
     <!-- Artifact content loaded via SSE -->
 </div>
 
 <!-- Bottom Right: Fun footer -->
-<div class="artifact-footer artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
+<div class="artifact-footer artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}" role="contentinfo">
     <svg class="icon"><use href="#icon-wand-magic-sparkles"></use></svg>
     <span>Generated with AI magic ✨</span>
 </div>
