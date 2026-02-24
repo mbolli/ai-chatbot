@@ -16,6 +16,7 @@ $isGuest = ($user['isGuest'] ?? true);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fast, privacy-focused AI chatbot powered by Claude and GPT. Create artifacts, write code, analyze data, and get instant answers.">
     <meta name="view-transition" content="same-origin">
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
 
@@ -69,7 +70,6 @@ $isGuest = ($user['isGuest'] ?? true);
             "_output": "",
             "_message": "",
             "_generatingMessage": "",
-            "_previewMarkdown": false,
             "_authModal": null,
             "_authEmail": "",
             "_authPassword": "",
@@ -101,19 +101,5 @@ $isGuest = ($user['isGuest'] ?? true);
 
     <!-- App JS -->
     <script type="module" src="/js/app.js"></script>
-
-    <!-- Marked.js for markdown preview in chat input -->
-    <script type="module">
-        import { marked } from '/js/marked.min.js';
-
-        // Configure marked for safe rendering
-        marked.setOptions({
-            breaks: true,
-            gfm: true
-        });
-
-        // Expose to window for use in templates (message preview)
-        window.marked = marked;
-    </script>
 </body>
 </html>

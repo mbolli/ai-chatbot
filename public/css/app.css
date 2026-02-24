@@ -268,20 +268,6 @@
     color: var(--blue-5);
 }
 
-
-.btn-preview {
-    opacity: 0.6;
-}
-
-.btn-preview:hover,
-.btn-preview[aria-pressed="true"] {
-    opacity: 1;
-}
-
-.btn-preview[aria-pressed="true"] {
-    color: var(--accent);
-}
-
 .disclaimer {
     text-align: center;
     font-size: var(--font-size-0);
@@ -820,22 +806,6 @@ html, body {
 
 .message-input::placeholder {
     color: var(--text-secondary);
-}
-
-.message-preview,
-.message-preview-empty {
-    background: var(--surface-2);
-    border: 1px solid var(--surface-3);
-    border-radius: var(--radius-2);
-    padding: var(--size-3);
-    min-height: 48px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.message-preview-empty {
-    display: flex;
-    align-items: center;
 }
 
 /* Old artifact panel styles moved to Artifact Panel Styles section below */

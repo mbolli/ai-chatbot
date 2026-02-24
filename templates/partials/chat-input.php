@@ -17,33 +17,30 @@ $formSubmit = $isNewChat
 ?>
 <div class="input-container">
     <form class="input-form" method="POST"
+          aria-label="Chat message form"
           data-on:submit__prevent="<?php echo $formSubmit; ?>">
         <div class="input-wrapper">
             <textarea
                 name="message"
                 class="message-input"
                 data-bind="_message"
-                data-show="!$_previewMarkdown"
                 autofocus
                 placeholder="Send a message..."
                 rows="1"
+                aria-label="Message input"
                 data-on-keys:enter__el="!evt.shiftKey && el.closest('form').requestSubmit()"></textarea>
-            <div id="message-preview" class="message-preview markdown-content"
-                 style="display:none"
-                 data-show="$_previewMarkdown && $_message"></div>
-            <div class="message-preview-empty"
-                 style="display:none"
-                 data-show="$_previewMarkdown && !$_message">
-                <span class="text-muted">Nothing to preview</span>
-            </div>
         </div>
         <div class="input-toolbar">
             <div class="input-toolbar-left">
                 <?php if (isset($chatId)) { ?>
                 <select class="model-selector-compact" data-bind="_model"
-                        data-on:change="@patch('/cmd/chat/<?php echo $e($chatId); ?>/model', {payload: {model: $_model}})">
+                        data-on:change="@patch('/cmd/chat/<?php echo $e($chatId); ?>/model', {payload: {model: $_model}})"
+                        aria-label="Select AI model"
+                        title="Select AI model">
                 <?php } else { ?>
-                <select class="model-selector-compact" data-bind="_model">
+                <select class="model-selector-compact" data-bind="_model"
+                        aria-label="Select AI model"
+                        title="Select AI model">
                 <?php } ?>
                     <?php foreach ($models as $modelId => $modelInfo) { ?>
                         <option value="<?php echo $e($modelId); ?>"
@@ -56,25 +53,16 @@ $formSubmit = $isNewChat
             </div>
             <p class="disclaimer">AI can make mistakes. Please verify information independently.</p>
             <div class="input-actions">
-                <button type="button"
-                        class="btn-icon btn-preview"
-                        data-on:click="$_previewMarkdown = !$_previewMarkdown; if ($_previewMarkdown) document.getElementById('message-preview').innerHTML = window.marked?.parse($_message) || $_message"
-                        data-attr-title="$_previewMarkdown ? 'Edit' : 'Preview'"
-                        data-attr-aria-pressed="$_previewMarkdown">
-                    <svg class="icon" data-show="!$_previewMarkdown"><use href="#icon-eye"></svg>
-                    <svg class="icon" data-show="$_previewMarkdown"><use href="#icon-edit"></svg>
-                    </svg>
-                </button>
-                <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr-disabled="!$_message.trim()">
-                    <svg class="icon"><use href="#icon-paper-plane"></use></svg>
+                <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr-disabled="!$_message.trim()" aria-label="Send message" title="Send message">
+                    <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
                 </button>
                 <?php if ($chatId) { ?>
-                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating">
-                        <svg class="icon"><use href="#icon-stop"></use></svg>
+                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating" aria-label="Stop generating">
+                        <svg class="icon" aria-hidden="true"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } else { ?>
-                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" title="Stop generating">
-                        <svg class="icon"><use href="#icon-stop"></use></svg>
+                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" title="Stop generating" aria-label="Stop generating">
+                        <svg class="icon" aria-hidden="true"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } ?>
             </div>
