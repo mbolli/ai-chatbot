@@ -29,8 +29,10 @@ $formSubmit = $isNewChat
                 rows="1"
                 data-on-keys:enter__el="!evt.shiftKey && el.closest('form').requestSubmit()"></textarea>
             <div id="message-preview" class="message-preview markdown-content"
+                 style="display:none"
                  data-show="$_previewMarkdown && $_message"></div>
             <div class="message-preview-empty"
+                 style="display:none"
                  data-show="$_previewMarkdown && !$_message">
                 <span class="text-muted">Nothing to preview</span>
             </div>

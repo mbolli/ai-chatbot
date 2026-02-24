@@ -8,6 +8,11 @@
  * @var callable $e Escape function
  */
 $isGuest = ($user['isGuest'] ?? true);
+// Pre-compute sidebar open state (same logic as data-signals in default.php)
+// so sidebar-closed class is server-rendered, avoiding a layout shift on Datastar init.
+$sidebarOpenInitial = !isset($_SERVER['HTTP_USER_AGENT'])
+    || !preg_match('/Mobile|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT']);
+$sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
 ?>
 <!-- Sidebar backdrop overlay (mobile only) -->
 <div class="sidebar-backdrop"
@@ -15,7 +20,7 @@ $isGuest = ($user['isGuest'] ?? true);
      data-on:click="$_sidebarOpen = false"></div>
 
 <!-- Top Left: Title + New Chat -->
-<div class="sidebar-header" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<div class="sidebar-header<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}">
     <h2>AI Chatbot</h2>
     <div class="sidebar-header-actions">
         <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat">
@@ -28,7 +33,7 @@ $isGuest = ($user['isGuest'] ?? true);
 </div>
 
 <!-- Middle Left: Conversations -->
-<nav class="sidebar-nav" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<nav class="sidebar-nav<?php echo $sidebarClosedClass; ?>" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}">
     <?php if (empty($chats)) { ?>
         <p class="sidebar-empty animate-fade-in">No conversations yet</p>
     <?php } else { ?>
@@ -44,7 +49,7 @@ $isGuest = ($user['isGuest'] ?? true);
 </nav>
 
 <!-- Bottom Left: Connection Status + Auth -->
-<div class="sidebar-footer" data-class="{'sidebar-closed': !$_sidebarOpen}">
+<div class="sidebar-footer<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}">
     <div id="connection-status" class="connection-indicator">
         <span class="dot"></span>
         <span>Connecting...</span>
