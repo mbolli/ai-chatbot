@@ -264,9 +264,7 @@ final class SseRequestListener {
 
         $patch = new PatchElements($html);
         $this->safeWrite($response, $patch->getOutput());
-
-        // Auto-scroll
-        $this->sendExecuteScript($response, "requestAnimationFrame(() => { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; })");
+        // Scrolling handled client-side via data-on:datastar-fetch__window
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {

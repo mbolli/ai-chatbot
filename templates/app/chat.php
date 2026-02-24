@@ -26,7 +26,7 @@ $selectedModel = $chat->model;
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
 <div class="main-content" id="messages-container"
-     data-on:datastar-fetch__window="this.scrollTop = this.scrollHeight">
+     data-on:datastar-fetch__window="el.scrollTop = el.scrollHeight">
     <?php include __DIR__ . '/../partials/messages.php'; ?>
 </div>
 
