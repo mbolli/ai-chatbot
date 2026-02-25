@@ -169,14 +169,17 @@ The application follows the Command Query Responsibility Segregation pattern:
 - **Queries** (`/api/*`) - GET operations that read state
 - **Events** - Emitted when state changes, broadcast to clients via SSE
 
-### Real-time Streaming Flow
+### Real-time Streaming Flow (Fat Morph)
 
 1. User sends message via `POST /cmd/chat/{chatId}/message`
 2. `MessageCommandHandler` creates user + assistant message placeholders
 3. Swoole coroutine starts `streamAiResponse()` calling `AIService::streamChat()`
-4. Each token chunk emits `MessageStreamingEvent` via `EventBus`
-5. `SseRequestListener` receives events and sends Datastar `PatchElements`
-6. Browser's Datastar automatically patches DOM with streamed content
+4. Server accumulates full content; each chunk emits `MessageStreamingEvent` with `fullContent`
+5. `SseRequestListener` renders full markdown server-side and sends `PatchElements`
+6. Datastar morphs the DOM efficiently (only changed nodes update)
+7. Container auto-scrolls via `data-on:datastar-fetch__window`
+
+**Why fat morph?** Brotli compresses repetitive content ~same as deltas. Server-side markdown means no client scripts per chunk. DOM stays clean — just rendered HTML.
 
 ## 📁 Project Structure
 
@@ -550,6 +553,11 @@ CMD ["php", "vendor/bin/laminas", "mezzio:swoole:start"]
 
 ## 📚 Additional Resources
 
+**Project Documentation:**
+- [Benchmark Results](benchmarks/RESULTS.md) - Performance comparison data
+- [Benchmarking Methodology](BENCHMARKING.md) - How to test fairly
+
+**Framework Documentation:**
 - [Mezzio Documentation](https://docs.mezzio.dev/)
 - [Swoole Documentation](https://wiki.swoole.com/)
 - [Datastar Documentation](https://data-star.dev/)
