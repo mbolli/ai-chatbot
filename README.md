@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Made by zweiundeins.gmbh](https://img.shields.io/badge/Made%20with%20%E2%98%95%20by-zweiundeins.gmbh-blue)](https://zweiundeins.gmbh)
 
-**[🚀 Live Demo](https://chat.zweiundeins.gmbh)** | **[📊 Benchmark Results](benchmarks/RESULTS.md)**
+**[🚀 Live Demo](https://chat.zweiundeins.gmbh)** | **[📊 Benchmark Results](benchmarks/RESULTS.md)** | **[📝 Blog Post](https://zweiundeins.gmbh/en/methodology/spa-vs-hypermedia-real-world-performance-under-load)**
 
 A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
 
@@ -554,20 +554,6 @@ RUN composer install --no-dev --optimize-autoloader
 EXPOSE 8080
 CMD ["php", "vendor/bin/laminas", "mezzio:swoole:start"]
 ```
-
-## 📚 Additional Resources
-
-**Project Documentation:**
-- [Benchmark Results](benchmarks/RESULTS.md) - Performance comparison data
-- [Benchmarking Methodology](BENCHMARKING.md) - How to test fairly
-
-**Framework Documentation:**
-- [Mezzio Documentation](https://docs.mezzio.dev/)
-- [Swoole Documentation](https://wiki.swoole.com/)
-- [Datastar Documentation](https://data-star.dev/)
-- [LLPhant Library](https://github.com/theodo-group/LLPhant)
-- [Anthropic API](https://docs.anthropic.com/)
-- [OpenAI API](https://platform.openai.com/docs/)
 
 ## 📄 License
 
