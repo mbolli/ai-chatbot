@@ -83,20 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Scroll to bottom of messages container
- */
-function scrollToBottom(selector: string): void {
-    const container = document.querySelector(selector);
-    if (container) {
-        container.scrollTop = container.scrollHeight;
-    }
-}
-
-// Expose scroll helper
-(window as unknown as { scrollToBottom: typeof scrollToBottom }).scrollToBottom =
-    scrollToBottom;
-
-/**
  * Copy text to clipboard
  */
 async function copyToClipboard(text: string): Promise<boolean> {

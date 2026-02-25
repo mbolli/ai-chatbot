@@ -21,7 +21,7 @@ $selectedModel = $defaultModel;
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
 <div class="main-content" id="messages-container" role="main" aria-label="Chat messages"
-     data-on:datastar-fetch__window="el.scrollTop = el.scrollHeight">
+     data-on:datastar-fetch__window="requestAnimationFrame(() => el.scrollTop = el.scrollHeight)">
     <?php
     $messages = [];
 $chatId = null;

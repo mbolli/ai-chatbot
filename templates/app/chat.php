@@ -26,7 +26,7 @@ $selectedModel = $chat->model;
 <?php include __DIR__ . '/../partials/header.php'; ?>
 
 <div class="main-content" id="messages-container" role="main" aria-label="Chat messages"
-     data-on:datastar-fetch__window="el.scrollTop = el.scrollHeight">
+     data-on:datastar-fetch__window="requestAnimationFrame(() => el.scrollTop = el.scrollHeight)">
     <?php include __DIR__ . '/../partials/messages.php'; ?>
 </div>
 
@@ -44,5 +44,8 @@ $selectedModel = $chat->model;
 
 <script>
     // Scroll to bottom on initial page load
-    document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
+    requestAnimationFrame(() => {
+        const c = document.getElementById('messages-container');
+        c.scrollTop = c.scrollHeight;
+    });
 </script>
