@@ -26,21 +26,21 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 | Metric | Next.js (Vercel) | PHP/Swoole | Difference |
 |--------|------------------|------------|------------|
-| **Lighthouse Score** | 92 | **100** | 🏆 PHP |
-| **Time to Interactive** | 1.58s | **0.29s** | **5.4x faster** |
-| **Total Blocking Time** | 134ms | **0ms** | ∞ better |
-| **JavaScript Sent** | ~1.1 MB | **~28 KB** | **39x less** |
-| **HTTP Requests** | 48 | **8** | **6x fewer** |
-| **Page Weight** | 1.3 MB | **60 KB** | **22x smaller** |
+| **Lighthouse Score** | 93 | **100** | 🏆 PHP |
+| **Time to Interactive** | 1.6s | **0.3s** | **5.3x faster** |
+| **Total Blocking Time** | 110ms | **0ms** | ∞ better |
+| **JavaScript Sent** | ~1,080 KB | **13.5 KB** | **80x less** |
+| **HTTP Requests** | 36+ | **8** | **4.5x fewer** |
+| **Page Weight** | 1,107 KB | **42 KB** | **26x smaller** |
 
 **Mobile (Slow 4G + 4x CPU throttling):**
 
 | Metric | Next.js (Vercel) | PHP/Swoole | Difference |
 |--------|------------------|------------|------------|
-| **Lighthouse Score** | 44 | **100** | 🏆 PHP |
-| **Time to Interactive** | 7.9s | **1.2s** | **6.6x faster** |
-| **Total Blocking Time** | 1,995ms | **19ms** | **105x less** |
-| **Largest Contentful Paint** | 7.7s | **1.2s** | **6.4x faster** |
+| **Lighthouse Score** | 54 | **100** | 🏆 PHP |
+| **Time to Interactive** | 8.2s | **1.1s** | **7.5x faster** |
+| **Total Blocking Time** | 780ms | **0ms** | ∞ better |
+| **Largest Contentful Paint** | 8.1s | **1.1s** | **7.4x faster** |
 
 ### Codebase Comparison (Production)
 
@@ -441,8 +441,12 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 OPENAI_API_KEY=sk-your-key-here
 
 # AI Model Configuration
-AI_DEFAULT_MODEL=claude-sonnet-4-5
-AI_MAX_TOKENS=4096
+AI_DEFAULT_MODEL=claude-3-haiku-20240307
+AI_MAX_TOKENS=2048
+
+# Context compression settings
+AI_CONTEXT_RECENT_MESSAGES=6
+AI_CONTEXT_MAX_OLDER_CHARS=500
 
 # Application Settings
 APP_ENV=development
@@ -540,7 +544,7 @@ server {
 ```dockerfile
 FROM php:8.2-cli
 
-RUN pecl install swoole && docker-php-ext-enable swoole
+RUN pecl install openswoole && docker-php-ext-enable openswoole
 RUN docker-php-ext-install pdo pdo_sqlite
 
 WORKDIR /app
