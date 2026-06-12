@@ -9,7 +9,7 @@
         "postinstall": "cp node_modules/@starfederation/datastar/bundles/datastar.js public/js/datastar.js && cp node_modules/@mbolli/datastar-attribute-on-keys/dist/index.js public/js/datastar-on-keys.js"
     },
     "devDependencies": {
-        "esbuild": "^0.27.3",
+        "esbuild": "^0.28.1",
         "typescript": "^5.9.3"
     },
     "dependencies": {
