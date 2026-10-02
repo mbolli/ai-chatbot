@@ -2209,3 +2209,138 @@ html, body {
 ::view-transition-group(active-chat) {
     animation: 300ms var(--ease-out-3) both;
 }
+
+/* === Suggestions & reasoning === */
+
+.message-reasoning {
+    margin-bottom: var(--size-2);
+    font-size: var(--font-size-1);
+    color: var(--text-secondary);
+}
+
+/* Present in every streaming message, shown once reasoning arrives */
+.message-reasoning:has(> .message-reasoning-text:empty) {
+    display: none;
+}
+
+.message-reasoning summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    padding: 0;
+    background: none;
+    font-weight: var(--font-weight-5);
+    color: inherit;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+
+.message-reasoning summary::-webkit-details-marker {
+    display: none;
+}
+
+.message-reasoning summary::after {
+    content: '';
+    width: 0.4em;
+    height: 0.4em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s var(--ease-3);
+}
+
+.message-reasoning[open] summary::after {
+    transform: rotate(45deg);
+}
+
+.message-reasoning summary:hover {
+    color: var(--text-primary);
+}
+
+.message-reasoning-live,
+.message[data-streaming="true"] .message-reasoning-done {
+    display: none;
+}
+
+.message[data-streaming="true"] .message-reasoning-live {
+    display: inline;
+    animation: reasoning-pulse 1.6s var(--ease-in-out-2) infinite;
+}
+
+@keyframes reasoning-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.message-reasoning-text {
+    margin-top: var(--size-2);
+    padding-left: var(--size-3);
+    border-left: 2px solid var(--surface-3);
+    line-height: var(--font-lineheight-3);
+}
+
+.artifact-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    margin: var(--size-4) var(--size-4) 0;
+}
+
+.artifact-suggestions-header {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2);
+    font-size: var(--font-size-0);
+    font-weight: var(--font-weight-6);
+    color: var(--text-secondary);
+}
+
+.suggestion-card {
+    padding: var(--size-3);
+    background: var(--surface-1);
+    border: 1px solid var(--surface-3);
+    border-radius: var(--radius-2);
+    font-size: var(--font-size-1);
+}
+
+.suggestion-card p {
+    margin: 0 0 var(--size-2);
+}
+
+.suggestion-description {
+    color: var(--text-primary);
+}
+
+.suggestion-diff del,
+.suggestion-diff ins {
+    display: block;
+    padding: var(--size-1) var(--size-2);
+    border-radius: var(--radius-1);
+}
+
+.suggestion-diff del {
+    background: color-mix(in srgb, var(--red-7) 18%, transparent);
+    color: var(--red-3);
+    text-decoration-color: color-mix(in srgb, var(--red-3) 60%, transparent);
+}
+
+.suggestion-diff ins {
+    margin-top: var(--size-1);
+    background: color-mix(in srgb, var(--green-7) 18%, transparent);
+    color: var(--green-3);
+    text-decoration: none;
+}
+
+.suggestion-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-2);
+}
+
+.suggestion-highlight {
+    background: color-mix(in srgb, var(--yellow-5) 25%, transparent);
+    color: inherit;
+    border-bottom: 2px solid var(--yellow-5);
+    border-radius: 2px;
+}

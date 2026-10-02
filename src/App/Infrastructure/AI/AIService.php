@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
+use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
+use App\Domain\Repository\SuggestionRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Domain\Service\Stream\TextDelta;
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
+use App\Infrastructure\AI\Tools\RequestSuggestionsTool;
 use App\Infrastructure\AI\Tools\UpdateDocumentTool;
+use App\Infrastructure\EventBus\EventBusInterface;
 
 /**
  * AI service streaming from Anthropic and OpenAI through raw Swoole socket clients.
@@ -64,6 +68,7 @@ final class AIService implements AIServiceInterface {
     private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5';
     private const string TITLE_MODEL_OPENAI = 'gpt-6-luna';
     private const int TITLE_MAX_TOKENS = 30;
+    private const int SUGGESTIONS_MAX_TOKENS = 1500;
 
     public function __construct(
         private readonly ?string $anthropicApiKey = null,
@@ -73,6 +78,9 @@ final class AIService implements AIServiceInterface {
         private readonly ?string $defaultModel = null,
         private readonly bool $productionMode = false,
         private readonly string $responseFormat = 'markdown',
+        private readonly ?SuggestionRepositoryInterface $suggestionRepository = null,
+        private readonly ?ChatRepositoryInterface $chatRepository = null,
+        private readonly ?EventBusInterface $eventBus = null,
     ) {}
 
     public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator {
@@ -87,6 +95,17 @@ final class AIService implements AIServiceInterface {
             $createTool = new CreateDocumentTool($this->documentRepository);
             $createTool->setChatContext($chatId, $messageId);
             $tools = [$createTool, new UpdateDocumentTool($this->documentRepository, $chatId)];
+
+            if ($this->suggestionRepository !== null && $this->chatRepository !== null && $this->eventBus !== null) {
+                $tools[] = new RequestSuggestionsTool(
+                    $this->documentRepository,
+                    $this->suggestionRepository,
+                    $this->chatRepository,
+                    $this->eventBus,
+                    fn (string $system, string $prompt): string => $this->completeWithCheapModel($system, $prompt, self::SUGGESTIONS_MAX_TOKENS),
+                    $chatId,
+                );
+            }
         }
 
         $client = $this->createClient($model, $this->maxTokens);
@@ -196,6 +215,19 @@ final class AIService implements AIServiceInterface {
         }
 
         return new AnthropicStreamingClient($this->anthropicApiKey, $maxTokens);
+    }
+
+    private function completeWithCheapModel(string $system, string $prompt, int $maxTokens): string {
+        $model = $this->anthropicApiKey !== null ? self::TITLE_MODEL_ANTHROPIC : self::TITLE_MODEL_OPENAI;
+
+        $text = '';
+        foreach ($this->createClient($model, $maxTokens)->streamChatRealtime([['role' => 'user', 'content' => $prompt]], $model, $system) as $event) {
+            if ($event instanceof TextDelta) {
+                $text .= $event->text;
+            }
+        }
+
+        return $text;
     }
 
     private function getSystemPrompt(): string {

@@ -7,9 +7,13 @@ namespace App\Infrastructure\Http\Listener;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Event\MessageThinkingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
+use App\Domain\Event\SuggestionsUpdatedEvent;
 use App\Domain\Event\VoteUpdatedEvent;
+use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
+use App\Domain\Repository\SuggestionRepositoryInterface;
 use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
@@ -40,6 +44,7 @@ final class SseRequestListener {
         private readonly SwooleTableSessionPersistence $sessionPersistence,
         private readonly TemplateRenderer $renderer,
         private readonly DocumentRepositoryInterface $documentRepository,
+        private readonly SuggestionRepositoryInterface $suggestionRepository,
     ) {}
 
     public function __invoke(RequestEvent $event): void {
@@ -122,6 +127,18 @@ final class SseRequestListener {
                 return;
             }
             // If complete, continue to handleMessageStreaming for completion signal
+        }
+
+        if ($event instanceof MessageThinkingEvent) {
+            $this->sendThinking($response, $event);
+
+            return;
+        }
+
+        if ($event instanceof SuggestionsUpdatedEvent) {
+            $this->handleSuggestionsUpdated($response, $event);
+
+            return;
         }
 
         // Handle ChatUpdatedEvent
@@ -265,6 +282,46 @@ final class SseRequestListener {
         $patch = new PatchElements($html);
         $this->safeWrite($response, $patch->getOutput());
         // Scrolling handled client-side via data-on:datastar-fetch__window
+    }
+
+    private function sendThinking(SwooleHttpResponse $response, MessageThinkingEvent $event): void {
+        // Patch only the inner text: morphing the <details> would reset whether the user opened it
+        $html = $this->renderer->partial('message-reasoning-text', [
+            'id' => $event->messageId,
+            'thinking' => $event->fullThinking,
+            'e' => TemplateRenderer::escape(...),
+        ]);
+
+        $this->safeWrite($response, new PatchElements($html)->getOutput());
+    }
+
+    private function handleSuggestionsUpdated(SwooleHttpResponse $response, SuggestionsUpdatedEvent $event): void {
+        $document = $this->documentRepository->findWithContent($event->documentId);
+
+        if ($document === null || $document->chatId !== $event->chatId) {
+            return;
+        }
+
+        // New suggestions open the document; a dismissal re-renders the document the user is looking at
+        if ($event->action === SuggestionsUpdatedEvent::ACTION_REQUESTED) {
+            $this->sendPatchSignals($response, [
+                '_artifactOpen' => true,
+                '_artifactId' => $document->id,
+                '_artifactEditing' => false,
+                '_output' => '',
+            ]);
+            $this->sendDatastarFragment($response, '<span id="artifact-title">' . TemplateRenderer::escape($document->title) . '</span>');
+        }
+
+        $this->sendDatastarFragment($response, $this->renderArtifactContent($document));
+    }
+
+    private function renderArtifactContent(Document $document): string {
+        return $this->renderer->partial('artifact-content', [
+            'document' => $document,
+            'suggestions' => $document->isText() ? $this->suggestionRepository->findPendingByDocument($document->id) : [],
+            'renderer' => $this->renderer,
+        ]);
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
@@ -440,10 +497,7 @@ final class SseRequestListener {
         }
 
         // Render artifact content using the partial
-        $contentHtml = $this->renderer->partial('artifact-content', [
-            'document' => $document,
-            'renderer' => $this->renderer,
-        ]);
+        $contentHtml = $this->renderArtifactContent($document);
         $titleHtml = '<span id="artifact-title">' . htmlspecialchars($document->title, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>';
 
         // If this is a Python code document, load Pyodide lazily
@@ -470,10 +524,7 @@ final class SseRequestListener {
         ]);
 
         // The partial will replace #artifact-content with updated content
-        $contentHtml = $this->renderer->partial('artifact-content', [
-            'document' => $document,
-            'renderer' => $this->renderer,
-        ]);
+        $contentHtml = $this->renderArtifactContent($document);
 
         // If this is a Python code document, ensure Pyodide is loaded
         if ($event->kind === 'code' && $event->language === 'python') {
