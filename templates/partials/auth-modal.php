@@ -1,26 +1,26 @@
 <?php
 /**
  * Auth Modal Partial
- * Renders login/register/upgrade modals using the Popover API.
+ * Renders login/register/upgrade modals as native modal dialogs.
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 ?>
 
-<!-- Login Modal (Popover API) -->
-<div id="login-modal"
+<!-- Login Modal -->
+<dialog id="login-modal"
      class="modal-popover"
-     popover="manual"
-     data-on-signal-patch="el.togglePopover($_authModal === 'login')"
+     aria-labelledby="login-modal-title"
+     data-on-signal-patch="$_authModal === 'login' ? el.open || el.showModal() : el.close()"
      data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'login') { $_authModal = null; $_authError = ''; }">
+     data-on:close="if ($_authModal === 'login') { $_authModal = null; $_authError = ''; }">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Sign In</h2>
+            <h2 id="login-modal-title">Sign In</h2>
             <button class="btn-icon modal-close"
                     type="button"
-                    popovertarget="login-modal"
-                    popovertargetaction="hide">
-                <svg class="icon"><use href="#icon-times"></use></svg>
+                    aria-label="Close"
+                    data-on:click="$_authModal = null">
+                <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -34,6 +34,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <label for="login-email">Email</label>
                 <input type="email"
                        id="login-email"
+                       autofocus
                        name="email"
                        data-bind="_authEmail"
                        placeholder="you@example.com"
@@ -52,17 +53,17 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                        autocomplete="current-password">
             </div>
 
-            <div class="form-error" data-show="$_authError">
-                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
+            <div class="form-error" role="alert" data-show="$_authError">
+                <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr-disabled="$_authLoading">
+                    data-attr:disabled="$_authLoading">
                 <span data-show="!$_authLoading">Sign In</span>
                 <span data-show="$_authLoading">
-                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Signing in...
+                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Signing in...
                 </span>
             </button>
         </form>
@@ -77,23 +78,23 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </p>
         </div>
     </div>
-</div>
+</dialog>
 
-<!-- Register Modal (Popover API) -->
-<div id="register-modal"
+<!-- Register Modal -->
+<dialog id="register-modal"
      class="modal-popover"
-     popover="manual"
-     data-on-signal-patch="el.togglePopover($_authModal === 'register')"
+     aria-labelledby="register-modal-title"
+     data-on-signal-patch="$_authModal === 'register' ? el.open || el.showModal() : el.close()"
      data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'register') { $_authModal = null; $_authError = ''; }">
+     data-on:close="if ($_authModal === 'register') { $_authModal = null; $_authError = ''; }">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Create Account</h2>
+            <h2 id="register-modal-title">Create Account</h2>
             <button class="btn-icon modal-close"
                     type="button"
-                    popovertarget="register-modal"
-                    popovertargetaction="hide">
-                <svg class="icon"><use href="#icon-times"></use></svg>
+                    aria-label="Close"
+                    data-on:click="$_authModal = null">
+                <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -107,6 +108,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <label for="register-email">Email</label>
                 <input type="email"
                        id="register-email"
+                       autofocus
                        name="email"
                        data-bind="_authEmail"
                        placeholder="you@example.com"
@@ -127,17 +129,17 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <small class="form-hint">At least 8 characters</small>
             </div>
 
-            <div class="form-error" data-show="$_authError">
-                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
+            <div class="form-error" role="alert" data-show="$_authError">
+                <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr-disabled="$_authLoading">
+                    data-attr:disabled="$_authLoading">
                 <span data-show="!$_authLoading">Create Account</span>
                 <span data-show="$_authLoading">
-                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Creating...
+                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...
                 </span>
             </button>
         </form>
@@ -152,23 +154,23 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </p>
         </div>
     </div>
-</div>
+</dialog>
 
-<!-- Upgrade Modal (for guest users) (Popover API) -->
-<div id="upgrade-modal"
+<!-- Upgrade Modal (for guest users) -->
+<dialog id="upgrade-modal"
      class="modal-popover"
-     popover="manual"
-     data-on-signal-patch="el.togglePopover($_authModal === 'upgrade')"
+     aria-labelledby="upgrade-modal-title"
+     data-on-signal-patch="$_authModal === 'upgrade' ? el.open || el.showModal() : el.close()"
      data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:toggle="if (event.newState === 'closed' && $_authModal === 'upgrade') { $_authModal = null; $_authError = ''; }">
+     data-on:close="if ($_authModal === 'upgrade') { $_authModal = null; $_authError = ''; }">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Save Your Chats</h2>
+            <h2 id="upgrade-modal-title">Save Your Chats</h2>
             <button class="btn-icon modal-close"
                     type="button"
-                    popovertarget="upgrade-modal"
-                    popovertargetaction="hide">
-                <svg class="icon"><use href="#icon-times"></use></svg>
+                    aria-label="Close"
+                    data-on:click="$_authModal = null">
+                <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
             </button>
         </div>
 
@@ -187,6 +189,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <label for="upgrade-email">Email</label>
                 <input type="email"
                        id="upgrade-email"
+                       autofocus
                        name="email"
                        data-bind="_authEmail"
                        placeholder="you@example.com"
@@ -207,17 +210,17 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
                 <small class="form-hint">At least 8 characters</small>
             </div>
 
-            <div class="form-error" data-show="$_authError">
-                <svg class="icon"><use href="#icon-exclamation-circle"></use></svg>
+            <div class="form-error" role="alert" data-show="$_authError">
+                <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
                 <span data-text="$_authError"></span>
             </div>
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr-disabled="$_authLoading">
+                    data-attr:disabled="$_authLoading">
                 <span data-show="!$_authLoading">Create Account & Save Chats</span>
                 <span data-show="$_authLoading">
-                    <svg class="icon icon-spin"><use href="#icon-spinner"></use></svg> Creating...
+                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...
                 </span>
             </button>
         </form>
@@ -232,6 +235,6 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </p>
         </div>
     </div>
-</div>
+</dialog>
 
 

@@ -25,7 +25,10 @@ composer db:init        # Create data/db.sqlite from data/schema.sql
 
 pnpm build              # esbuild src/ts/main.ts -> public/js/app.js (committed)
 pnpm typecheck
+PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium pnpm test:e2e   # Playwright; starts its own server on E2E_PORT (8094) with a temp DB
 ```
+
+The e2e suite (`tests/e2e/`, `playwright.config.ts`) only sends the free test commands. It starts the server with `E2E_DATA_DIR` set, which makes `config/e2e.php` point the database, port and pid file at a temp directory, so `data/db.sqlite` is never touched. Stop any server on that port first. `PHP_INI_SCAN_DIR` defaults to `~/.local/php-swoole/conf.d`.
 
 `pnpm install` runs a postinstall that copies the Datastar bundle and the on-keys plugin into `public/js/`. Those files are committed, so a Datastar upgrade shows up as a diff there. Datastar is pinned to a GitHub tag in `package.json`.
 

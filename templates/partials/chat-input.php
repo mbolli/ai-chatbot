@@ -12,8 +12,8 @@ $formAction = $isNewChat
     ? '/cmd/chat'
     : '/cmd/chat/' . $e($chatId) . '/message';
 $formSubmit = $isNewChat
-    ? '$_generatingMessage = true; @post(\'/cmd/chat\', {payload: {message: $_message, model: $_model}})'
-    : '$_generatingMessage = true; @post(\'/cmd/chat/' . $e($chatId) . '/message\', {payload: {message: $_message}})';
+    ? 'if (!$_message.trim() || $_generatingMessage) return; $_generatingMessage = true; @post(\'/cmd/chat\', {payload: {message: $_message, model: $_model}})'
+    : 'if (!$_message.trim() || $_generatingMessage) return; document.getElementById(\'messages-container\').dataset.pinned = true; $_generatingMessage = true; @post(\'/cmd/chat/' . $e($chatId) . '/message\', {payload: {message: $_message}})';
 ?>
 <div class="input-container">
     <form class="input-form" method="POST"
@@ -27,8 +27,8 @@ $formSubmit = $isNewChat
                 autofocus
                 placeholder="Send a message..."
                 rows="1"
-                aria-label="Message input"
-                data-on-keys:enter__el="!evt.shiftKey && el.closest('form').requestSubmit()"></textarea>
+                aria-label="Message"
+                data-on-keys:enter__el="!evt.shiftKey && !evt.isComposing && el.closest('form').requestSubmit()"></textarea>
         </div>
         <div class="input-toolbar">
             <div class="input-toolbar-left">
@@ -53,15 +53,15 @@ $formSubmit = $isNewChat
             </div>
             <p class="disclaimer">AI can make mistakes. Please verify information independently.</p>
             <div class="input-actions">
-                <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr-disabled="!$_message.trim()" aria-label="Send message" title="Send message">
-                    <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
-                </button>
-                <?php if ($chatId) { ?>
-                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating" aria-label="Stop generating">
-                        <svg class="icon" aria-hidden="true"><use href="#icon-stop"></use></svg>
+                <?php if ($isNewChat) { ?>
+                    <button type="submit" class="btn btn-primary btn-send" data-attr:disabled="!$_message.trim() || $_generatingMessage" aria-label="Send message" title="Send message">
+                        <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
                     </button>
                 <?php } else { ?>
-                    <button type="button" class="btn btn-danger btn-stop animate-pulse" data-show="$_generatingMessage" title="Stop generating" aria-label="Stop generating">
+                    <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr:disabled="!$_message.trim()" aria-label="Send message" title="Send message">
+                        <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
+                    </button>
+                    <button type="button" class="btn btn-danger btn-stop" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating" aria-label="Stop generating">
                         <svg class="icon" aria-hidden="true"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } ?>

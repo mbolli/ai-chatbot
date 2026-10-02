@@ -27,6 +27,7 @@ $aggregator = new ConfigAggregator([
 
     new ArrayProvider($cacheConfig),
     new PhpFileProvider(realpath(__DIR__) . '/autoload/{{,*.}global,{,*.}local}.php'),
+    new PhpFileProvider(realpath(__DIR__) . '/e2e.php'),
 ], $cacheConfig['config_cache_path']);
 
 return $aggregator->getMergedConfig();

@@ -15,6 +15,9 @@ importers:
         specifier: github:starfederation/datastar#v1.0.4
         version: https://codeload.github.com/starfederation/datastar/tar.gz/1efcdc3cb336ec3e9139491604e770e0329657bc
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.63.0
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -183,6 +186,11 @@ packages:
   '@mbolli/datastar-attribute-on-keys@1.2.0':
     resolution: {integrity: sha512-xZM10HoHX8V4TX0CXt9O0pPH+Ku4Nc3nZSG4onzvRMXDB2a3ZCQH4nyAjSjDtHyl1UNOPtxSClV7NTJN3W8vNA==}
 
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/1efcdc3cb336ec3e9139491604e770e0329657bc':
     resolution: {gitHosted: true, integrity: sha512-rMcGGl+U7P4hBSlBY0PrdBb0nfDCm4hc8sUVciavwJELtEC9fh3I9P4CIKUgbeV5rRs1oxr62Cwa8Ir4b3xxsQ==, tarball: https://codeload.github.com/starfederation/datastar/tar.gz/1efcdc3cb336ec3e9139491604e770e0329657bc}
     version: 0.0.0
@@ -312,6 +320,16 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   typescript@7.0.2:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
     engines: {node: '>=16.20.0'}
@@ -398,6 +416,10 @@ snapshots:
     optional: true
 
   '@mbolli/datastar-attribute-on-keys@1.2.0': {}
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@starfederation/datastar@https://codeload.github.com/starfederation/datastar/tar.gz/1efcdc3cb336ec3e9139491604e770e0329657bc': {}
 
@@ -489,6 +511,12 @@ snapshots:
       '@esbuild/win32-arm64': 0.28.2
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   typescript@7.0.2:
     optionalDependencies:

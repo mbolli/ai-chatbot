@@ -27,7 +27,7 @@ $votes = $votes ?? [];
                 ?>
                 <div class="message message-<?php echo $e($message->role); ?>"
                      id="message-<?php echo $e($message->id); ?>">
-                    <div class="message-avatar">
+                    <div class="message-avatar" aria-hidden="true">
                         <?php if ($message->isUser()) { ?>
                             <svg class="icon"><use href="#icon-user"></use></svg>
                         <?php } else { ?>
