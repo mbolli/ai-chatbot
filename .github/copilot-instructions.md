@@ -65,7 +65,6 @@ composer serve      # Start Swoole server at :8080
 composer test       # Run Pest tests (uses in-memory SQLite)
 composer stan       # PHPStan analysis
 composer cs:fix     # PHP-CS-Fixer
-composer db:seed    # Seed sample data
 
 npm run build       # Build TypeScript with esbuild
 npm run watch       # Watch mode

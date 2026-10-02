@@ -65,7 +65,7 @@ This project exists to challenge the assumption that modern AI chat apps require
 - **Rate Limiting** - Configurable daily message limits for guests and registered users
 - **Responsive UI** - Mobile-friendly design with sidebar navigation
 - **No Build Required** - Datastar provides reactivity without complex JS bundling
-- **Zero CDN Dependencies** - All assets served locally (Open Props, marked.js, SVG icons)
+- **Zero CDN Dependencies** - All assets served locally (Open Props, Datastar, SVG icons), markdown is rendered server-side
 
 ## 📋 Requirements
 
@@ -87,7 +87,7 @@ cd ai-chatbot
 composer install
 
 # Install frontend dependencies (optional)
-npm install
+pnpm install
 ```
 
 ### 2. Configure Environment
@@ -185,8 +185,7 @@ The application follows the Command Query Responsibility Segregation pattern:
 
 ```
 ├── bin/
-│   ├── init-db.php           # Database initialization script
-│   └── seed.php              # Sample data seeder
+│   └── init-db.php           # Database initialization script
 ├── config/
 │   ├── config.php            # Config aggregator
 │   ├── container.php         # DI container setup
@@ -204,7 +203,7 @@ The application follows the Command Query Responsibility Segregation pattern:
 │   └── js/
 │       ├── app.js            # Custom TypeScript (compiled)
 │       ├── datastar.js       # Datastar library
-│       └── marked.min.js     # Markdown parser
+│       └── datastar-on-keys.js # Datastar keyboard plugin
 ├── src/App/
 │   ├── ConfigProvider.php    # DI factories
 │   ├── Domain/
@@ -332,7 +331,6 @@ composer reload         # Reload Swoole workers
 
 # Database
 composer db:init        # Initialize database schema
-composer db:seed        # Seed with sample data
 
 # Testing
 composer test           # Run Pest tests
@@ -344,9 +342,9 @@ composer cs:fix         # Fix code style issues
 composer stan           # Run PHPStan static analysis
 
 # Frontend (optional)
-npm run build           # Build TypeScript with esbuild
-npm run watch           # Watch mode for development
-npm run typecheck       # TypeScript type checking
+pnpm build              # Build TypeScript with esbuild
+pnpm watch              # Watch mode for development
+pnpm typecheck          # TypeScript type checking
 ```
 
 ### Running Tests
@@ -358,7 +356,7 @@ Tests use Pest PHP with in-memory SQLite:
 composer test
 
 # Run specific test file
-./vendor/bin/pest tests/Unit/ChatTest.php
+./vendor/bin/pest tests/Unit/Domain/ChatTest.php
 
 # Run with coverage
 composer test:coverage
@@ -402,7 +400,7 @@ The frontend uses [Datastar](https://data-star.dev/) for reactive UI without Jav
 <div data-init="@get('/updates')">
 
 <!-- Form with signal binding -->
-<input type="text" data-model="$message" />
+<input type="text" data-bind="message" />
 
 <!-- Action on click -->
 <button data-on:click="@post('/cmd/chat/123/message')">
@@ -444,7 +442,7 @@ AI_CONTEXT_MAX_OLDER_CHARS=500
 APP_ENV=development
 APP_DEBUG=true
 
-# Rate Limits
+# Rate Limits (the hourly values are not enforced yet, only the daily ones)
 RATE_LIMIT_GUEST_HOURLY=10
 RATE_LIMIT_GUEST_DAILY=20
 RATE_LIMIT_USER_HOURLY=30
@@ -481,9 +479,8 @@ return [
             'host' => '0.0.0.0',
             'port' => 8080,
             'options' => [
-                'worker_num' => 4,
-                'task_worker_num' => 2,
-                'max_request' => 10000,
+                // Keep a single worker: the event bus and SSE connections live in worker memory
+                'worker_num' => 1,
             ],
         ],
     ],
@@ -536,8 +533,12 @@ server {
 ```dockerfile
 FROM php:8.5-cli
 
-RUN pecl install swoole && docker-php-ext-enable swoole
-RUN docker-php-ext-install pdo pdo_sqlite
+# Swoole needs OpenSSL for the HTTPS connections to the AI providers
+RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev libicu-dev unzip \
+    && docker-php-ext-install intl \
+    && pecl install -D 'enable-openssl="yes" enable-swoole-curl="yes"' swoole \
+    && docker-php-ext-enable swoole
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 COPY . .
@@ -554,7 +555,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🙏 Acknowledgments
 
 - **Baseline:** [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) — the Next.js reference implementation we're comparing against
-- **AI Integration:** [LLPhant](https://github.com/theodo-group/LLPhant) — PHP library for LLM interactions
+- **AI Integration:** [LLPhant](https://github.com/theodo-group/LLPhant) — PHP library for LLM interactions, used for chat titles (responses stream through custom Swoole clients)
 - **Reactivity:** [Datastar](https://data-star.dev/) — HTML-over-the-wire without the JS framework tax
 
 ---

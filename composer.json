@@ -58,8 +58,7 @@
         "cs": "php-cs-fixer fix --dry-run --diff",
         "cs:fix": "php-cs-fixer fix",
         "stan": "phpstan analyse",
-        "db:init": "php bin/init-db.php",
-        "db:seed": "php bin/seed.php"
+        "db:init": "php bin/init-db.php"
     },
     "config": {
         "sort-packages": true,
