@@ -96,7 +96,11 @@ final class OpenAIStreamingClient {
 
         // Create SSL socket connection
         $socket = new Socket(AF_INET, SOCK_STREAM, 0);
-        $socket->setProtocol(['open_ssl' => true]);
+        $socket->setProtocol([
+            'open_ssl' => true,
+            'ssl_host_name' => self::API_HOST,
+            'ssl_verify_peer' => true,
+        ]);
 
         if (!$socket->connect(self::API_HOST, 443, 30)) {
             throw new \RuntimeException('Failed to connect to OpenAI API: ' . $socket->errMsg);
@@ -145,11 +149,14 @@ final class OpenAIStreamingClient {
         }
 
         $statusCode = (int) $matches[1];
+
+        $decoder = preg_match('/^transfer-encoding:\s*chunked/im', $headers) === 1 ? new ChunkedDecoder() : null;
+        $remaining = $decoder?->decode($remaining) ?? $remaining;
         if ($statusCode >= 400) {
             // Read error body
             $errorBody = $remaining;
             while (($chunk = $socket->recv(4096, 5)) !== false && $chunk !== '') {
-                $errorBody .= $chunk;
+                $errorBody .= $decoder?->decode($chunk) ?? $chunk;
             }
             $socket->close();
 
@@ -168,16 +175,15 @@ final class OpenAIStreamingClient {
                 break;
             }
 
-            $buffer .= $chunk;
+            $buffer .= $decoder?->decode($chunk) ?? $chunk;
 
             // Process complete lines from buffer
             while (($lineEnd = strpos($buffer, "\n")) !== false) {
                 $line = substr($buffer, 0, $lineEnd);
                 $buffer = substr($buffer, $lineEnd + 1);
 
-                // Remove any chunk size lines if chunked encoding
                 $line = trim($line);
-                if ($line === '' || ctype_xdigit($line)) {
+                if ($line === '') {
                     continue;
                 }
 

@@ -84,7 +84,11 @@ final class AnthropicStreamingClient {
 
         // Create SSL socket connection
         $socket = new Socket(AF_INET, SOCK_STREAM, 0);
-        $socket->setProtocol(['open_ssl' => true]);
+        $socket->setProtocol([
+            'open_ssl' => true,
+            'ssl_host_name' => self::API_HOST,
+            'ssl_verify_peer' => true,
+        ]);
 
         if (!$socket->connect(self::API_HOST, 443, 30)) {
             throw new \RuntimeException('connection error: Failed to connect to Anthropic API - ' . $socket->errMsg);
@@ -141,6 +145,9 @@ final class AnthropicStreamingClient {
 
         $statusCode = (int) $matches[1];
 
+        $decoder = preg_match('/^transfer-encoding:\s*chunked/im', $headers) === 1 ? new ChunkedDecoder() : null;
+        $remaining = $decoder?->decode($remaining) ?? $remaining;
+
         if ($statusCode >= 400) {
             // Read error body
             $errorBody = $remaining;
@@ -150,7 +157,7 @@ final class AnthropicStreamingClient {
                     break;
                 }
 
-                $errorBody .= $data;
+                $errorBody .= $decoder?->decode($data) ?? $data;
             }
 
             $socket->close();
@@ -298,7 +305,7 @@ final class AnthropicStreamingClient {
                 break; // Connection closed or timeout
             }
 
-            $buffer .= $data;
+            $buffer .= $decoder?->decode($data) ?? $data;
         }
 
         $socket->close();
