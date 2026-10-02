@@ -11,6 +11,12 @@ final class Message {
     public const string ROLE_ASSISTANT = 'assistant';
     public const string ROLE_SYSTEM = 'system';
 
+    // Ordered entries of messages.parts; plain-text messages store no parts
+    public const string PART_TEXT = 'text';
+    public const string PART_TOOL_CALL = 'tool_call';
+    public const string PART_TOOL_RESULT = 'tool_result';
+    public const string PART_NOTICE = 'notice';
+
     /**
      * @param null|list<array<string, mixed>> $parts
      */
@@ -71,9 +77,9 @@ final class Message {
     }
 
     /**
-     * @param list<array<string, mixed>> $parts
+     * @param null|list<array<string, mixed>> $parts
      */
-    public function withParts(array $parts): self {
+    public function withParts(?array $parts): self {
         return new self(
             id: $this->id,
             chatId: $this->chatId,
@@ -115,7 +121,7 @@ final class Message {
         }
 
         foreach ($this->parts as $part) {
-            if (($part['type'] ?? '') === 'tool-invocation') {
+            if (($part['type'] ?? '') === self::PART_TOOL_CALL) {
                 return true;
             }
         }
@@ -131,7 +137,7 @@ final class Message {
             return [];
         }
 
-        return array_values(array_filter($this->parts, fn (array $part): bool => ($part['type'] ?? '') === 'tool-invocation'));
+        return array_values(array_filter($this->parts, fn (array $part): bool => ($part['type'] ?? '') === self::PART_TOOL_CALL));
     }
 
     /**

@@ -12,13 +12,20 @@ use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Model\Document;
 use App\Domain\Model\Message;
+use App\Domain\Model\MessageUsage;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
+use App\Domain\Service\AssistantResponse;
+use App\Domain\Service\ConversationHistoryBuilder;
 use App\Domain\Service\RateLimitService;
-use App\Domain\Service\Stream\TextDelta;
+use App\Domain\Service\Stream\StopReason;
+use App\Domain\Service\Stream\StreamEnd;
 use App\Domain\Service\Stream\ThinkingDelta;
+use App\Domain\Service\Stream\ToolCall;
+use App\Domain\Service\Stream\ToolResult;
+use App\Domain\Service\Stream\Usage;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -53,8 +60,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         private readonly AIServiceInterface $aiService,
         private readonly StreamingSessionManager $sessionManager,
         private readonly RateLimitService $rateLimitService,
-        private readonly int $contextRecentMessages = 6,
-        private readonly int $contextMaxOlderChars = 500,
+        private readonly int $contextMaxTokens = 8000,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
@@ -98,22 +104,10 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             return new EmptyResponse(409); // Conflict - already streaming
         }
 
-        // Check rate limit
-        if (!$this->rateLimitService->canSendMessage($userId)) {
-            $usageInfo = $this->rateLimitService->getUsageInfo($userId);
-
-            $this->eventBus->emit($userId, new RateLimitExceededEvent(
-                userId: $userId,
-                chatId: $chatId,
-                used: $usageInfo['used'],
-                limit: $usageInfo['limit'],
-                isGuest: $usageInfo['is_guest'],
-            ));
-
-            return new EmptyResponse(429); // Too Many Requests
+        if ($this->isRateLimited($userId, $chatId)) {
+            return new EmptyResponse(429);
         }
 
-        // Record this message for rate limiting
         $this->rateLimitService->recordMessage($userId);
 
         // Create user message
@@ -246,6 +240,13 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             }
         }
 
+        // The first message of a new chat is answered here, not in send()
+        if ($this->isRateLimited($userId, $chatId)) {
+            return new EmptyResponse(429);
+        }
+
+        $this->rateLimitService->recordMessage($userId);
+
         // Create placeholder for assistant message
         $assistantMessage = Message::assistant($chatId);
         $this->messageRepository->save($assistantMessage);
@@ -303,6 +304,18 @@ final class MessageCommandHandler implements RequestHandlerInterface {
      * Stream AI response to the user via SSE.
      */
     private function streamAiResponse(int $userId, string $chatId, Chat $chat, Message $userMessage, Message $assistantMessage, bool $isLocalhost = false): void {
+        $response = new AssistantResponse();
+        $history = [];
+        $model = $chat->model;
+        $fullThinking = '';
+        $stopReason = null;
+        $usage = null;
+        $wasStopped = false;
+        $failed = false;
+        $calledAi = false;
+        $startedAt = hrtime(true);
+        $firstTokenAt = null;
+
         try {
             // Check for test commands first
             $testCommand = $this->getTestCommand($userMessage->content ?? '', $isLocalhost);
@@ -312,23 +325,39 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 return;
             }
 
-            // Get conversation history
             $messages = $this->messageRepository->findByChat($chatId);
-            $history = $this->buildConversationHistory($messages);
-
-            // Stream AI response with 100ms buffering to reduce SSE events
-            $fullContent = '';
-            $fullThinking = '';
-            $wasStopped = false;
-            $chunkCount = 0;
+            $history = (new ConversationHistoryBuilder($this->contextMaxTokens))->build($messages);
+            $model = $this->servedModel($chat->model);
+            $calledAi = true;
 
             foreach ($this->aiService->streamChat($history, $chat->model, $chatId, $assistantMessage->id) as $event) {
-                // Check if stop was requested
                 if ($this->sessionManager->isStopRequested($chatId, $userId)) {
                     $wasStopped = true;
 
                     break;
                 }
+
+                if ($event instanceof StreamEnd) {
+                    $stopReason = $event->stopReason;
+                    $usage = $event->usage;
+
+                    continue;
+                }
+
+                if ($event instanceof ToolCall) {
+                    $response->addToolCall($event);
+
+                    continue;
+                }
+
+                if ($event instanceof ToolResult) {
+                    $response->addToolResult($event);
+                    $this->emitDocumentUpdate($userId, $chatId, $event, $response);
+
+                    continue;
+                }
+
+                $firstTokenAt ??= hrtime(true);
 
                 if ($event instanceof ThinkingDelta) {
                     $fullThinking .= $event->text;
@@ -342,48 +371,37 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                     continue;
                 }
 
-                if (!$event instanceof TextDelta) {
-                    continue;
-                }
-
-                $chunk = $event->text;
-                $fullContent .= $chunk;
-                ++$chunkCount;
+                $response->addText($event->text);
 
                 $this->eventBus->emit($userId, new MessageStreamingEvent(
                     chatId: $chatId,
                     messageId: $assistantMessage->id,
                     userId: $userId,
-                    chunk: $chunk,
+                    chunk: $event->text,
                     isComplete: false,
-                    fullContent: $fullContent,
+                    fullContent: $response->text(),
                 ));
             }
 
             $createdDocument = $this->documentRepository->findByMessageId($assistantMessage->id);
 
-            // Handle empty response (AI returned nothing, not even a document)
-            if (empty(mb_trim($fullContent)) && !$wasStopped && $createdDocument === null) {
-                error_log("AI returned empty response for chat {$chatId}, model: {$chat->model}, chunks received: {$chunkCount}");
+            // A response that only ran tools (created or updated a document) is not empty
+            $isEmpty = mb_trim($response->text()) === '' && !$wasStopped && $createdDocument === null && !$response->hasSuccessfulToolResult();
 
-                $errorContent = '⚠️ The AI returned an empty response. This could be due to content filtering or a temporary issue. Please try rephrasing your message or try again.';
-                $updatedMessage = $assistantMessage->appendContent($errorContent);
-                $this->messageRepository->update($updatedMessage);
-
-                $this->eventBus->emit($userId, new MessageStreamingEvent(
-                    chatId: $chatId,
-                    messageId: $assistantMessage->id,
-                    userId: $userId,
-                    chunk: $errorContent,
-                    isComplete: true,
-                ));
-
-                return;
+            $notice = null;
+            if ($stopReason !== null && !$wasStopped) {
+                $notice = AssistantResponse::noticeFor($stopReason);
+                if ($notice !== null) {
+                    $response->addNotice($stopReason->value, $notice);
+                }
+            }
+            if ($notice === null && $isEmpty) {
+                error_log("AI returned empty response for chat {$chatId}, model: {$model}");
+                $notice = '⚠️ The AI returned an empty response. This could be due to content filtering or a temporary issue. Please try rephrasing your message or try again.';
+                $response->addNotice(AssistantResponse::NOTICE_EMPTY, $notice);
             }
 
-            // Update message with full content
-            $updatedMessage = $assistantMessage->appendContent($fullContent);
-            $this->messageRepository->update($updatedMessage);
+            $this->messageRepository->update($assistantMessage->appendContent($response->content())->withParts($response->parts()));
 
             if ($createdDocument !== null) {
                 $this->eventBus->emit($userId, new DocumentUpdatedEvent(
@@ -397,25 +415,28 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 ));
             }
 
-            // Signal completion
+            // The stop marker is shown but not stored
             $this->eventBus->emit($userId, new MessageStreamingEvent(
                 chatId: $chatId,
                 messageId: $assistantMessage->id,
                 userId: $userId,
-                chunk: $wasStopped ? ' ⏹' : '',
+                chunk: $notice ?? ($wasStopped ? ' ⏹' : ''),
                 isComplete: true,
+                fullContent: $response->content() . ($wasStopped ? ' ⏹' : ''),
             ));
 
             // Generate title if this is the first message exchange (and not stopped early)
-            if (!$wasStopped && $chat->title === null && \count($messages) <= 2) {
+            if (!$wasStopped && !$isEmpty && $chat->title === null && \count($messages) <= 2) {
                 $this->generateChatTitle($userId, $chat, $userMessage->content ?? '');
             }
         } catch (\Throwable $e) {
+            $failed = true;
+
             // Log error with more context for debugging
             error_log(\sprintf(
                 'AI streaming error in chat %s (model: %s): %s | Trace: %s',
                 $chatId,
-                $chat->model,
+                $model,
                 $e->getMessage(),
                 $e->getTraceAsString()
             ));
@@ -432,8 +453,9 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 default => '⚠️ Sorry, I encountered an error while generating a response. Please try again.',
             };
 
-            $updatedMessage = $assistantMessage->appendContent($errorContent);
-            $this->messageRepository->update($updatedMessage);
+            // Keep whatever text arrived before the error
+            $response->addNotice(AssistantResponse::NOTICE_ERROR, $errorContent);
+            $this->messageRepository->update($assistantMessage->appendContent($response->content())->withParts($response->parts()));
 
             $this->eventBus->emit($userId, new MessageStreamingEvent(
                 chatId: $chatId,
@@ -441,11 +463,164 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 userId: $userId,
                 chunk: $errorContent,
                 isComplete: true,
+                fullContent: $response->content(),
             ));
         } finally {
+            if ($calledAi) {
+                $this->recordResponse(
+                    userId: $userId,
+                    chatId: $chatId,
+                    messageId: $assistantMessage->id,
+                    model: $model,
+                    response: $response,
+                    history: $history,
+                    thinking: $fullThinking,
+                    stopReason: $stopReason,
+                    usage: $usage,
+                    wasStopped: $wasStopped,
+                    failed: $failed,
+                    startedAt: $startedAt,
+                    firstTokenAt: $firstTokenAt,
+                );
+            }
+
             // Always clean up the session
             $this->sessionManager->endSession($chatId, $userId);
         }
+    }
+
+    /**
+     * Refresh the artifact panel after the model updated a document of this chat.
+     */
+    private function emitDocumentUpdate(int $userId, string $chatId, ToolResult $result, AssistantResponse $response): void {
+        if ($result->isError || $result->name !== 'updateDocument') {
+            return;
+        }
+
+        $documentId = $response->toolInput($result->id)['documentId'] ?? null;
+        $document = \is_string($documentId) ? $this->documentRepository->findWithContent($documentId) : null;
+
+        if ($document === null || $document->chatId !== $chatId) {
+            return;
+        }
+
+        $this->eventBus->emit($userId, new DocumentUpdatedEvent(
+            documentId: $document->id,
+            chatId: $chatId,
+            userId: $userId,
+            action: 'updated',
+            version: $document->currentVersion,
+            kind: $document->kind,
+            language: $document->language,
+        ));
+    }
+
+    /**
+     * Mirrors the fallback in AIServiceInterface::streamChat(), which serves the default model for unknown or retired ones.
+     */
+    private function servedModel(string $model): string {
+        return ($this->aiService->getAvailableModels()[$model]['available'] ?? false) ? $model : $this->aiService->getDefaultModel();
+    }
+
+    /**
+     * Persist usage, add it to the daily token tally and write one telemetry line. Never throws.
+     *
+     * @param list<array{role: string, content: string}> $history
+     */
+    private function recordResponse(
+        int $userId,
+        string $chatId,
+        string $messageId,
+        string $model,
+        AssistantResponse $response,
+        array $history,
+        string $thinking,
+        ?StopReason $stopReason,
+        ?Usage $usage,
+        bool $wasStopped,
+        bool $failed,
+        int $startedAt,
+        ?int $firstTokenAt,
+    ): void {
+        try {
+            $usage ??= new Usage();
+            $reported = $usage->inputTokens + $usage->outputTokens + $usage->cacheReadTokens + $usage->cacheWriteTokens;
+
+            // Stopped streams never see StreamEnd; estimate so stopping early cannot dodge the token limit
+            $estimated = !$failed && $reported === 0;
+            if ($estimated) {
+                $usage = new Usage(
+                    inputTokens: ConversationHistoryBuilder::estimateTokens(implode("\n", array_column($history, 'content'))),
+                    outputTokens: ConversationHistoryBuilder::estimateTokens($thinking . $response->text()),
+                );
+            }
+
+            $stop = match (true) {
+                $wasStopped => MessageUsage::STOP_REASON_USER,
+                $failed => 'error',
+                default => ($stopReason ?? StopReason::Unknown)->value,
+            };
+
+            $record = new MessageUsage(
+                messageId: $messageId,
+                userId: $userId,
+                model: $model,
+                stopReason: $stop,
+                inputTokens: $usage->inputTokens,
+                outputTokens: $usage->outputTokens,
+                cacheReadTokens: $usage->cacheReadTokens,
+                cacheWriteTokens: $usage->cacheWriteTokens,
+                estimated: $estimated,
+                createdAt: new \DateTimeImmutable(),
+            );
+
+            if (!$failed) {
+                $this->messageRepository->saveUsage($record);
+                $this->rateLimitService->recordTokens($userId, $record->totalTokens());
+            }
+
+            $now = hrtime(true);
+            error_log('ai_response ' . json_encode([
+                'chat_id' => $chatId,
+                'message_id' => $messageId,
+                'user_id' => $userId,
+                'model' => $model,
+                'ttft_ms' => $firstTokenAt === null ? null : intdiv($firstTokenAt - $startedAt, 1_000_000),
+                'total_ms' => intdiv($now - $startedAt, 1_000_000),
+                'stop_reason' => $stop,
+                'tool_calls' => $response->toolCallCount(),
+                'input_tokens' => $record->inputTokens,
+                'output_tokens' => $record->outputTokens,
+                'cache_read_tokens' => $record->cacheReadTokens,
+                'cache_write_tokens' => $record->cacheWriteTokens,
+                'usage_estimated' => $estimated,
+                'stopped_by_user' => $wasStopped,
+                'error' => $failed,
+            ], JSON_UNESCAPED_SLASHES));
+        } catch (\Throwable $e) {
+            error_log("Recording AI usage failed for message {$messageId}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Emit RateLimitExceededEvent when the user has reached a limit.
+     */
+    private function isRateLimited(int $userId, string $chatId): bool {
+        $exceeded = $this->rateLimitService->exceededLimit($userId);
+
+        if ($exceeded === null) {
+            return false;
+        }
+
+        $this->eventBus->emit($userId, new RateLimitExceededEvent(
+            userId: $userId,
+            chatId: $chatId,
+            used: $exceeded->used,
+            limit: $exceeded->limit,
+            isGuest: $exceeded->isGuest,
+        ));
+
+        return true;
     }
 
     /**
@@ -471,47 +646,6 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             // Title generation is non-critical, just log the error
             error_log('Title generation error: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Build conversation history for AI, with context compression.
-     *
-     * Compression strategy:
-     * - Always include full system message (if any)
-     * - Always include the last N messages in full (recent context)
-     * - Summarize/truncate older messages to reduce tokens
-     * - Estimate ~4 chars per token for rough limits
-     *
-     * @param list<Message> $messages
-     *
-     * @return array<array{role: string, content: string}>
-     */
-    private function buildConversationHistory(array $messages): array {
-        $history = [];
-        $totalMessages = \count($messages);
-
-        foreach ($messages as $index => $msg) {
-            // Skip messages without content (like newly created assistant placeholders)
-            if (empty($msg->content)) {
-                continue;
-            }
-
-            $content = $msg->content;
-            $isRecent = ($totalMessages - $index) <= $this->contextRecentMessages;
-
-            // Compress older messages
-            if (!$isRecent && mb_strlen($content) > $this->contextMaxOlderChars) {
-                // Truncate with indicator
-                $content = mb_substr($content, 0, $this->contextMaxOlderChars) . '... [truncated]';
-            }
-
-            $history[] = [
-                'role' => $msg->role,
-                'content' => $content,
-            ];
-        }
-
-        return $history;
     }
 
     /**

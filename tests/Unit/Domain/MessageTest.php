@@ -45,7 +45,7 @@ it('appends content', function (): void {
 it('handles message parts', function (): void {
     $parts = [
         ['type' => 'text', 'text' => 'Here is your code:'],
-        ['type' => 'tool-invocation', 'toolName' => 'createDocument', 'args' => ['title' => 'Code']],
+        ['type' => 'tool_call', 'id' => 't-createDocument', 'name' => 'createDocument', 'input' => ['title' => 'Code']],
     ];
 
     $message = Message::assistant('chat-123', '', $parts);
@@ -58,8 +58,8 @@ it('handles message parts', function (): void {
 it('extracts tool calls', function (): void {
     $parts = [
         ['type' => 'text', 'text' => 'Creating document...'],
-        ['type' => 'tool-invocation', 'toolName' => 'createDocument', 'args' => []],
-        ['type' => 'tool-invocation', 'toolName' => 'updateDocument', 'args' => []],
+        ['type' => 'tool_call', 'id' => 't-createDocument', 'name' => 'createDocument', 'input' => []],
+        ['type' => 'tool_call', 'id' => 't-updateDocument', 'name' => 'updateDocument', 'input' => []],
     ];
 
     $message = Message::assistant('chat-123', '', $parts);

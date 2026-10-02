@@ -123,6 +123,9 @@ composer db:init
 
 # Or manually:
 sqlite3 data/db.sqlite < data/schema.sql
+
+# Upgrade an existing database to the current schema (safe to repeat)
+composer db:migrate
 ```
 
 ### 4. Start the Server
@@ -496,6 +499,7 @@ return [
 3. Configure proper rate limits
 4. Set up SSL/TLS termination (nginx/Caddy)
 5. Configure log rotation
+6. After each update, back up `data/db.sqlite`, run `composer db:migrate`, then restart the server
 
 ### Example Nginx Configuration
 

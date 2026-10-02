@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence;
 
 use App\Domain\Model\Message;
+use App\Domain\Model\MessageUsage;
 use App\Domain\Repository\MessageRepositoryInterface;
 
 final class SqliteMessageRepository implements MessageRepositoryInterface {
@@ -81,5 +82,23 @@ final class SqliteMessageRepository implements MessageRepositoryInterface {
     public function deleteByChat(string $chatId): void {
         $stmt = $this->pdo->prepare('DELETE FROM messages WHERE chat_id = :chat_id');
         $stmt->execute(['chat_id' => $chatId]);
+    }
+
+    public function saveUsage(MessageUsage $usage): void {
+        $stmt = $this->pdo->prepare(
+            'INSERT OR REPLACE INTO message_usage
+                (message_id, user_id, model, stop_reason, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, estimated, created_at)
+             VALUES
+                (:message_id, :user_id, :model, :stop_reason, :input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :estimated, :created_at)'
+        );
+        $stmt->execute($usage->toArray());
+    }
+
+    public function findUsage(string $messageId): ?MessageUsage {
+        $stmt = $this->pdo->prepare('SELECT * FROM message_usage WHERE message_id = :message_id');
+        $stmt->execute(['message_id' => $messageId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $row === false ? null : MessageUsage::fromArray($row);
     }
 }

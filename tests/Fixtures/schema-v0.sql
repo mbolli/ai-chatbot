@@ -104,36 +104,8 @@ CREATE TABLE "rate_limits" (
     "user_id" INTEGER NOT NULL,
     "date" TEXT NOT NULL,  -- YYYY-MM-DD format
     "message_count" INTEGER NOT NULL DEFAULT 0,
-    "token_count" INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY ("user_id", "date"),
     FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
 );
 
--- One row per AI request, for the sliding hourly limit (rows older than an hour are pruned)
-CREATE TABLE "rate_limit_requests" (
-    "user_id" INTEGER NOT NULL,
-    "created_at" INTEGER NOT NULL,
-    FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
-);
-CREATE INDEX "rate_limit_requests_user_id_created_at_ix" ON "rate_limit_requests" ("user_id", "created_at");
-
--- Token usage per assistant message
-CREATE TABLE "message_usage" (
-    "message_id" TEXT PRIMARY KEY NOT NULL,
-    "user_id" INTEGER NOT NULL,
-    "model" TEXT NOT NULL,
-    "stop_reason" TEXT NOT NULL,
-    "input_tokens" INTEGER NOT NULL DEFAULT 0,
-    "output_tokens" INTEGER NOT NULL DEFAULT 0,
-    "cache_read_tokens" INTEGER NOT NULL DEFAULT 0,
-    "cache_write_tokens" INTEGER NOT NULL DEFAULT 0,
-    "estimated" INTEGER NOT NULL DEFAULT 0 CHECK ("estimated" >= 0 AND "estimated" <= 1),
-    "created_at" INTEGER NOT NULL,
-    FOREIGN KEY ("message_id") REFERENCES "messages" ("id") ON DELETE CASCADE
-);
-CREATE INDEX "message_usage_user_id_created_at_ix" ON "message_usage" ("user_id", "created_at");
-
 PRAGMA foreign_keys = ON;
-
--- Must match the highest version in App\Infrastructure\Persistence\SchemaMigrator
-PRAGMA user_version = 1;
