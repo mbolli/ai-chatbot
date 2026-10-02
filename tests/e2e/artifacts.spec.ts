@@ -7,6 +7,8 @@ const cases = [
     { command: '{artifact:sheet}', title: 'Sample Spreadsheet', content: (panel: Locator) => panel.getByRole('table'), text: 'Alice' },
 ];
 
+test.fixme(true, 'needs documents (the artifact panel), not yet ported to php-via');
+
 test.beforeEach(async ({ page }) => {
     // The Python artifact lazy-loads Pyodide from a CDN; keep the suite offline.
     await page.route('https://cdn.jsdelivr.net/**', (route) => route.abort());

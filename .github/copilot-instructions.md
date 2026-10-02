@@ -1,116 +1,41 @@
 # Copilot Instructions - AI Chatbot
 
-## Architecture Overview
+`CLAUDE.md` is the maintained guide to this codebase; this file is the short version.
 
-This is a **PHP/Swoole** AI chatbot application using **CQRS** pattern with real-time **SSE streaming** via Datastar frontend framework.
+## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Frontend (Datastar + TypeScript)                               │
-│  └── SSE connection to /updates for real-time DOM patching      │
-├─────────────────────────────────────────────────────────────────┤
-│  Infrastructure Layer                                           │
-│  ├── Http/Handler/Command/  → POST/PUT/DELETE (messages, chats) │
-│  ├── Http/Handler/Query/    → GET requests                      │
-│  ├── Http/Listener/         → SseRequestListener for streaming  │
-│  └── AI/                    → AIService, streaming clients      │
-├─────────────────────────────────────────────────────────────────┤
-│  Application Layer (Events)                                     │
-│  ├── Domain/Event/          → MessageStreamingEvent, ChatUpdated│
-│  └── EventBus/              → SwooleEventBus for SSE broadcasts │
-├─────────────────────────────────────────────────────────────────┤
-│  Domain Layer                                                   │
-│  ├── Model/                 → Chat, Message, Document           │
-│  ├── Service/               → AIServiceInterface, RateLimitSvc  │
-│  └── Repository/            → Interface definitions             │
-├─────────────────────────────────────────────────────────────────┤
-│  SQLite (data/db.sqlite)                                        │
-└─────────────────────────────────────────────────────────────────┘
-```
+PHP 8.5 on OpenSwoole, served by [php-via](https://via.zweiundeins.gmbh): pages, server-side actions, signals and live components, with one Server-Sent Events stream per tab. Datastar runs in the browser and morphs the HTML the server sends. SQLite for storage.
 
-## Key Patterns
+- `bin/server.php` loads the config, builds `App\Container` (shared services), registers `App\Web\ChatApp` and starts the server.
+- `ChatApp` registers the pages `/` and `/chat/{id}`. Each page creates its signals (`message`, `model`), actions (`send`, `stop`, `model`) and live components (`sidebar`, `toasts`, `messages`, `stream`).
+- Components join broadcast scopes (`App\Web\Scopes`: user, chat, chat stream). The page itself joins none, so a broadcast re-renders only the affected component.
+- `App\Application\ChatCommands` and `MessageCommands` change state and emit domain events on `EventBusInterface`. They never render.
+- `App\Web\ViaEventBus` turns those events into `LiveState` changes (the reply being streamed, toasts) and `Via::broadcast()` calls. Components re-render from the database and `LiveState`.
 
-### AI Streaming Flow
-1. User sends message via POST `/cmd/chat/{chatId}/send`
-2. `MessageCommandHandler` creates user + assistant message placeholders
-3. Coroutine starts `streamAiResponse()` which calls `AIService::streamChat()`
-4. Each chunk emits `MessageStreamingEvent` via `EventBus`
-5. `SseRequestListener` receives events and sends `PatchElements` to client
-6. Client's Datastar appends chunks to message content in real-time
+## AI streaming flow
 
-### AI Service Implementation
-- `AIService` streams through `AnthropicStreamingClient` / `OpenAIStreamingClient` (raw Swoole sockets with SSE parsing)
-- Clients and tools are created per call: services are shared by all coroutines in a worker
-- Models defined in `ANTHROPIC_MODELS` and `OPENAI_MODELS` constants
+1. The `send` action calls `MessageCommands::send()`, which saves the user message and an empty assistant message and emits `ChatUpdatedEvent`.
+2. A coroutine iterates `AIService::streamChat()` and emits a `MessageStreamingEvent` with the full text so far per chunk.
+3. `ViaEventBus` stores the text in `LiveState` and broadcasts the chat stream scope, at most once per 50 ms.
+4. The `stream` component renders the reply as Markdown on the server; Datastar morphs it into the page.
+5. When the reply is complete, the stream entry is dropped and the message list renders the stored message.
 
-### Error Handling for AI Responses
-- Always validate `$fullContent` is not empty before saving
-- Catch exceptions in `streamAiResponse()` and provide user-friendly messages
-- Log errors with `error_log()` for debugging
-- Empty responses should trigger retry or error notification
+## Conventions
 
-### Datastar Frontend Conventions
-- Signals are **only for client state** (e.g., form inputs, modal visibility, `_generatingMessage`)
-- Server responses should return **HTML via PatchElements**, not signals
-- Always use the **Datastar SDK** (`starfederation/datastar`) for SSE responses
-- SSE connection via `data-init="@get('/updates')"`
-- Actions: `data-on:click="@post('/cmd/chat/{id}/send')"` with form data
-- Datastar wraps signals in `{'datastar': {...}}` - handle in `getRequestData()`
+- Underscore signals (`$_sidebarOpen`, `$_generatingMessage`) are client-only. Server signals come from `$c->signal()`; templates reference them by id (`$signals['message']`).
+- Server data arrives as HTML, not signals.
+- Container services are shared by every coroutine: never keep per-request state on them.
+- `LiveState`, php-via sessions and the streaming session table live in worker memory, so the server runs one worker and loses them on restart.
+- php-via wraps every component in `<div id="c-…">`; `public/css/app.css` sets `display: contents` on `[id^="c-"]` so the wrapper does not break grid and flex layouts. Do not give other elements ids starting with `c-`.
+- Domain models are immutable (`fromArray()` / `toArray()`, `update*` return new instances). Repository interfaces live in `Domain/Repository`, SQLite implementations in `Infrastructure/Persistence`.
 
-## Development Commands
+## Commands
 
 ```bash
-composer serve      # Start Swoole server at :8080
-composer test       # Run Pest tests (uses in-memory SQLite)
-composer stan       # PHPStan analysis
+composer serve      # php bin/server.php, port 8080 unless config/autoload/app.local.php sets server.port
+composer test       # Pest, in-memory SQLite (createTestPdo() in tests/Pest.php)
+composer stan       # PHPStan
 composer cs:fix     # PHP-CS-Fixer
-
-npm run build       # Build TypeScript with esbuild
-npm run watch       # Watch mode
+pnpm build          # esbuild src/ts/main.ts -> public/js/app.js (committed)
+PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium pnpm test:e2e
 ```
-
-## Domain Models
-
-Models use **readonly constructor properties** and factory methods:
-- `Chat::fromArray()` / `Message::fromArray()` / `Document::fromArray()`
-- Maps DB columns (snake_case) to properties (camelCase)
-- `toArray()` for persistence (converts back to snake_case)
-- UUIDs for IDs, timestamps as `DateTimeImmutable`
-
-## Testing Patterns
-
-Tests use **Pest PHP** with in-memory SQLite:
-```php
-beforeEach(function (): void {
-    $this->pdo = new PDO('sqlite::memory:');
-    $this->pdo->exec(file_get_contents(__DIR__ . '/../../data/schema.sql'));
-    $this->repository = new SqliteChatRepository($this->pdo);
-    $this->eventBus = new SwooleEventBus();
-});
-```
-Test events by subscribing before action: `$this->eventBus->subscribe(fn($e) => ...)`
-
-## File Conventions
-
-- **ConfigProvider.php** - All DI container factories (no separate factory classes)
-- **routes.php** - Route-to-handler mapping with `:method` suffixes for multi-action handlers
-- **templates/** - Plain PHP templates with `<?php echo $var; ?>` escaping
-- **SseRequestListener.php** - Custom SSE handling bypassing Mezzio for `/updates`
-
-## Adding New Features
-
-**New Command** (e.g., UpdateChat):
-1. Create handler in `src/App/Infrastructure/Http/Handler/Command/`
-2. Register factory in `ConfigProvider::getDependencies()`
-3. Add route in `config/routes.php`
-4. Emit events for SSE updates via `EventBusInterface`
-
-**New Query**: Add to existing query handlers or create new ones in `Http/Handler/Query/`
-
-## Important Notes
-
-- Swoole runs persistently - static singletons for EventBus are intentional
-- SSE uses Datastar SDK's `PatchElements` for HTML fragment updates
-- Repository interface in Domain, implementation in Infrastructure
-- All handlers return `EmptyResponse(204)` on success - UI updates via SSE
-- AI streaming happens in Swoole coroutines to avoid blocking

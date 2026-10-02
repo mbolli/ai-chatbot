@@ -169,4 +169,4 @@ Use the 👁️ preview button to see how your message will look.
 
 ---
 
-*Built with ❤️ using PHP, Swoole, and Datastar*
+*Built with ❤️ using PHP, OpenSwoole, php-via and Datastar*

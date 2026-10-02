@@ -56,9 +56,4 @@ return [
             'daily_tokens' => (int) ($env('RATE_LIMIT_USER_DAILY_TOKENS') ?? 0),
         ],
     ],
-
-    'server' => [
-        'host' => '0.0.0.0',
-        'port' => 8080,
-    ],
 ];

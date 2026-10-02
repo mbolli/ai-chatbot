@@ -6,8 +6,8 @@ A side-by-side comparison of two implementations of the same AI chatbot applicat
 
 | Aspect | Next.js (AI SDK) | PHP/Swoole (Datastar) |
 |--------|------------------|------------------------|
-| **Runtime** | Node.js (Edge/Serverless) | Swoole (persistent process) |
-| **Framework** | React + Vercel AI SDK | Mezzio + Datastar |
+| **Runtime** | Node.js (Edge/Serverless) | OpenSwoole (persistent process) |
+| **Framework** | React + Vercel AI SDK | php-via + Datastar |
 | **State Location** | Client (React state) | Server (HTML fragments) |
 | **Rendering** | Client-side hydration | Server-side HTML |
 | **Database** | Drizzle ORM + Postgres | PDO + SQLite |
@@ -61,12 +61,11 @@ data: {"type":"text-delta","textDelta":"Hello"}
 data: {"type":"data-chat-title","data":"My Chat Title"}
 ```
 
-**PHP/Swoole**: Datastar HTML patches
+**PHP/Swoole**: Datastar HTML patches. php-via re-renders the streaming reply's component and morphs it in place
 ```
 event: datastar-patch-elements
-data: selector #message-123-content
-data: mergeMode append
-data: fragments <span>Hello</span>
+data: selector #c-…
+data: elements <div id="c-…"><div class="message message-assistant" id="message-123">…the reply so far…</div></div>
 ```
 
 ### 3. Client Complexity
@@ -121,7 +120,7 @@ $this->eventBus->emit($userId, new DocumentUpdatedEvent(
     document: $document,
     action: 'created',
 ));
-// SseRequestListener renders document preview HTML
+// ViaEventBus broadcasts to the chat scope; the message list re-renders with the preview
 ```
 
 ### 6. Resumable Streams
@@ -213,7 +212,7 @@ $this->sessionManager->startSession($chatId, $userId, $messageId);
 
 ## 3. Routing & Request Handling
 
-*TODO: Compare App Router vs Mezzio handlers, CQRS pattern*
+*TODO: Compare App Router vs php-via pages, actions and components*
 
 ---
 
@@ -249,7 +248,7 @@ $this->sessionManager->startSession($chatId, $userId, $messageId);
 
 ## 8. Deployment
 
-*TODO: Compare Vercel serverless vs Swoole persistent process*
+*TODO: Compare Vercel serverless vs OpenSwoole persistent process*
 
 ---
 
@@ -258,5 +257,5 @@ $this->sessionManager->startSession($chatId, $userId, $messageId);
 | | Next.js (AI SDK) | PHP/Swoole (Datastar) |
 |---|------------------|------------------------|
 | **Pros** | Rich ecosystem, type-safe, resumable streams, faster FCP via edge CDN | **100 Lighthouse score**, 0ms TBT, 39x less JS, $20/year hosting, no cold starts |
-| **Cons** | 1.09 MB JavaScript, 1.85s cold starts, 921 dependencies, complex state sync | Requires Swoole, smaller ecosystem |
+| **Cons** | 1.09 MB JavaScript, 1.85s cold starts, 921 dependencies, complex state sync | Requires OpenSwoole, smaller ecosystem |
 | **Best for** | Complex SPAs, offline-first apps | Performance-critical apps, low-cost hosting, progressive enhancement |

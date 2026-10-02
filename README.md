@@ -1,8 +1,8 @@
-# AI Chatbot — PHP/Swoole/Datastar Stack Showcase
+# AI Chatbot: PHP/OpenSwoole/Datastar Stack Showcase
 
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
-[![Swoole](https://img.shields.io/badge/Swoole-6-007EC6?logo=swoole&logoColor=white)](https://www.swoole.com/)
-[![Mezzio](https://img.shields.io/badge/Mezzio-3.19-6C3BAF?logo=laminas&logoColor=white)](https://docs.mezzio.dev/)
+[![OpenSwoole](https://img.shields.io/badge/OpenSwoole-26-007EC6)](https://openswoole.com/)
+[![php-via](https://img.shields.io/badge/php--via-0.13-6C3BAF)](https://via.zweiundeins.gmbh)
 [![Datastar](https://img.shields.io/badge/Datastar-1.0-FF6B35?logo=rocket&logoColor=white)](https://data-star.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -10,17 +10,19 @@
 
 **[🚀 Live Demo](https://chat.zweiundeins.gmbh)** | **[📊 Benchmark Results](benchmarks/RESULTS.md)** | **[📝 Blog Post](https://zweiundeins.gmbh/en/methodology/spa-vs-hypermedia-real-world-performance-under-load)**
 
-A real-time AI chatbot built with **PHP 8.5**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
+A real-time AI chatbot built with **PHP 8.5**, **OpenSwoole**, **[php-via](https://via.zweiundeins.gmbh)** and **Datastar**: streaming responses, documents the AI can create and edit, and a reactive UI without a JavaScript framework.
 
 > **🎯 Project Goal:** This is a side-by-side comparison with the [Vercel AI Chatbot (Next.js)](https://github.com/vercel/ai-chatbot), demonstrating that a lean PHP stack can deliver the same features with **dramatically less complexity** and **better performance**.
 
 ## 🆚 The Comparison: Next.js vs PHP
 
-This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot using PHP—and the results speak for themselves.
+This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot in PHP and measured both.
 
-> **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization—yet outperforms on most metrics.
+> **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization, and it still leads on most metrics.
 
 ### Measured Performance (February 2026)
+
+Measured on the Swoole/Mezzio version, before the port to php-via.
 
 **Desktop (Chrome 144):**
 
@@ -44,14 +46,16 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 ### Codebase Comparison (Production)
 
-| Aspect | Next.js | PHP/Swoole | Ratio |
-|--------|---------|------------|-------|
-| **Dependencies (prod)** | 799 packages | **50 packages** | **16x fewer** |
-| **node_modules / vendor** | 793 MB | **11 MB** | **72x smaller** |
-| **Build Step** | Required | **None** | — |
-| **Hosting Cost** | Usage-based | **$20/year VPS** | — |
+| Aspect | Next.js | PHP/OpenSwoole | Ratio |
+|--------|---------|----------------|-------|
+| **Dependencies (prod)** | 799 packages | **20 packages** | **40x fewer** |
+| **node_modules / vendor** | 793 MB | **5.6 MB** | **140x smaller** |
+| **Build Step** | Required | **None on deploy** (`public/js/app.js` is committed) | |
+| **Hosting Cost** | Usage-based | **$20/year VPS** | |
 
-**The takeaway:** Modern PHP with Swoole is a serious contender for real-time applications. No transpilation, no hydration, no serverless cold starts—just fast, efficient code.
+PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via installed as a copy of its dist files). Twig, Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies.
+
+**The takeaway:** Modern PHP on OpenSwoole is a serious contender for real-time applications: no transpilation, no hydration, no serverless cold starts.
 
 > ⚠️ **Feature Completeness:** This is a **working proof-of-concept**, not a production-ready clone. Core features (chat, streaming, artifacts, auth, voting) work. Missing: file attachments, edit/regenerate messages. See the [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) for the full-featured original.
 
@@ -62,20 +66,21 @@ This project exists to challenge the assumption that modern AI chat apps require
 - **Document Artifacts** - AI can create and edit code, text, spreadsheets, and images, and suggest edits you can accept or dismiss
 - **Reasoning Display** - Collapsible reasoning summary for models that think (Claude Opus/Sonnet 5.5)
 - **Usage Accounting** - Token usage per response, prompt caching, and one structured log line per AI response
-- **CQRS Architecture** - Clean separation of commands, queries, and events
+- **Commands and events** - Actions call application commands; the commands emit domain events, and live components re-render from them
 - **Session-based Auth** - Simple authentication with guest and registered user support
 - **Rate Limiting** - Hourly request, daily message and optional daily token limits for guests and registered users
 - **Responsive UI** - Mobile-friendly design with sidebar navigation
-- **No Build Required** - Datastar provides reactivity without complex JS bundling
+- **No build step on deploy** - Datastar provides the reactivity; the small TypeScript bundle is committed
 - **Zero CDN Dependencies** - All assets served locally (Open Props, Datastar, SVG icons), markdown is rendered server-side. Exception: running Python artifacts loads Pyodide from jsDelivr on demand
 
 ## 📋 Requirements
 
-- PHP 8.5
-- Swoole 6 extension (`pecl install swoole`). OpenSwoole is not supported: mezzio-swoole dropped it in 4.12
-- SQLite3 extension
+- PHP 8.5 with `pdo_sqlite`
+- OpenSwoole 26 (`ext-openswoole`), built with OpenSSL: the AI clients connect over TLS from OpenSwoole coroutine sockets. The Swoole extension must not be loaded in the same PHP binary
 - Composer
-- Node.js 18+ (optional, for TypeScript development)
+- Node.js and pnpm, only for TypeScript changes and the Playwright suite
+
+php-via is not yet released with the fix this app needs (component ids on routes with parameters). Until it is, `composer.json` installs it from a path repository at `../php-via-fix`, so a checkout of php-via's `fix/component-dom-ids` branch has to sit next to this repository.
 
 ## 🚀 Quick Start
 
@@ -85,7 +90,7 @@ This project exists to challenge the assumption that modern AI chat apps require
 git clone <repository-url>
 cd ai-chatbot
 
-# Install PHP dependencies
+# Install PHP dependencies (add --ignore-platform-req=ext-inotify if inotify is missing; only the dev tools need it)
 composer install
 
 # Install frontend dependencies (optional)
@@ -111,7 +116,7 @@ AI_DEFAULT_MODEL=claude-haiku-4-5
 AI_MAX_TOKENS=4096
 ```
 
-Optionally copy the local PHP config for additional settings:
+Optionally copy the local PHP config, for example to change the host and port:
 
 ```bash
 cp config/autoload/app.local.php.dist config/autoload/app.local.php
@@ -123,9 +128,6 @@ cp config/autoload/app.local.php.dist config/autoload/app.local.php
 # Initialize the SQLite database
 composer db:init
 
-# Or manually:
-sqlite3 data/db.sqlite < data/schema.sql
-
 # Upgrade an existing database to the current schema (safe to repeat)
 composer db:migrate
 ```
@@ -133,147 +135,89 @@ composer db:migrate
 ### 4. Start the Server
 
 ```bash
-# Start the Swoole server (runs on http://localhost:8080)
+# php bin/server.php, listens on 0.0.0.0:8080 unless app.local.php sets server.host/server.port
 composer serve
 ```
 
-Visit **http://localhost:8080** in your browser.
+Visit **http://localhost:8080** in your browser. The server runs in the foreground; stop it with Ctrl+C and restart it after PHP changes.
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Frontend (Datastar + TypeScript)                               │
-│  └── SSE connection to /updates for real-time DOM patching      │
-├─────────────────────────────────────────────────────────────────┤
-│  Infrastructure Layer                                           │
-│  ├── Http/Handler/Command/  → POST/PUT/DELETE mutations         │
-│  ├── Http/Handler/Query/    → GET read operations               │
-│  ├── Http/Listener/         → SseRequestListener for streaming  │
-│  └── AI/                    → AIService, streaming clients      │
-├─────────────────────────────────────────────────────────────────┤
-│  Application Layer (Events)                                     │
-│  ├── Domain/Event/          → MessageStreamingEvent, ChatUpdated│
-│  └── EventBus/              → SwooleEventBus for SSE broadcasts │
-├─────────────────────────────────────────────────────────────────┤
-│  Domain Layer                                                   │
-│  ├── Model/                 → Chat, Message, Document, User     │
-│  ├── Service/               → AIServiceInterface, RateLimitSvc  │
-│  └── Repository/            → Interface definitions             │
-├─────────────────────────────────────────────────────────────────┤
-│  Persistence (SQLite)                                           │
-│  └── data/db.sqlite                                             │
-└─────────────────────────────────────────────────────────────────┘
+Browser (Datastar)
+ ├── GET  /  and  /chat/{id}   ChatApp page: signals, actions, live components
+ ├── POST /_action/{id}        send, stop, model  ──>  ChatCommands, MessageCommands
+ └── GET  /_sse  (one per tab) <── re-rendered components
+                                        ^
+ MessageCommands ── domain events ──> ViaEventBus ──> LiveState + Via::broadcast(scope)
 ```
 
-### CQRS Pattern
+[php-via](https://via.zweiundeins.gmbh) runs the HTTP server on OpenSwoole. Each tab holds one Server-Sent Events stream, and Datastar morphs the HTML that arrives on it.
 
-The application follows the Command Query Responsibility Segregation pattern:
+- **Pages.** `App\Web\ChatApp` registers `/` and `/chat/{id}`. A page handler creates its signals (`message`, `model`), its actions (`send`, `stop`, `model`) and its live components: `sidebar` and `toasts` join the user's scope, `messages` the chat's scope, and `stream` (the reply being written) the chat stream scope.
+- **Commands.** Actions call `App\Application\ChatCommands` and `MessageCommands`. They change state and emit domain events; they never render.
+- **Broadcasts.** `App\Web\ViaEventBus` turns each event into a `LiveState` change (the reply being streamed, toasts) and a broadcast to the affected scope. Only the components in that scope re-render, from the database and `LiveState`. The page itself joins no scope.
+- **Single worker.** `LiveState`, the php-via sessions and the table of running streams live in worker memory, so the server runs one worker, and a restart logs everybody out.
 
-- **Commands** (`/cmd/*`) - POST/PUT/DELETE operations that modify state
-- **Queries** (`/api/*`) - GET operations that read state
-- **Events** - Emitted when state changes, broadcast to clients via SSE
+### Real-time Streaming Flow
 
-### Real-time Streaming Flow (Fat Morph)
+1. The `send` action calls `MessageCommands::send()`, which saves the user message and an empty assistant message
+2. An OpenSwoole coroutine iterates `AIService::streamChat()`
+3. Each chunk emits a `MessageStreamingEvent` with the full text so far
+4. `ViaEventBus` stores the text in `LiveState` and broadcasts the chat stream scope, at most once per 50 ms per chat
+5. The `stream` component renders the reply as Markdown on the server; Datastar morphs only the changed nodes
+6. When the reply is complete, the message list renders the stored message
+7. The message container keeps the newest text in view unless the user scrolled up
 
-1. User sends message via `POST /cmd/chat/{chatId}/message`
-2. `MessageCommandHandler` creates user + assistant message placeholders
-3. Swoole coroutine starts `streamAiResponse()` calling `AIService::streamChat()`
-4. Server accumulates full content; each chunk emits `MessageStreamingEvent` with `fullContent`
-5. `SseRequestListener` renders full markdown server-side and sends `PatchElements`
-6. Datastar morphs the DOM efficiently (only changed nodes update)
-7. Container auto-scrolls via `data-on:datastar-fetch__window`
-
-**Why fat morph?** Brotli compresses repetitive content ~same as deltas. Server-side markdown means no client scripts per chunk. DOM stays clean — just rendered HTML.
+Each update carries the whole reply as rendered HTML, so the browser runs no Markdown code and a missed update is repaired by the next one.
 
 ## 📁 Project Structure
 
 ```
 ├── bin/
-│   └── init-db.php           # Database initialization script
+│   ├── server.php            # Loads config, builds the container, starts php-via
+│   ├── init-db.php           # Creates data/db.sqlite from data/schema.sql
+│   └── migrate.php           # Upgrades an existing database
 ├── config/
-│   ├── config.php            # Config aggregator
-│   ├── container.php         # DI container setup
-│   ├── routes.php            # Route definitions
-│   ├── pipeline.php          # Middleware pipeline
-│   └── autoload/             # Environment-specific configs
+│   ├── autoload/             # app.global.php, your *.local.php overrides
+│   └── e2e.php               # Overrides for the Playwright suite
 ├── data/
 │   ├── schema.sql            # Database schema
 │   └── db.sqlite             # SQLite database (created on init)
+├── legacy/                   # Mezzio-era handlers, reference while they are ported; not autoloaded
 ├── public/
-│   ├── css/
-│   │   ├── app.css               # Custom styles
-│   │   └── open-props-bundle.css # Open Props CSS (bundled)
+│   ├── css/                  # app.css, open-props-bundle.css
 │   ├── icons.svg             # SVG icon sprite
-│   └── js/
-│       ├── app.js            # Custom TypeScript (compiled)
-│       ├── datastar.js       # Datastar library
-│       └── datastar-on-keys.js # Datastar keyboard plugin
+│   └── js/                   # app.js (built from src/ts), datastar.js, datastar-on-keys.js
 ├── src/App/
-│   ├── ConfigProvider.php    # DI factories
-│   ├── Domain/
-│   │   ├── Event/            # Domain events
-│   │   ├── Model/            # Entity classes (Chat, Message, Document, etc.)
-│   │   ├── Repository/       # Repository interfaces
-│   │   └── Service/          # Service interfaces
-│   └── Infrastructure/
-│       ├── AI/               # AI service implementations
-│       ├── Auth/             # Authentication middleware
-│       ├── EventBus/         # SSE event broadcasting
-│       ├── Http/Handler/     # Request handlers
-│       ├── Persistence/      # SQLite repositories
-│       ├── Session/          # Swoole-based sessions
-│       └── Template/         # Template renderer
+│   ├── Application/          # ChatCommands, MessageCommands
+│   ├── Container.php         # Builds the shared services
+│   ├── Domain/               # Events, models, repository and service interfaces
+│   ├── Infrastructure/       # AI clients and tools, auth, SQLite repositories, templates
+│   └── Web/                  # ChatApp, ViaEventBus, LiveState, Scopes, ViaSession
+├── src/ts/main.ts            # Textarea auto-resize, Python artifacts (Pyodide)
 ├── templates/
 │   ├── app/                  # Page templates
 │   ├── layout/               # Layout templates
-│   └── partials/             # Reusable components
+│   └── partials/             # Components and dialogs
 └── tests/
     ├── Feature/              # Integration tests
-    └── Unit/                 # Unit tests
+    ├── Unit/                 # Unit tests
+    └── e2e/                  # Playwright specs
 ```
 
-## 🔌 API Endpoints
+## 🔌 Routes
 
-### Authentication
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Home page, the first message creates a chat |
+| GET | `/chat/{id}` | A chat the user owns, or a public chat |
+| GET | `/_sse` | php-via: the tab's SSE stream |
+| POST | `/_action/{id}` | php-via: runs a page action (`send`, `stop`, `model`) |
+| POST | `/_session/close` | php-via: tab-close beacon |
+| GET | `/css/*`, `/js/*` | Static files from `public/` |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/login` | Login with email/password |
-| POST | `/auth/register` | Register new account |
-| POST | `/auth/logout` | Logout current session |
-| POST | `/auth/upgrade` | Upgrade guest to registered |
-| GET | `/auth/status` | Get current auth status |
-
-### Queries (Read Operations)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/chats` | List user's chats |
-| GET | `/api/chats/{id}` | Get chat details |
-| GET | `/api/chats/{id}/messages` | Get chat messages |
-| GET | `/api/documents/{id}` | Get document/artifact |
-
-### Commands (Write Operations)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/cmd/chat` | Create new chat |
-| DELETE | `/cmd/chat/{id}` | Delete chat |
-| PATCH | `/cmd/chat/{id}/visibility` | Toggle public/private |
-| POST | `/cmd/chat/{chatId}/message` | Send message & generate response |
-| POST | `/cmd/chat/{chatId}/generate` | Regenerate AI response |
-| POST | `/cmd/chat/{chatId}/stop` | Stop streaming response |
-| POST | `/cmd/document` | Create document |
-| PUT | `/cmd/document/{id}` | Update document |
-| DELETE | `/cmd/document/{id}` | Delete document |
-| PATCH | `/cmd/vote/{chatId}/{messageId}` | Vote on message |
-
-### Real-time
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/updates` | SSE endpoint for real-time updates |
+Actions belong to the tab that rendered the page; the browser posts the tab's context id and signals with each action.
 
 ## 🤖 AI Models
 
@@ -333,12 +277,11 @@ suggestions (id, document_id, content, status, created_at)
 
 ```bash
 # Server
-composer serve          # Start Swoole server at :8080
-composer stop           # Stop Swoole server
-composer reload         # Reload Swoole workers
+composer serve          # php bin/server.php, foreground; restart after PHP changes
 
 # Database
-composer db:init        # Initialize database schema
+composer db:init        # Create data/db.sqlite from data/schema.sql
+composer db:migrate     # Upgrade an existing database (safe to repeat)
 
 # Testing
 composer test           # Run Pest tests
@@ -353,6 +296,7 @@ composer stan           # Run PHPStan static analysis
 pnpm build              # Build TypeScript with esbuild
 pnpm watch              # Watch mode for development
 pnpm typecheck          # TypeScript type checking
+pnpm test:e2e           # Playwright suite
 ```
 
 ### Running Tests
@@ -370,7 +314,7 @@ composer test
 composer test:coverage
 ```
 
-End-to-end tests use Playwright and only the free localhost test commands, so they never call an AI provider. The config starts its own Swoole server on a temporary database (port `E2E_PORT`, default 8094). Browsers are not downloaded; point `PLAYWRIGHT_CHROMIUM_PATH` at a local Chromium:
+End-to-end tests use Playwright and only the free test commands (`{help}`, `{slow}`, `{error}` and so on, available whenever `APP_ENV` is not `production`), so they never call an AI provider. The config starts `php bin/server.php` on a temporary database at `127.0.0.1:E2E_PORT` (default 8094) through `config/e2e.php`, and stops it with SIGTERM. Browsers are not downloaded; point `PLAYWRIGHT_CHROMIUM_PATH` at a local Chromium:
 
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install
@@ -399,34 +343,35 @@ composer stan
 
 ## 🎨 Frontend (Datastar)
 
-The frontend uses [Datastar](https://data-star.dev/) for reactive UI without JavaScript frameworks.
+The frontend uses [Datastar](https://data-star.dev/) for reactive UI without JavaScript frameworks. php-via renders the HTML and sends updates over the tab's SSE stream.
 
 ### Key Concepts
 
-- **Signals** - Client-side state (form inputs, UI flags)
-- **PatchElements** - Server-sent HTML fragments that update DOM
-- **ExecuteScript** - Server-sent JavaScript execution
-- **Actions** - Declarative HTTP requests (`@post`, `@get`, etc.)
+- **Signals** - State shared with the server (`$c->signal()` in PHP), or client-only when the name starts with `_` (`$_sidebarOpen`)
+- **Actions** - `@post()` to a php-via action URL; the action changes state, and the components re-render
+- **Components** - Parts of a page that join a broadcast scope and re-render on their own
+- **PatchElements** - The SSE events that carry the re-rendered HTML
 
 ### Example Usage
 
-```html
-<!-- SSE connection for real-time updates -->
-<div data-init="@get('/updates')">
+```php
+// A page with a signal, an action and a live component (php-via)
+$app->page('/chat/{id}', function (Context $c, string $id): void {
+    $message = $c->signal('', 'message');
+    $send = $c->action(function () use ($message): void { /* store $message->string() */ }, 'send');
+    $messages = $c->component(function (Context $cc) use ($id): void {
+        $cc->addScope(Scopes::chat($id));
+        $cc->view(fn (): string => '...');
+    }, 'messages');
+    $c->view(fn (): string => $messages() . '<textarea data-bind="' . $message->id() . '"></textarea>'
+        . '<button data-on:click="@post(\'' . $send->url() . '\')">Send</button>');
+});
 
-<!-- Form with signal binding -->
-<input type="text" data-bind="message" />
-
-<!-- Action on click -->
-<button data-on:click="@post('/cmd/chat/123/message')">
-    Send
-</button>
-
-<!-- Conditional rendering -->
-<div data-show="$isGenerating">
-    Generating...
-</div>
+// Anywhere, after the data changed: re-render every "messages" component of that chat
+$app->broadcast(Scopes::chat($id));
 ```
+
+`App\Web\ChatApp` follows this shape with templates instead of inline HTML.
 
 ## 🔧 Configuration Reference
 
@@ -452,7 +397,7 @@ AI_MAX_TOKENS=2048
 # Context budget: older messages are dropped once the history exceeds this (estimated tokens)
 AI_CONTEXT_MAX_TOKENS=8000
 
-# Application Settings
+# Application Settings (APP_ENV=production limits the models, hides the test commands and sets a Secure cookie)
 APP_ENV=development
 APP_DEBUG=true
 
@@ -465,105 +410,151 @@ RATE_LIMIT_USER_DAILY=100
 RATE_LIMIT_USER_DAILY_TOKENS=0
 ```
 
-For additional PHP configuration overrides, create `config/autoload/app.local.php`:
+`APP_DEBUG=true` turns on php-via's dev mode and the signal debug panel. `VIA_DEVBAR=1` adds php-via's Dev Bar, which shows session and context ids, so keep it off in production.
+
+### Server Configuration
+
+Host, port and database path go into `config/autoload/app.local.php`:
 
 ```php
 <?php
 
 return [
+    'server' => [
+        'host' => '127.0.0.1',   // default 0.0.0.0
+        'port' => 3200,          // default 8080
+    ],
     'database' => [
-        'path' => getcwd() . '/data/db.sqlite',
-    ],
-    'templates' => [
-        'paths' => [
-            '' => getcwd() . '/templates',
-        ],
+        'path' => '/var/lib/ai-chatbot/db.sqlite',
     ],
 ];
 ```
 
-### Swoole Configuration
-
-Default Swoole settings can be overridden in `config/autoload/swoole.local.php`:
-
-```php
-<?php
-
-return [
-    'mezzio-swoole' => [
-        'swoole-http-server' => [
-            'host' => '0.0.0.0',
-            'port' => 8080,
-            'options' => [
-                // Keep a single worker: the event bus and SSE connections live in worker memory
-                'worker_num' => 1,
-            ],
-        ],
-    ],
-];
-```
+A port set under the old `mezzio-swoole.swoole-http-server` key is still read when `server` does not set one. The server always runs a single worker: live state and sessions are kept in its memory.
 
 ## 🚢 Deployment
 
+The app is one long-running PHP process. Put a reverse proxy in front for TLS and compression, bind the app to `127.0.0.1`, and run it under systemd.
+
 ### Production Checklist
 
-1. Set `debug` to `false` in configuration
-2. Use strong session secrets
-3. Configure proper rate limits
-4. Set up SSL/TLS termination (nginx/Caddy)
-5. Configure log rotation
-6. After each update, back up `data/db.sqlite`, run `composer db:migrate`, then restart the server
+1. `APP_ENV=production` and `APP_DEBUG=false` in `.env`; no `VIA_DEVBAR`
+2. Require a released php-via version in `composer.json` and drop the `../php-via-fix` path repository
+3. `server.host` set to `127.0.0.1` in `config/autoload/app.local.php`
+4. HTTPS in front: in production the session cookie is `Secure` with the `__Host-` prefix
+5. After each update: back up `data/db.sqlite`, `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
 
-### Example Nginx Configuration
+### Caddy
 
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name chat.example.com;
-
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # SSE endpoint needs special handling
-    location /updates {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Connection '';
-        proxy_buffering off;
-        proxy_cache off;
-        chunked_transfer_encoding off;
-    }
+```caddy
+chat.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3200
 }
 ```
+
+Caddy needs nothing extra for the SSE streams: `reverse_proxy` flushes `text/event-stream` responses immediately, also through `encode`. php-via writes an SSE comment after 15 seconds of silence, so idle streams stay open. This setup (Caddy 2.11.6, `encode zstd gzip`) passed the Playwright suite, streaming specs included, in October 2026.
+
+Let Caddy compress, not php-via. php-via can compress pages and streams itself with `Config::withBrotli()`, but that needs the `brotli` PHP extension, HTTP/2 to the proxy (`withH2c()` and `reverse_proxy h2c://…`) and `encode` removed from Caddy, and each open SSE stream keeps its own Brotli encoder (about 9 MB per busy stream at the default level, according to php-via's deployment docs). `bin/server.php` does not enable it. Stock Caddy encodes gzip and zstd; `encode br` needs a Caddy build with a Brotli module (`caddy list-modules | grep http.encoders` shows what a binary has).
+
+### systemd
+
+```ini
+[Unit]
+Description=AI Chatbot
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/ai-chatbot
+ExecStart=/usr/bin/php8.5 bin/server.php
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+The process stays in the foreground and exits cleanly on SIGTERM, so `systemctl stop` and `restart` need no extra settings. Deploy new code with `restart`: the unit has no reload command, and an OpenSwoole worker reload would keep the classes the master process loaded at start.
+
+### Moving a Mezzio/Swoole installation to php-via
+
+For a server that runs the earlier version (`php8.5 vendor/bin/laminas mezzio:swoole:start` under systemd, Swoole loaded for PHP 8.5, Caddy in front). Deploy a commit that contains the php-via ports of documents, accounts, votes, visibility and chat deletion; the first php-via commits lack them.
+
+1. Back up the database and note the running commit for a rollback:
+   ```bash
+   cp data/db.sqlite data/db.sqlite.$(date +%F).bak
+   git rev-parse HEAD
+   ```
+2. Install OpenSwoole for PHP 8.5. Use the distribution package if one exists (`apt-cache policy php8.5-openswoole`), otherwise build it with OpenSSL:
+   ```bash
+   sudo apt install php8.5-dev libssl-dev
+   pecl download openswoole-26.2.0 && tar xzf openswoole-26.2.0.tgz && cd openswoole-26.2.0
+   phpize8.5 && ./configure --with-php-config=php-config8.5 --enable-openssl --enable-http2
+   make -j"$(nproc)" && sudo make install
+   echo 'extension=openswoole.so' | sudo tee /etc/php/8.5/mods-available/openswoole.ini
+   ```
+3. Swap the extensions for the PHP 8.5 CLI and check the result. Swoole and OpenSwoole cannot share a process, and PHP 8.4 is not involved:
+   ```bash
+   php8.5 --ini                          # find the ini file that loads swoole
+   sudo phpdismod -v 8.5 -s cli swoole
+   sudo phpenmod -v 8.5 -s cli openswoole
+   php8.5 -m | grep -i swoole            # only "openswoole"
+   php8.5 --ri openswoole | grep -E 'Version|openssl'
+   ```
+4. Update the code and dependencies with PHP 8.5 (the `php` on the path may be 8.4, which `composer.json` rejects):
+   ```bash
+   git pull
+   php8.5 "$(command -v composer)" install --no-dev --optimize-autoloader
+   php8.5 bin/migrate.php
+   ```
+5. Move the port in `config/autoload/app.local.php` from `mezzio-swoole.swoole-http-server` to the `server` key, with `'host' => '127.0.0.1'`. `bin/server.php` still reads the old key, but binds `0.0.0.0` unless a host is set there.
+6. Point the unit at the new command. `systemctl cat chat.service` shows the unit and its drop-in; in the drop-in, clear and replace `ExecStart`, and remove any `Type=forking`, `PIDFile=`, `ExecStop=` or `ExecReload=` lines that belong to `mezzio:swoole`:
+   ```ini
+   [Service]
+   Type=simple
+   ExecStart=
+   ExecStart=/usr/bin/php8.5 bin/server.php
+   ```
+   ```bash
+   sudo systemctl daemon-reload && sudo systemctl restart chat
+   journalctl -u chat -f
+   ```
+7. Caddy: `reverse_proxy 127.0.0.1:3200` and the existing `encode` stay as they are. Nothing changes for SSE.
+8. Check: `curl -s -D - -o /dev/null https://chat.example.com/` answers 200 with a `__Host-via_session_id` cookie, and a test message streams token by token. In the browser's network panel, `/_sse` stays open with `Content-Type: text/event-stream`.
+
+Rollback: check out the noted commit, run `composer install --no-dev`, swap the extensions back (`phpdismod -v 8.5 -s cli openswoole`, `phpenmod -v 8.5 -s cli swoole`), restore the drop-in and restart. The port to php-via itself does not change the schema; if `migrate.php` applied a migration, restore the backup as well.
 
 ### Docker (Example)
 
 ```dockerfile
 FROM php:8.5-cli
 
-# Swoole picks up OpenSSL (needed for HTTPS to the AI providers) and Brotli from the dev packages
-RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev libbrotli-dev libicu-dev unzip \
-    && docker-php-ext-install intl \
-    && pecl install swoole \
-    && docker-php-ext-enable swoole
+# OpenSwoole builds without OpenSSL unless asked; the AI clients need it for HTTPS
+RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev unzip \
+    && pecl install -D 'enable-sockets="no" enable-openssl="yes" enable-http2="yes" enable-mysqlnd="no" enable-hook-curl="no" with-postgres="no"' openswoole \
+    && docker-php-ext-enable openswoole \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
+# Only while composer.json points at ../php-via-fix: build with --build-context php-via=../php-via-fix
+COPY --from=php-via . /php-via-fix
 COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
+VOLUME /app/data
 EXPOSE 8080
-CMD ["php", "vendor/bin/laminas", "mezzio:swoole:start"]
+CMD ["sh", "-c", "php bin/init-db.php && php bin/migrate.php && exec php bin/server.php"]
 ```
+
+```bash
+docker build --build-context php-via=../php-via-fix -t ai-chatbot .
+docker run -p 8080:8080 --env-file .env -v ai-chatbot-data:/app/data ai-chatbot
+```
+
+`.dockerignore` keeps `.env`, `vendor/`, the database and the benchmark data out of the image. The container listens on `0.0.0.0:8080` and creates or migrates the database on start. Without `APP_ENV` the app runs in production mode, where the session cookie is `Secure`, so put the container behind HTTPS.
 
 ## 📄 License
 
@@ -571,8 +562,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- **Baseline:** [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) — the Next.js reference implementation we're comparing against
-- **Reactivity:** [Datastar](https://data-star.dev/) — HTML-over-the-wire without the JS framework tax
+- **Baseline:** [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot): the Next.js reference implementation we're comparing against
+- **Server:** [php-via](https://via.zweiundeins.gmbh) on [OpenSwoole](https://openswoole.com/)
+- **Reactivity:** [Datastar](https://data-star.dev/): HTML-over-the-wire without the JS framework tax
 
 ---
 

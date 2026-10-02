@@ -15,7 +15,7 @@ use App\Infrastructure\AI\Tools\UpdateDocumentTool;
 use App\Infrastructure\EventBus\EventBusInterface;
 
 /**
- * AI service streaming from Anthropic and OpenAI through raw Swoole socket clients.
+ * AI service streaming from Anthropic and OpenAI through raw OpenSwoole socket clients.
  */
 final class AIService implements AIServiceInterface {
     /**

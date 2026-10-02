@@ -14,4 +14,10 @@ return [
     'app' => [
         'env' => 'development',
     ],
+
+    // bin/server.php listens on 0.0.0.0:8080 unless set here
+    'server' => [
+        'host' => '127.0.0.1',
+        'port' => 8080,
+    ],
 ];

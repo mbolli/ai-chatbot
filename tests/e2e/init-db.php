@@ -14,7 +14,7 @@ if (!is_dir($dir)) {
     mkdir($dir, 0o755, true);
 }
 
-foreach (['db.sqlite', 'db.sqlite-wal', 'db.sqlite-shm', 'swoole.pid'] as $file) {
+foreach (['db.sqlite', 'db.sqlite-wal', 'db.sqlite-shm'] as $file) {
     if (is_file("{$dir}/{$file}")) {
         unlink("{$dir}/{$file}");
     }

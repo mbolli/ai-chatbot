@@ -1,0 +1,14 @@
+.git
+.env
+.env.local
+vendor
+node_modules
+data/*.sqlite*
+config/autoload/*.local.php
+ai-chatbot
+benchmarks
+legacy
+test-results
+playwright-report
+.php-cs-fixer.cache
+.phpunit.result.cache

@@ -10,7 +10,7 @@ export function trackErrors(page: Page): string[] {
     return errors;
 }
 
-/** Waits until the /updates SSE stream is subscribed; events emitted before that are lost. */
+/** Waits until the tab's php-via SSE stream (/_sse) is open; broadcasts sent before that are lost. */
 export async function waitForConnection(page: Page): Promise<void> {
     await expect(page.locator('#connection-status[data-connected="true"]')).toBeAttached();
 }

@@ -89,7 +89,7 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
          data-init="$_sidebarOpen = matchMedia('(min-width: 769px)').matches"
          data-on-keys:ctrl-b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
          data-on-keys:ctrl-k__window__prevent="window.location.href = '/'"
-         data-on-keys:esc__window="$_artifactOpen = false; $_authModal = null">
+         data-on-keys:esc__window="$_artifactOpen = false; $_authModal = null; $_aboutOpen = false">
         <?php echo $content ?? ''; ?>
 
         <!-- Auth Modals -->

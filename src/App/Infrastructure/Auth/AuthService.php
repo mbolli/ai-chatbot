@@ -11,7 +11,7 @@ use App\Domain\Repository\UserRepositoryInterface;
  * Session-based authentication for guest and registered users.
  *
  * This service manages user authentication through request-scoped sessions,
- * making it fully compatible with Swoole coroutines (no global state).
+ * making it fully compatible with OpenSwoole coroutines (no global state).
  */
 final class AuthService {
     private const string USER_SESSION_KEY = 'authenticated_user';

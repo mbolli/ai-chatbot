@@ -24,13 +24,12 @@ if (getenv('E2E_DATA_DIR') !== false) {
 }
 
 $container = new Container($config, $root);
-$server = $config['server'] ?? [];
-// Servers configured before the php-via port still carry the port under the old key
-$port = (int) ($server['port'] ?? $config['mezzio-swoole']['swoole-http-server']['port'] ?? 8080);
+// Local configs written before the php-via port still use the old mezzio-swoole key
+$server = ($config['server'] ?? []) + ($config['mezzio-swoole']['swoole-http-server'] ?? []);
 
 $viaConfig = (new Config())
     ->withHost((string) ($server['host'] ?? '0.0.0.0'))
-    ->withPort($port)
+    ->withPort((int) ($server['port'] ?? 8080))
     ->withDevMode((bool) ($config['debug'] ?? false))
     ->withLogLevel(($config['debug'] ?? false) ? 'debug' : 'warning')
     // php-via's Dev Bar overlays the page; opt in with VIA_DEVBAR=1
