@@ -6,12 +6,12 @@ namespace App\Infrastructure\AI;
 
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
 use App\Infrastructure\AI\Tools\UpdateDocumentTool;
-use OpenSwoole\Coroutine\Socket;
+use Swoole\Coroutine\Socket;
 
 /**
- * OpenAI API client with true real-time streaming using OpenSwoole coroutines.
+ * OpenAI API client with true real-time streaming using Swoole coroutines.
  *
- * Uses OpenSwoole's raw coroutine Socket with recv() to read SSE events as they
+ * Uses Swoole's raw coroutine Socket with recv() to read SSE events as they
  * arrive, yielding text chunks immediately without buffering the entire response.
  * The recv() call properly yields to the coroutine scheduler while waiting for data.
  *

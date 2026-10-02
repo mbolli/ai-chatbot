@@ -8,7 +8,7 @@ use App\Domain\Repository\UserRepositoryInterface;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use Mezzio\Swoole\Event\WorkerStartEvent;
-use OpenSwoole\Timer;
+use Swoole\Timer;
 
 /**
  * Worker start listener that sets up periodic cleanup tasks.

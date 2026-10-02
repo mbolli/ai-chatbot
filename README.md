@@ -1,7 +1,7 @@
 # AI Chatbot — PHP/Swoole/Datastar Stack Showcase
 
-[![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white)](https://www.php.net/)
-[![Swoole](https://img.shields.io/badge/Swoole-5.0+-007EC6?logo=swoole&logoColor=white)](https://openswoole.com/)
+[![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Swoole](https://img.shields.io/badge/Swoole-6-007EC6?logo=swoole&logoColor=white)](https://www.swoole.com/)
 [![Mezzio](https://img.shields.io/badge/Mezzio-3.19-6C3BAF?logo=laminas&logoColor=white)](https://docs.mezzio.dev/)
 [![Datastar](https://img.shields.io/badge/Datastar-1.0-FF6B35?logo=rocket&logoColor=white)](https://data-star.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -10,7 +10,7 @@
 
 **[🚀 Live Demo](https://chat.zweiundeins.gmbh)** | **[📊 Benchmark Results](benchmarks/RESULTS.md)** | **[📝 Blog Post](https://zweiundeins.gmbh/en/methodology/spa-vs-hypermedia-real-world-performance-under-load)**
 
-A real-time AI chatbot built with **PHP 8.2+**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
+A real-time AI chatbot built with **PHP 8.5**, **Swoole**, **Mezzio**, and **Datastar**. Features streaming responses, document/artifact generation, and a modern reactive UI—all without JavaScript frameworks.
 
 > **🎯 Project Goal:** This is a side-by-side comparison with the [Vercel AI Chatbot (Next.js)](https://github.com/vercel/ai-chatbot), demonstrating that a lean PHP stack can deliver the same features with **dramatically less complexity** and **better performance**.
 
@@ -46,8 +46,8 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 | Aspect | Next.js | PHP/Swoole | Ratio |
 |--------|---------|------------|-------|
-| **Dependencies (prod)** | 799 packages | **69 packages** | **11.6x fewer** |
-| **node_modules / vendor** | 793 MB | **25 MB** | **31.7x smaller** |
+| **Dependencies (prod)** | 799 packages | **63 packages** | **12.7x fewer** |
+| **node_modules / vendor** | 793 MB | **19 MB** | **41.7x smaller** |
 | **Build Step** | Required | **None** | — |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | — |
 
@@ -69,8 +69,8 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 ## 📋 Requirements
 
-- PHP 8.2 or higher
-- Swoole extension (`pecl install swoole`)
+- PHP 8.5
+- Swoole 6 extension (`pecl install swoole`). OpenSwoole is not supported: mezzio-swoole dropped it in 4.12
 - SQLite3 extension
 - Composer
 - Node.js 18+ (optional, for TypeScript development)
@@ -542,9 +542,9 @@ server {
 ### Docker (Example)
 
 ```dockerfile
-FROM php:8.2-cli
+FROM php:8.5-cli
 
-RUN pecl install openswoole && docker-php-ext-enable openswoole
+RUN pecl install swoole && docker-php-ext-enable swoole
 RUN docker-php-ext-install pdo pdo_sqlite
 
 WORKDIR /app

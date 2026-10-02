@@ -21,10 +21,10 @@ use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Mezzio\Router\RouteResult;
-use OpenSwoole\Coroutine;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Swoole\Coroutine;
 
 final class MessageCommandHandler implements RequestHandlerInterface {
     /**

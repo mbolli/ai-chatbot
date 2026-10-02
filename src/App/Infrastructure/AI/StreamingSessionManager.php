@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use OpenSwoole\Table;
+use Swoole\Table;
 
 /**
  * Manages active AI streaming sessions for stop generation feature.

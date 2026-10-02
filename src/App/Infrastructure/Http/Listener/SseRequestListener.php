@@ -14,14 +14,14 @@ use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
 use Mezzio\Swoole\Event\RequestEvent;
-use OpenSwoole\Coroutine\Channel;
-use OpenSwoole\Http\Request;
-use OpenSwoole\Http\Response as SwooleHttpResponse;
 use starfederation\datastar\enums\ElementPatchMode;
 use starfederation\datastar\events\ExecuteScript;
 use starfederation\datastar\events\PatchElements;
 use starfederation\datastar\events\PatchSignals;
 use starfederation\datastar\ServerSentEventGenerator;
+use Swoole\Coroutine\Channel;
+use Swoole\Http\Request;
+use Swoole\Http\Response as SwooleHttpResponse;
 
 /**
  * SSE Request Listener for Datastar real-time updates.

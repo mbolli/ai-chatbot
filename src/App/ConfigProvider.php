@@ -51,7 +51,7 @@ class ConfigProvider {
     }
 
     /**
-     * @return array{invokables: array<string, class-string>, factories: array<string, callable>}
+     * @return array{invokables: array<string, class-string>, factories: array<string, callable>, aliases: array<string, string>}
      */
     public function getDependencies(): array {
         return [
