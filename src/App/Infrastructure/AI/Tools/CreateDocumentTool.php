@@ -13,7 +13,7 @@ use App\Domain\Repository\DocumentRepositoryInterface;
  * This tool allows the AI to create text documents, code snippets,
  * spreadsheets, or images that appear in the artifact panel.
  */
-final class CreateDocumentTool {
+final class CreateDocumentTool implements ToolInterface {
     private ?string $chatId = null;
     private ?string $messageId = null;
     private ?Document $lastCreatedDocument = null;
@@ -29,6 +29,49 @@ final class CreateDocumentTool {
 
     public function getLastCreatedDocument(): ?Document {
         return $this->lastCreatedDocument;
+    }
+
+    public function name(): string {
+        return 'createDocument';
+    }
+
+    public function description(): string {
+        return 'Create a new document artifact (code, text, spreadsheet, or image). Use this when the user asks you to write, create, or generate content that would benefit from being in a separate editable document.';
+    }
+
+    public function inputSchema(): array {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'kind' => [
+                    'type' => 'string',
+                    'enum' => ['text', 'code', 'sheet', 'image'],
+                    'description' => 'The type of document: "text" for markdown/prose, "code" for programming code, "sheet" for CSV data, "image" for SVG content',
+                ],
+                'title' => [
+                    'type' => 'string',
+                    'description' => 'A short descriptive title for the document',
+                ],
+                'content' => [
+                    'type' => 'string',
+                    'description' => 'The actual content of the document',
+                ],
+                'language' => [
+                    'type' => 'string',
+                    'description' => 'For code documents, the programming language (e.g., "python", "javascript", "php")',
+                ],
+            ],
+            'required' => ['kind', 'title', 'content'],
+        ];
+    }
+
+    public function execute(array $input): string {
+        return $this->createDocument(
+            (string) ($input['kind'] ?? 'text'),
+            (string) ($input['title'] ?? 'Untitled'),
+            (string) ($input['content'] ?? ''),
+            isset($input['language']) ? (string) $input['language'] : null,
+        );
     }
 
     /**

@@ -13,7 +13,7 @@ use App\Domain\Repository\DocumentRepositoryInterface;
  * This tool allows the AI to modify the content of existing documents.
  * Each update creates a new version for undo/redo functionality.
  */
-final class UpdateDocumentTool {
+final class UpdateDocumentTool implements ToolInterface {
     private ?Document $lastUpdatedDocument = null;
 
     /**
@@ -26,6 +26,43 @@ final class UpdateDocumentTool {
 
     public function getLastUpdatedDocument(): ?Document {
         return $this->lastUpdatedDocument;
+    }
+
+    public function name(): string {
+        return 'updateDocument';
+    }
+
+    public function description(): string {
+        return 'Update an existing document artifact with new content. Replaces the full content and creates a new version.';
+    }
+
+    public function inputSchema(): array {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'documentId' => [
+                    'type' => 'string',
+                    'description' => 'The ID of the document to update',
+                ],
+                'content' => [
+                    'type' => 'string',
+                    'description' => 'The new full content for the document',
+                ],
+                'title' => [
+                    'type' => 'string',
+                    'description' => 'Optional new title',
+                ],
+            ],
+            'required' => ['documentId', 'content'],
+        ];
+    }
+
+    public function execute(array $input): string {
+        return $this->updateDocument(
+            (string) ($input['documentId'] ?? ''),
+            (string) ($input['content'] ?? ''),
+            isset($input['title']) ? (string) $input['title'] : null,
+        );
     }
 
     /**

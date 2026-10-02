@@ -16,7 +16,7 @@ interface AIServiceInterface {
      * @param null|string                                 $chatId    Chat ID for tool context
      * @param null|string                                 $messageId Message ID for tool context
      *
-     * @return \Generator<string> Yields response chunks
+     * @return \Generator<int, Stream\StreamEnd|Stream\TextDelta|Stream\ThinkingDelta|Stream\ToolCall|Stream\ToolResult> Ends with exactly one StreamEnd
      */
     public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator;
 

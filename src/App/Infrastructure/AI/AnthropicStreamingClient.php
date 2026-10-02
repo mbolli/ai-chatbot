@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use App\Infrastructure\AI\Tools\CreateDocumentTool;
-use App\Infrastructure\AI\Tools\UpdateDocumentTool;
+use App\Domain\Service\Stream\StopReason;
+use App\Domain\Service\Stream\StreamEnd;
+use App\Domain\Service\Stream\TextDelta;
+use App\Domain\Service\Stream\ToolCall;
+use App\Domain\Service\Stream\ToolResult;
+use App\Infrastructure\AI\Tools\ToolInterface;
 use Swoole\Coroutine\Socket;
 
 /**
@@ -23,8 +27,8 @@ final class AnthropicStreamingClient {
     private const int DEFAULT_MAX_TOKENS = 4096;
     private const array LOW_EFFORT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5'];
 
-    private ?CreateDocumentTool $createDocumentTool = null;
-    private ?UpdateDocumentTool $updateDocumentTool = null;
+    /** @var list<ToolInterface> */
+    private array $tools = [];
 
     public function __construct(
         private readonly string $apiKey,
@@ -32,11 +36,10 @@ final class AnthropicStreamingClient {
     ) {}
 
     /**
-     * Set tools for this client.
+     * @param list<ToolInterface> $tools
      */
-    public function setTools(?CreateDocumentTool $createTool, ?UpdateDocumentTool $updateTool): void {
-        $this->createDocumentTool = $createTool;
-        $this->updateDocumentTool = $updateTool;
+    public function setTools(array $tools): void {
+        $this->tools = $tools;
     }
 
     /**
@@ -46,7 +49,7 @@ final class AnthropicStreamingClient {
      * @param string                                      $model    Model ID (e.g., claude-haiku-4-5)
      * @param null|string                                 $system   Optional system prompt
      *
-     * @return \Generator<string> Yields text chunks as they arrive
+     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult> Ends with exactly one StreamEnd
      *
      * @throws \RuntimeException On API errors with descriptive message
      */
@@ -73,7 +76,7 @@ final class AnthropicStreamingClient {
      * @param array<string, mixed>                                     $payload
      * @param array<array{role: string, content: array<mixed>|string}> $originalMessages
      *
-     * @return \Generator<string>
+     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
      */
     private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
         $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -171,6 +174,7 @@ final class AnthropicStreamingClient {
 
         /** @var array<int, string> $toolInputJson */
         $toolInputJson = [];
+        $stopReason = StopReason::Unknown;
 
         while (true) {
             // Process complete lines from buffer
@@ -184,16 +188,6 @@ final class AnthropicStreamingClient {
                 }
 
                 $jsonStr = substr($line, 6); // Remove 'data: ' prefix
-
-                if ($jsonStr === '[DONE]') {
-                    $socket->close();
-
-                    if (!$hasYieldedContent) {
-                        error_log('Anthropic API returned no content for model: ' . $model);
-                    }
-
-                    return;
-                }
 
                 try {
                     $event = json_decode($jsonStr, true, 512, JSON_THROW_ON_ERROR);
@@ -213,7 +207,7 @@ final class AnthropicStreamingClient {
                             $hasYieldedContent = true;
                             $blocks[$index]['text'] .= $delta['text'];
 
-                            yield $delta['text'];
+                            yield new TextDelta($delta['text']);
 
                             break;
 
@@ -242,13 +236,21 @@ final class AnthropicStreamingClient {
                     }
                     // An empty PHP array would encode as [], the API expects an object
                     $blocks[$index]['input'] = \is_array($input) && $input !== [] ? $input : new \stdClass();
+                } elseif ($type === 'message_delta') {
+                    $stopReason = match ($event['delta']['stop_reason'] ?? null) {
+                        'end_turn', 'tool_use' => StopReason::EndTurn,
+                        'max_tokens' => StopReason::MaxTokens,
+                        'refusal' => StopReason::Refusal,
+                        'stop_sequence' => StopReason::StopSequence,
+                        default => StopReason::Unknown,
+                    };
                 } elseif ($type === 'message_stop') {
                     $toolCalls = array_values(array_filter($blocks, static fn (array $b): bool => ($b['type'] ?? '') === 'tool_use'));
 
                     if ($toolCalls !== []) {
                         $socket->close();
 
-                        $toolResults = $this->executeToolCalls($toolCalls);
+                        $toolResults = yield from $this->executeToolCalls($toolCalls);
 
                         // Echo the assistant turn back unchanged (thinking blocks must keep their signatures)
                         ksort($blocks);
@@ -287,6 +289,8 @@ final class AnthropicStreamingClient {
 
                     $socket->close();
 
+                    yield new StreamEnd($stopReason);
+
                     return;
                 }
 
@@ -311,6 +315,8 @@ final class AnthropicStreamingClient {
         if (!$hasYieldedContent) {
             error_log('Anthropic API stream ended without content. Remaining buffer: ' . substr($buffer, 0, 200));
         }
+
+        yield new StreamEnd($stopReason);
     }
 
     /**
@@ -357,97 +363,43 @@ final class AnthropicStreamingClient {
     }
 
     /**
-     * Build the tools array for the API request.
-     *
-     * @return array<array{name: string, description: string, input_schema: array<string, mixed>}>
+     * @return list<array{name: string, description: string, input_schema: array<string, mixed>}>
      */
     private function buildToolsArray(): array {
-        $tools = [];
-
-        if ($this->createDocumentTool !== null) {
-            $tools[] = [
-                'name' => 'createDocument',
-                'description' => 'Create a new document artifact (code, text, spreadsheet, or image). Use this when the user asks you to write, create, or generate content that would benefit from being in a separate editable document.',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'kind' => [
-                            'type' => 'string',
-                            'enum' => ['text', 'code', 'sheet', 'image'],
-                            'description' => 'The type of document: "text" for markdown/prose, "code" for programming code, "sheet" for CSV data, "image" for SVG content',
-                        ],
-                        'title' => [
-                            'type' => 'string',
-                            'description' => 'A short descriptive title for the document',
-                        ],
-                        'content' => [
-                            'type' => 'string',
-                            'description' => 'The actual content of the document',
-                        ],
-                        'language' => [
-                            'type' => 'string',
-                            'description' => 'For code documents, the programming language (e.g., "python", "javascript", "php")',
-                        ],
-                    ],
-                    'required' => ['kind', 'title', 'content'],
-                ],
-            ];
-        }
-
-        if ($this->updateDocumentTool !== null) {
-            $tools[] = [
-                'name' => 'updateDocument',
-                'description' => 'Update an existing document artifact with new content.',
-                'input_schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'documentId' => [
-                            'type' => 'string',
-                            'description' => 'The ID of the document to update',
-                        ],
-                        'content' => [
-                            'type' => 'string',
-                            'description' => 'The new content for the document',
-                        ],
-                    ],
-                    'required' => ['documentId', 'content'],
-                ],
-            ];
-        }
-
-        return $tools;
+        return array_map(static fn (ToolInterface $tool): array => [
+            'name' => $tool->name(),
+            'description' => $tool->description(),
+            'input_schema' => $tool->inputSchema(),
+        ], $this->tools);
     }
 
     /**
-     * Execute tool calls and return results.
-     *
      * @param list<array<string, mixed>> $toolCalls tool_use content blocks
      *
-     * @return array<array{tool_use_id: string, content: string}>
+     * @return \Generator<int, ToolCall|ToolResult, mixed, list<array{tool_use_id: string, content: string, is_error: bool}>>
      */
-    private function executeToolCalls(array $toolCalls): array {
+    private function executeToolCalls(array $toolCalls): \Generator {
         $results = [];
 
         foreach ($toolCalls as $toolCall) {
-            $toolCall['input'] = (array) $toolCall['input'];
-            $result = match ($toolCall['name']) {
-                'createDocument' => $this->createDocumentTool?->createDocument(
-                    $toolCall['input']['kind'] ?? 'text',
-                    $toolCall['input']['title'] ?? 'Untitled',
-                    $toolCall['input']['content'] ?? '',
-                    $toolCall['input']['language'] ?? null,
-                ) ?? 'Error: Tool not available',
-                'updateDocument' => $this->updateDocumentTool?->updateDocument(
-                    $toolCall['input']['documentId'] ?? '',
-                    $toolCall['input']['content'] ?? '',
-                ) ?? 'Error: Tool not available',
-                default => "Error: Unknown tool '{$toolCall['name']}'",
-            };
+            $id = (string) $toolCall['id'];
+            $name = (string) $toolCall['name'];
+            $input = (array) $toolCall['input'];
 
-            $results[] = [
-                'tool_use_id' => $toolCall['id'],
-                'content' => $result,
-            ];
+            yield new ToolCall($id, $name, $input);
+
+            $tool = array_find($this->tools, static fn (ToolInterface $t): bool => $t->name() === $name);
+
+            try {
+                $content = $tool?->execute($input) ?? "Error: Unknown tool '{$name}'";
+            } catch (\Throwable $e) {
+                $content = 'Error: ' . $e->getMessage();
+            }
+            $isError = str_starts_with($content, 'Error:');
+
+            yield new ToolResult($id, $name, $content, $isError);
+
+            $results[] = ['tool_use_id' => $id, 'content' => $content, 'is_error' => $isError];
         }
 
         return $results;
@@ -456,9 +408,9 @@ final class AnthropicStreamingClient {
     /**
      * Build user message content with tool results.
      *
-     * @param array<array{tool_use_id: string, content: string}> $toolResults
+     * @param list<array{tool_use_id: string, content: string, is_error: bool}> $toolResults
      *
-     * @return array<array{type: string, tool_use_id: string, content: string}>
+     * @return list<array{type: string, tool_use_id: string, content: string, is_error: bool}>
      */
     private function buildToolResultContent(array $toolResults): array {
         $content = [];
@@ -468,6 +420,7 @@ final class AnthropicStreamingClient {
                 'type' => 'tool_result',
                 'tool_use_id' => $result['tool_use_id'],
                 'content' => $result['content'],
+                'is_error' => $result['is_error'],
             ];
         }
 

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Handler\Command;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Event\MessageThinkingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Model\Document;
@@ -16,6 +17,8 @@ use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Domain\Service\RateLimitService;
+use App\Domain\Service\Stream\TextDelta;
+use App\Domain\Service\Stream\ThinkingDelta;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
@@ -315,10 +318,11 @@ final class MessageCommandHandler implements RequestHandlerInterface {
 
             // Stream AI response with 100ms buffering to reduce SSE events
             $fullContent = '';
+            $fullThinking = '';
             $wasStopped = false;
             $chunkCount = 0;
 
-            foreach ($this->aiService->streamChat($history, $chat->model, $chatId, $assistantMessage->id) as $chunk) {
+            foreach ($this->aiService->streamChat($history, $chat->model, $chatId, $assistantMessage->id) as $event) {
                 // Check if stop was requested
                 if ($this->sessionManager->isStopRequested($chatId, $userId)) {
                     $wasStopped = true;
@@ -326,6 +330,23 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                     break;
                 }
 
+                if ($event instanceof ThinkingDelta) {
+                    $fullThinking .= $event->text;
+                    $this->eventBus->emit($userId, new MessageThinkingEvent(
+                        chatId: $chatId,
+                        messageId: $assistantMessage->id,
+                        userId: $userId,
+                        fullThinking: $fullThinking,
+                    ));
+
+                    continue;
+                }
+
+                if (!$event instanceof TextDelta) {
+                    continue;
+                }
+
+                $chunk = $event->text;
                 $fullContent .= $chunk;
                 ++$chunkCount;
 

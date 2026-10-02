@@ -6,6 +6,7 @@ namespace App\Infrastructure\AI;
 
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
+use App\Domain\Service\Stream\TextDelta;
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
 use App\Infrastructure\AI\Tools\UpdateDocumentTool;
 
@@ -81,16 +82,15 @@ final class AIService implements AIServiceInterface {
         }
 
         // Clients and tools are created per call: this service is shared by all coroutines in the worker
-        $createTool = null;
-        $updateTool = null;
+        $tools = [];
         if ($this->documentRepository !== null && $chatId !== null) {
             $createTool = new CreateDocumentTool($this->documentRepository);
             $createTool->setChatContext($chatId, $messageId);
-            $updateTool = new UpdateDocumentTool($this->documentRepository, $chatId);
+            $tools = [$createTool, new UpdateDocumentTool($this->documentRepository, $chatId)];
         }
 
         $client = $this->createClient($model, $this->maxTokens);
-        $client->setTools($createTool, $updateTool);
+        $client->setTools($tools);
 
         yield from $client->streamChatRealtime($messages, $model, $this->getSystemPrompt());
     }
@@ -120,8 +120,10 @@ final class AIService implements AIServiceInterface {
 
         try {
             $title = '';
-            foreach ($this->createClient($model, self::TITLE_MAX_TOKENS)->streamChatRealtime([['role' => 'user', 'content' => $prompt]], $model) as $chunk) {
-                $title .= $chunk;
+            foreach ($this->createClient($model, self::TITLE_MAX_TOKENS)->streamChatRealtime([['role' => 'user', 'content' => $prompt]], $model) as $event) {
+                if ($event instanceof TextDelta) {
+                    $title .= $event->text;
+                }
             }
 
             $title = mb_trim($title, " \t\n\r\"'");

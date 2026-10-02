@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use App\Infrastructure\AI\Tools\CreateDocumentTool;
-use App\Infrastructure\AI\Tools\UpdateDocumentTool;
+use App\Domain\Service\Stream\StopReason;
+use App\Domain\Service\Stream\StreamEnd;
+use App\Domain\Service\Stream\TextDelta;
+use App\Domain\Service\Stream\ToolCall;
+use App\Domain\Service\Stream\ToolResult;
+use App\Infrastructure\AI\Tools\ToolInterface;
 use Swoole\Coroutine\Socket;
 
 /**
@@ -27,8 +31,8 @@ final class OpenAIStreamingClient {
      */
     private const array NO_REASONING_MODELS = ['gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna'];
 
-    private ?CreateDocumentTool $createDocumentTool = null;
-    private ?UpdateDocumentTool $updateDocumentTool = null;
+    /** @var list<ToolInterface> */
+    private array $tools = [];
 
     public function __construct(
         private readonly string $apiKey,
@@ -36,11 +40,10 @@ final class OpenAIStreamingClient {
     ) {}
 
     /**
-     * Set tools for this client.
+     * @param list<ToolInterface> $tools
      */
-    public function setTools(?CreateDocumentTool $createTool, ?UpdateDocumentTool $updateTool): void {
-        $this->createDocumentTool = $createTool;
-        $this->updateDocumentTool = $updateTool;
+    public function setTools(array $tools): void {
+        $this->tools = $tools;
     }
 
     /**
@@ -50,7 +53,7 @@ final class OpenAIStreamingClient {
      * @param string                                      $model    Model ID (e.g., gpt-5-nano)
      * @param null|string                                 $system   Optional system prompt
      *
-     * @return \Generator<string> Yields text chunks as they arrive
+     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult> Ends with exactly one StreamEnd
      *
      * @throws \RuntimeException On API errors with descriptive message
      */
@@ -99,7 +102,7 @@ final class OpenAIStreamingClient {
      * @param array<string, mixed>       $payload
      * @param list<array<string, mixed>> $originalMessages
      *
-     * @return \Generator<string>
+     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
      */
     private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
         $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -175,6 +178,7 @@ final class OpenAIStreamingClient {
 
         // Track tool calls being accumulated
         $toolCalls = [];
+        $stopReason = StopReason::Unknown;
 
         // Stream SSE events
         $buffer = $remaining;
@@ -214,7 +218,7 @@ final class OpenAIStreamingClient {
 
                             // Handle content chunks
                             if (isset($delta['content']) && $delta['content'] !== '') {
-                                yield $delta['content'];
+                                yield new TextDelta($delta['content']);
                             }
 
                             // Handle tool calls
@@ -241,8 +245,21 @@ final class OpenAIStreamingClient {
                         // Check for finish reason
                         $finishReason = $event['choices'][0]['finish_reason'] ?? null;
                         if ($finishReason === 'tool_calls' && !empty($toolCalls)) {
-                            // Process tool calls
+                            $socket->close();
+
+                            // The continuation ends with its own StreamEnd
                             yield from $this->processToolCalls($toolCalls, $originalMessages, $model, $system);
+
+                            return;
+                        }
+
+                        if ($finishReason !== null) {
+                            $stopReason = match ($finishReason) {
+                                'stop' => StopReason::EndTurn,
+                                'length' => StopReason::MaxTokens,
+                                'content_filter' => StopReason::Refusal,
+                                default => StopReason::Unknown,
+                            };
                         }
                     } catch (\JsonException) {
                         // Skip malformed JSON
@@ -252,6 +269,8 @@ final class OpenAIStreamingClient {
         }
 
         $socket->close();
+
+        yield new StreamEnd($stopReason);
     }
 
     /**
@@ -260,21 +279,32 @@ final class OpenAIStreamingClient {
      * @param array<int, array{id: string, function: array{name: string, arguments: string}}> $toolCalls
      * @param list<array<string, mixed>>                                                      $originalMessages
      *
-     * @return \Generator<string>
+     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
      */
     private function processToolCalls(array $toolCalls, array $originalMessages, string $model, ?string $system): \Generator {
         $toolResults = [];
 
         foreach ($toolCalls as $toolCall) {
-            $functionName = $toolCall['function']['name'];
-            $arguments = json_decode($toolCall['function']['arguments'], true) ?? [];
+            $name = $toolCall['function']['name'];
+            $decoded = json_decode($toolCall['function']['arguments'], true);
+            $input = \is_array($decoded) ? $decoded : [];
 
-            $result = $this->executeTool($functionName, $arguments);
+            yield new ToolCall($toolCall['id'], $name, $input);
+
+            $tool = array_find($this->tools, static fn (ToolInterface $t): bool => $t->name() === $name);
+
+            try {
+                $content = $tool?->execute($input) ?? "Error: Unknown tool '{$name}'";
+            } catch (\Throwable $e) {
+                $content = 'Error: ' . $e->getMessage();
+            }
+
+            yield new ToolResult($toolCall['id'], $name, $content, str_starts_with($content, 'Error:'));
 
             $toolResults[] = [
                 'tool_call_id' => $toolCall['id'],
                 'role' => 'tool',
-                'content' => json_encode($result, JSON_THROW_ON_ERROR),
+                'content' => $content,
             ];
         }
 
@@ -335,142 +365,16 @@ final class OpenAIStreamingClient {
     }
 
     /**
-     * Execute a tool and return the result.
-     *
-     * @param array<string, mixed> $arguments
-     *
-     * @return array<string, mixed>
-     */
-    private function executeTool(string $functionName, array $arguments): array {
-        return match ($functionName) {
-            'createDocument' => $this->executeCreateDocument($arguments),
-            'updateDocument' => $this->executeUpdateDocument($arguments),
-            default => ['error' => "Unknown function: {$functionName}"],
-        };
-    }
-
-    /**
-     * Execute createDocument tool.
-     *
-     * @param array<string, mixed> $arguments
-     *
-     * @return array<string, mixed>
-     */
-    private function executeCreateDocument(array $arguments): array {
-        if ($this->createDocumentTool === null) {
-            return ['error' => 'Document creation not available'];
-        }
-
-        try {
-            $title = $arguments['title'] ?? 'Untitled';
-            $kind = $arguments['kind'] ?? 'text';
-            $content = $arguments['content'] ?? '';
-            $language = $arguments['language'] ?? null;
-
-            $result = $this->createDocumentTool->createDocument($kind, $title, $content, $language);
-
-            // Get the document from the tool to access the ID
-            $document = $this->createDocumentTool->getLastCreatedDocument();
-            $documentId = $document !== null ? $document->id : 'unknown';
-
-            return [
-                'success' => !str_contains($result, 'Error:'),
-                'document_id' => $documentId,
-                'message' => $result,
-            ];
-        } catch (\Throwable $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Execute updateDocument tool.
-     *
-     * @param array<string, mixed> $arguments
-     *
-     * @return array<string, mixed>
-     */
-    private function executeUpdateDocument(array $arguments): array {
-        if ($this->updateDocumentTool === null) {
-            return ['error' => 'Document update not available'];
-        }
-
-        try {
-            $documentId = $arguments['document_id'] ?? '';
-            $content = $arguments['content'] ?? '';
-
-            $this->updateDocumentTool->updateDocument($documentId, $content);
-
-            return [
-                'success' => true,
-                'message' => "Updated document {$documentId}",
-            ];
-        } catch (\Throwable $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Build tools array for OpenAI API.
-     *
-     * @return array<array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>}}>
+     * @return list<array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>}}>
      */
     private function buildToolsArray(): array {
-        $tools = [];
-
-        if ($this->createDocumentTool !== null) {
-            $tools[] = [
-                'type' => 'function',
-                'function' => [
-                    'name' => 'createDocument',
-                    'description' => 'Create a new document (text, code, spreadsheet, or image). Use this when the user asks you to create, write, or generate content that should be saved as a document.',
-                    'parameters' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'title' => [
-                                'type' => 'string',
-                                'description' => 'Title for the document',
-                            ],
-                            'kind' => [
-                                'type' => 'string',
-                                'enum' => ['text', 'code', 'sheet', 'image'],
-                                'description' => 'Type of document to create',
-                            ],
-                            'content' => [
-                                'type' => 'string',
-                                'description' => 'Initial content for the document. For code, include the full source code. For sheets, use CSV format. For images, provide an SVG string or image generation prompt.',
-                            ],
-                        ],
-                        'required' => ['title', 'kind', 'content'],
-                    ],
-                ],
-            ];
-        }
-
-        if ($this->updateDocumentTool !== null) {
-            $tools[] = [
-                'type' => 'function',
-                'function' => [
-                    'name' => 'updateDocument',
-                    'description' => 'Update an existing document with new content.',
-                    'parameters' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'document_id' => [
-                                'type' => 'string',
-                                'description' => 'ID of the document to update',
-                            ],
-                            'content' => [
-                                'type' => 'string',
-                                'description' => 'New content for the document',
-                            ],
-                        ],
-                        'required' => ['document_id', 'content'],
-                    ],
-                ],
-            ];
-        }
-
-        return $tools;
+        return array_map(static fn (ToolInterface $tool): array => [
+            'type' => 'function',
+            'function' => [
+                'name' => $tool->name(),
+                'description' => $tool->description(),
+                'parameters' => $tool->inputSchema(),
+            ],
+        ], $this->tools);
     }
 }
