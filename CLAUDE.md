@@ -22,6 +22,7 @@ vendor/bin/pest tests/Unit/Infrastructure/AIToolsTest.php --filter 'refuses to u
 composer stan           # PHPStan level 6 + type-coverage 100% (bleedingEdge)
 composer cs             # php-cs-fixer dry run; composer cs:fix to apply
 composer db:init        # Create data/db.sqlite from data/schema.sql
+composer db:migrate     # Upgrade an existing DB in place (idempotent)
 
 pnpm build              # esbuild src/ts/main.ts -> public/js/app.js (committed)
 pnpm typecheck
@@ -40,7 +41,7 @@ On localhost, chat messages such as `{help}`, `{longStream}`, `{error}`, `{artif
 
 **Swoole request path.** `/updates` never reaches the Mezzio pipeline: `SseRequestListener` is registered before `RequestHandlerRequestListener` in the `mezzio-swoole` listener list in `config/autoload/app.global.php` (`MergeReplaceKey` keeps the order). `CleanupTimerListener` starts timers on worker start.
 
-**AI streaming.** `MessageCommandHandler` starts a coroutine (`Swoole\Coroutine::create`) that iterates `AIServiceInterface::streamChat()` and emits a `MessageStreamingEvent` per chunk. `AIService` is the implementation. It streams, and generates chat titles, through `AnthropicStreamingClient` / `OpenAIStreamingClient`, which talk HTTP/1.1 over raw `Swoole\Coroutine\Socket` with TLS verification. They de-chunk the response with `ChunkedDecoder` before splitting SSE lines; skipping that silently drops tokens. Both clients run the tool loop (`createDocument`, `updateDocument`) themselves by recursing into a continuation request.
+**AI streaming.** `MessageCommandHandler` starts a coroutine (`Swoole\Coroutine::create`) that iterates `AIServiceInterface::streamChat()` and emits a `MessageStreamingEvent` per chunk. `AIService` is the implementation. It streams, and generates chat titles, through `AnthropicStreamingClient` / `OpenAIStreamingClient`, which talk HTTP/1.1 over raw `Swoole\Coroutine\Socket` with TLS verification. The shared `SseHttpTransport` de-chunks the response with `ChunkedDecoder` before `SseParser` splits SSE lines (skipping that silently drops tokens), and `RetryPolicy` retries 429/5xx/overloaded only before anything was yielded. Both clients run the tool loop themselves, capped at 5 model requests (`StopReason::ToolLimit`), and yield typed events from `Domain/Service/Stream` (text, thinking, tool call, tool result, and one final `StreamEnd` with stop reason and summed usage). Tools implement `Tools/ToolInterface`; registering one in `AIService::streamChat()` is all the wiring both providers need.
 
 - Anthropic continuation requests must echo the assistant turn back unchanged, thinking blocks and signatures included (Opus 5.5 / Sonnet 5.5 always think).
 - Per-model request quirks live next to the clients: `LOW_EFFORT_MODELS` (Anthropic) and `NO_REASONING_MODELS` (OpenAI reasoning models need `reasoning_effort: none` to accept function tools on Chat Completions).
@@ -48,7 +49,9 @@ On localhost, chat messages such as `{help}`, `{longStream}`, `{error}`, `{artif
 
 **Shared state across coroutines.** Container services are singletons shared by every coroutine in a worker. Never keep per-request state on them: `streamChat()` creates its clients and tools per call, and the handler finds created documents via `DocumentRepository::findByMessageId()`. Shared tool state once leaked one user's document into another user's session.
 
-**Sessions and streaming state** live in `Swoole\Table` (`SwooleTableSessionPersistence`, `StreamingSessionManager`). The data is in memory and is lost on restart. Guests get a session-backed user. `RateLimitService` enforces a daily message limit per user, with separate guest and registered tiers. The `requests_per_hour` settings in config are not enforced anywhere.
+**Sessions and streaming state** live in `Swoole\Table` (`SwooleTableSessionPersistence`, `StreamingSessionManager`). The data is in memory and is lost on restart. Guests get a session-backed user. `RateLimitService` enforces an hourly request window, a daily message limit and an optional daily token limit per user, with separate guest and registered tiers. `MessageCommandHandler` stores tool calls in `messages.parts` (replayed as text notes by `ConversationHistoryBuilder`), usage in `message_usage`, and logs one `ai_response {json}` line per response.
+
+**Schema changes** go into `data/schema.sql` (fresh installs, tests) and as a new step in `SchemaMigrator` (existing DBs, keyed on `PRAGMA user_version`); deploys run `composer db:migrate`.
 
 **Domain models** (`Domain/Model`) are immutable: readonly properties, `fromArray()` from snake_case DB rows, `toArray()` back, and `update*`/`append*` methods return new instances. Repository interfaces live in `Domain/Repository`, SQLite implementations in `Infrastructure/Persistence`. All DI factories are closures in `src/App/ConfigProvider.php`. Routes in `config/routes.php` use a `.action` route-name suffix that the multi-action handlers dispatch on.
 

@@ -59,13 +59,15 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 - **Real-time AI Streaming** - Token-by-token streaming via Server-Sent Events (SSE)
 - **Multiple AI Providers** - Support for Anthropic (Claude) and OpenAI (GPT) models
-- **Document Artifacts** - AI can create and edit code, text, spreadsheets, and images
+- **Document Artifacts** - AI can create and edit code, text, spreadsheets, and images, and suggest edits you can accept or dismiss
+- **Reasoning Display** - Collapsible reasoning summary for models that think (Claude Opus/Sonnet 5.5)
+- **Usage Accounting** - Token usage per response, prompt caching, and one structured log line per AI response
 - **CQRS Architecture** - Clean separation of commands, queries, and events
 - **Session-based Auth** - Simple authentication with guest and registered user support
-- **Rate Limiting** - Configurable daily message limits for guests and registered users
+- **Rate Limiting** - Hourly request, daily message and optional daily token limits for guests and registered users
 - **Responsive UI** - Mobile-friendly design with sidebar navigation
 - **No Build Required** - Datastar provides reactivity without complex JS bundling
-- **Zero CDN Dependencies** - All assets served locally (Open Props, Datastar, SVG icons), markdown is rendered server-side
+- **Zero CDN Dependencies** - All assets served locally (Open Props, Datastar, SVG icons), markdown is rendered server-side. Exception: running Python artifacts loads Pyodide from jsDelivr on demand
 
 ## 📋 Requirements
 
@@ -296,6 +298,9 @@ The AI can use tools to create and update documents:
 
 - **CreateDocument** - Create code, text, spreadsheet, or image artifacts
 - **UpdateDocument** - Modify existing artifacts
+- **RequestSuggestions** - Propose up to 5 edits for a text document, shown with Accept/Dismiss
+
+Tool calls are stored with each message and replayed as short notes in later turns, so the model can refer to documents it created earlier. One response runs at most 5 model requests.
 
 ## 🗄️ Database Schema
 
@@ -444,19 +449,20 @@ OPENAI_API_KEY=sk-your-key-here
 AI_DEFAULT_MODEL=claude-haiku-4-5
 AI_MAX_TOKENS=2048
 
-# Context compression settings
-AI_CONTEXT_RECENT_MESSAGES=6
-AI_CONTEXT_MAX_OLDER_CHARS=500
+# Context budget: older messages are dropped once the history exceeds this (estimated tokens)
+AI_CONTEXT_MAX_TOKENS=8000
 
 # Application Settings
 APP_ENV=development
 APP_DEBUG=true
 
-# Rate Limits (the hourly values are not enforced yet, only the daily ones)
+# Rate Limits (daily token limits: 0 = unlimited)
 RATE_LIMIT_GUEST_HOURLY=10
 RATE_LIMIT_GUEST_DAILY=20
+RATE_LIMIT_GUEST_DAILY_TOKENS=0
 RATE_LIMIT_USER_HOURLY=30
 RATE_LIMIT_USER_DAILY=100
+RATE_LIMIT_USER_DAILY_TOKENS=0
 ```
 
 For additional PHP configuration overrides, create `config/autoload/app.local.php`:
