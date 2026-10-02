@@ -14,12 +14,21 @@
  */
 ?>
 <?php
-/** @var list<array{id: string, message: string, expires: int}> $toasts */
+/** @var list<array{id: string, message: string, expires: int, signals?: array<string, mixed>}> $toasts */
 $toasts = $toasts ?? [];
+// A toast may set client signals when it appears, e.g. open the upgrade dialog after a guest hit a limit
+$init = static function (array $toast): string {
+    $script = 'setTimeout(() => el.remove(), 8000)';
+    foreach ($toast['signals'] ?? [] as $name => $value) {
+        $script .= '; $' . $name . ' = ' . json_encode($value);
+    }
+
+    return $script;
+};
 ?>
 <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-label="Notifications">
     <?php foreach ($toasts as $toast) { ?>
-        <div class="toast" id="toast-<?php echo $e($toast['id']); ?>" data-type="error" data-init="setTimeout(() => el.remove(), 8000)">
+        <div class="toast" id="toast-<?php echo $e($toast['id']); ?>" data-type="error" data-init="<?php echo $e($init($toast)); ?>">
             <span class="toast-message"><?php echo $e($toast['message']); ?></span>
             <button type="button" class="toast-close btn-icon" aria-label="Dismiss" data-on:click="el.closest('.toast').remove()">×</button>
         </div>

@@ -13,7 +13,7 @@ final class LiveState {
     /** @var array<string, array{messageId: string, content: string, thinking: string}> */
     private array $streams = [];
 
-    /** @var array<int, list<array{id: string, message: string, expires: int}>> */
+    /** @var array<int, list<array{id: string, message: string, expires: int, signals: array<string, mixed>}>> */
     private array $toasts = [];
 
     public function startStream(string $chatId, string $messageId): void {
@@ -45,15 +45,18 @@ final class LiveState {
         return $this->streams[$chatId] ?? null;
     }
 
-    public function pushToast(int $userId, string $message, int $ttlSeconds = 8): void {
+    /**
+     * @param array<string, mixed> $signals client signals the toast sets when it appears
+     */
+    public function pushToast(int $userId, string $message, int $ttlSeconds = 8, array $signals = []): void {
         $now = time();
         $active = array_values(array_filter($this->toasts[$userId] ?? [], static fn (array $t): bool => $t['expires'] > $now));
-        $active[] = ['id' => bin2hex(random_bytes(6)), 'message' => $message, 'expires' => $now + $ttlSeconds];
+        $active[] = ['id' => bin2hex(random_bytes(6)), 'message' => $message, 'expires' => $now + $ttlSeconds, 'signals' => $signals];
         $this->toasts[$userId] = \array_slice($active, -3);
     }
 
     /**
-     * @return list<array{id: string, message: string, expires: int}>
+     * @return list<array{id: string, message: string, expires: int, signals: array<string, mixed>}>
      */
     public function toasts(int $userId): array {
         $now = time();

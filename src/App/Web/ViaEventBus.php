@@ -93,7 +93,13 @@ final class ViaEventBus implements EventBusInterface {
             $message .= ' Sign up for more!';
         }
 
-        $this->state->pushToast($event->userId, $message);
+        // The refused message never starts a reply, so the input leaves its generating state
+        $signals = ['_generatingMessage' => ''];
+        if ($event->isGuest) {
+            $signals['_authModal'] = 'upgrade';
+        }
+
+        $this->state->pushToast($event->userId, $message, signals: $signals);
         $this->broadcast(Scopes::user($event->userId));
     }
 
