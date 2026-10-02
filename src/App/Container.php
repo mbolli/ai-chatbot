@@ -6,6 +6,7 @@ namespace App;
 
 use App\Application\ChatCommands;
 use App\Application\MessageCommands;
+use App\Application\VoteCommands;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
@@ -159,6 +160,15 @@ final class Container {
             $this->rateLimits(),
             contextMaxTokens: $this->config['ai']['context_max_tokens'] ?? 8000,
             testCommandsEnabled: !$this->isProduction(),
+        ));
+    }
+
+    public function voteCommands(): VoteCommands {
+        return $this->shared(VoteCommands::class, fn (): VoteCommands => new VoteCommands(
+            $this->votes(),
+            $this->chats(),
+            $this->messages(),
+            $this->eventBus(),
         ));
     }
 
