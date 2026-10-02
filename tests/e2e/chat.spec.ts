@@ -11,6 +11,9 @@ test('home page loads without console errors', async ({ page }) => {
     await expect(page.getByRole('navigation', { name: 'Chat history' })).toBeVisible();
     await expect(messageInput(page)).toBeFocused();
     await expect(page.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    // A blank '' generating flag once kept the button disabled after typing
+    await messageInput(page).pressSequentially('hi');
+    await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled();
     expect(errors).toEqual([]);
 });
 

@@ -60,7 +60,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr:disabled="$_authLoading">
+                    data-attr:disabled="!!$_authLoading">
                 <span data-show="!$_authLoading">Sign In</span>
                 <span data-show="$_authLoading">
                     <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Signing in...
@@ -136,7 +136,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr:disabled="$_authLoading">
+                    data-attr:disabled="!!$_authLoading">
                 <span data-show="!$_authLoading">Create Account</span>
                 <span data-show="$_authLoading">
                     <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...
@@ -217,7 +217,7 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr:disabled="$_authLoading">
+                    data-attr:disabled="!!$_authLoading">
                 <span data-show="!$_authLoading">Create Account & Save Chats</span>
                 <span data-show="$_authLoading">
                     <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...

@@ -54,7 +54,7 @@ $formSubmit = $isNewChat
             <p class="disclaimer">AI can make mistakes. Please verify information independently.</p>
             <div class="input-actions">
                 <?php if ($isNewChat) { ?>
-                    <button type="submit" class="btn btn-primary btn-send" data-attr:disabled="!$_message.trim() || $_generatingMessage" aria-label="Send message" title="Send message">
+                    <button type="submit" class="btn btn-primary btn-send" data-attr:disabled="!$_message.trim() || !!$_generatingMessage" aria-label="Send message" title="Send message">
                         <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
                     </button>
                 <?php } else { ?>
