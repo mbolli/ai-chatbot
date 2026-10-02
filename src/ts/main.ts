@@ -107,3 +107,5 @@ async function copyToClipboard(text: string): Promise<boolean> {
 ).copyToClipboard = copyToClipboard;
 
 console.log('AI Chatbot initialized');
+
+export {};
