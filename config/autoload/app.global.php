@@ -39,11 +39,9 @@ return [
         // Haiku 4.5: $5/1M output tokens, so 2048 tokens = ~$0.01
         'max_tokens' => (int) ($_ENV['AI_MAX_TOKENS'] ?? 2048),
 
-        // Context compression - reduce token usage for long conversations
-        // Number of recent messages to keep in full
-        'context_recent_messages' => (int) ($_ENV['AI_CONTEXT_RECENT_MESSAGES'] ?? 6),
-        // Max chars for older messages before truncation (~4 chars = 1 token)
-        'context_max_older_chars' => (int) ($_ENV['AI_CONTEXT_MAX_OLDER_CHARS'] ?? 500),
+        // Estimated token budget for conversation history sent per request (system prompt and tools excluded).
+        // Newest messages are kept whole, older ones dropped or truncated to fit.
+        'context_max_tokens' => (int) ($_ENV['AI_CONTEXT_MAX_TOKENS'] ?? 8000),
 
         // Response format: 'markdown' (default) or 'plain'
         // Markdown responses are rendered with formatting (headers, code blocks, lists)

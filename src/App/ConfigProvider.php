@@ -187,8 +187,7 @@ class ConfigProvider {
                         $container->get(AIServiceInterface::class),
                         $container->get(StreamingSessionManager::class),
                         $container->get(RateLimitService::class),
-                        contextRecentMessages: $aiConfig['context_recent_messages'] ?? 6,
-                        contextMaxOlderChars: $aiConfig['context_max_older_chars'] ?? 500,
+                        contextMaxTokens: $aiConfig['context_max_tokens'] ?? 8000,
                     );
                 },
                 DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(
