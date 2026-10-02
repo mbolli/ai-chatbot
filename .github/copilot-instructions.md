@@ -13,7 +13,7 @@ This is a **PHP/Swoole** AI chatbot application using **CQRS** pattern with real
 │  ├── Http/Handler/Command/  → POST/PUT/DELETE (messages, chats) │
 │  ├── Http/Handler/Query/    → GET requests                      │
 │  ├── Http/Listener/         → SseRequestListener for streaming  │
-│  └── AI/                    → LLPhantAIService, streaming tools │
+│  └── AI/                    → AIService, streaming clients      │
 ├─────────────────────────────────────────────────────────────────┤
 │  Application Layer (Events)                                     │
 │  ├── Domain/Event/          → MessageStreamingEvent, ChatUpdated│
@@ -39,9 +39,8 @@ This is a **PHP/Swoole** AI chatbot application using **CQRS** pattern with real
 6. Client's Datastar appends chunks to message content in real-time
 
 ### AI Service Implementation
-- `LLPhantAIService` wraps LLPhant library for Anthropic/OpenAI
-- **Important**: LLPhant's default streaming buffers entire response before returning
-- For true streaming, implement custom HTTP client with SSE parsing
+- `AIService` streams through `AnthropicStreamingClient` / `OpenAIStreamingClient` (raw Swoole sockets with SSE parsing)
+- Clients and tools are created per call: services are shared by all coroutines in a worker
 - Models defined in `ANTHROPIC_MODELS` and `OPENAI_MODELS` constants
 
 ### Error Handling for AI Responses

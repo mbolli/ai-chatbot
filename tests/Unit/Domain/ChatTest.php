@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Model\Chat;
-use App\Infrastructure\AI\LLPhantAIService;
+use App\Infrastructure\AI\AIService;
 
 it('creates a chat with default values', function (): void {
     $chat = Chat::create(userId: 1);
@@ -11,7 +11,7 @@ it('creates a chat with default values', function (): void {
     expect($chat->id)->toBeUuid()
         ->and($chat->userId)->toBe(1)
         ->and($chat->title)->toBeNull()
-        ->and($chat->model)->toBe(LLPhantAIService::DEFAULT_MODEL)
+        ->and($chat->model)->toBe(AIService::DEFAULT_MODEL)
         ->and($chat->visibility)->toBe('private')
     ;
 });

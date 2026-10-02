@@ -8,20 +8,11 @@ use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
 use App\Infrastructure\AI\Tools\UpdateDocumentTool;
-use LLPhant\AnthropicConfig;
-use LLPhant\Chat\AnthropicChat;
-use LLPhant\Chat\ChatInterface;
-use LLPhant\Chat\OpenAIChat;
-use LLPhant\OpenAIConfig;
 
 /**
- * AI Service implementation using LLPhant library for OpenAI
- * and custom AnthropicStreamingClient for Anthropic.
- *
- * Model IDs are defined here directly to support newer models
- * that may not yet be in LLPhant.
+ * AI service streaming from Anthropic and OpenAI through raw Swoole socket clients.
  */
-final class LLPhantAIService implements AIServiceInterface {
+final class AIService implements AIServiceInterface {
     /**
      * Default model to use when requested model is not found.
      * Haiku 4.5 is the cheapest Anthropic model still served.
@@ -71,6 +62,7 @@ final class LLPhantAIService implements AIServiceInterface {
      */
     private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5';
     private const string TITLE_MODEL_OPENAI = 'gpt-6-luna';
+    private const int TITLE_MAX_TOKENS = 30;
 
     public function __construct(
         private readonly ?string $anthropicApiKey = null,
@@ -97,20 +89,7 @@ final class LLPhantAIService implements AIServiceInterface {
             $updateTool = new UpdateDocumentTool($this->documentRepository, $chatId);
         }
 
-        if ($this->getProvider($model) === 'openai') {
-            if ($this->openaiApiKey === null) {
-                throw new \RuntimeException('OpenAI API key not configured');
-            }
-
-            $client = new OpenAIStreamingClient($this->openaiApiKey, $this->maxTokens);
-        } else {
-            if ($this->anthropicApiKey === null) {
-                throw new \RuntimeException('Anthropic API key not configured');
-            }
-
-            $client = new AnthropicStreamingClient($this->anthropicApiKey, $this->maxTokens);
-        }
-
+        $client = $this->createClient($model, $this->maxTokens);
         $client->setTools($createTool, $updateTool);
 
         yield from $client->streamChatRealtime($messages, $model, $this->getSystemPrompt());
@@ -136,22 +115,27 @@ final class LLPhantAIService implements AIServiceInterface {
     }
 
     public function generateTitle(string $firstMessage): string {
-        // Use a fast model for title generation
         $model = $this->anthropicApiKey !== null ? self::TITLE_MODEL_ANTHROPIC : self::TITLE_MODEL_OPENAI;
-        $chat = $this->createChat($model);
-
         $prompt = "Generate a very short title (max 6 words) for a chat that starts with this message. Return only the title, no quotes or explanation:\n\n" . $firstMessage;
 
         try {
-            $response = $chat->generateText($prompt);
+            $title = '';
+            foreach ($this->createClient($model, self::TITLE_MAX_TOKENS)->streamChatRealtime([['role' => 'user', 'content' => $prompt]], $model) as $chunk) {
+                $title .= $chunk;
+            }
 
-            return mb_trim($response);
+            $title = mb_trim($title, " \t\n\r\"'");
+            if ($title !== '') {
+                return $title;
+            }
         } catch (\Throwable $e) {
-            // Fallback: use first few words of the message
-            $words = explode(' ', $firstMessage);
-
-            return implode(' ', \array_slice($words, 0, 5)) . (\count($words) > 5 ? '...' : '');
+            error_log('Title generation failed: ' . $e->getMessage());
         }
+
+        // Fallback: use first few words of the message
+        $words = explode(' ', $firstMessage);
+
+        return implode(' ', \array_slice($words, 0, 5)) . (\count($words) > 5 ? '...' : '');
     }
 
     public function getAvailableModels(): array {
@@ -196,56 +180,20 @@ final class LLPhantAIService implements AIServiceInterface {
         return 'anthropic';
     }
 
-    /**
-     * Check if a model ID is valid (exists in any model list).
-     */
-    private function isValidModel(string $model): bool {
-        return \array_key_exists($model, self::ANTHROPIC_MODELS)
-            || \array_key_exists($model, self::ANTHROPIC_MODELS_PROD)
-            || \array_key_exists($model, self::OPENAI_MODELS)
-            || \array_key_exists($model, self::OPENAI_MODELS_PROD);
-    }
+    private function createClient(string $model, int $maxTokens): AnthropicStreamingClient|OpenAIStreamingClient {
+        if ($this->getProvider($model) === 'openai') {
+            if ($this->openaiApiKey === null) {
+                throw new \RuntimeException('OpenAI API key not configured');
+            }
 
-    private function createChat(string $model): ChatInterface {
-        $provider = $this->getProvider($model);
-
-        // If model not found in our lists, use configured default or fallback
-        if (!$this->isValidModel($model)) {
-            $model = $this->defaultModel ?? self::DEFAULT_MODEL;
-            $provider = $this->getProvider($model);
+            return new OpenAIStreamingClient($this->openaiApiKey, $maxTokens);
         }
 
-        return match ($provider) {
-            'anthropic' => $this->createAnthropicChat($model),
-            'openai' => $this->createOpenAIChat($model),
-            default => throw new \RuntimeException("Unknown provider: {$provider}"),
-        };
-    }
-
-    private function createAnthropicChat(string $model): AnthropicChat {
         if ($this->anthropicApiKey === null) {
             throw new \RuntimeException('Anthropic API key not configured');
         }
 
-        $config = new AnthropicConfig(
-            model: $model,
-            maxTokens: $this->maxTokens,
-            apiKey: $this->anthropicApiKey,
-        );
-
-        return new AnthropicChat($config);
-    }
-
-    private function createOpenAIChat(string $model): OpenAIChat {
-        if ($this->openaiApiKey === null) {
-            throw new \RuntimeException('OpenAI API key not configured');
-        }
-
-        $config = new OpenAIConfig();
-        $config->model = $model;
-        $config->apiKey = $this->openaiApiKey;
-
-        return new OpenAIChat($config);
+        return new AnthropicStreamingClient($this->anthropicApiKey, $maxTokens);
     }
 
     private function getSystemPrompt(): string {

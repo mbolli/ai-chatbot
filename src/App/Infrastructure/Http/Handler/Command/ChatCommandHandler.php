@@ -9,7 +9,7 @@ use App\Domain\Model\Chat;
 use App\Domain\Model\Message;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
-use App\Infrastructure\AI\LLPhantAIService;
+use App\Infrastructure\AI\AIService;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
@@ -48,7 +48,7 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
         $chat = Chat::create(
             userId: $userId,
-            model: $data['_model'] ?? $data['model'] ?? LLPhantAIService::DEFAULT_MODEL,
+            model: $data['_model'] ?? $data['model'] ?? AIService::DEFAULT_MODEL,
             visibility: $data['_visibility'] ?? $data['visibility'] ?? 'private',
             title: $data['_title'] ?? $data['title'] ?? null,
         );

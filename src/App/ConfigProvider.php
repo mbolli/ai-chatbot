@@ -12,7 +12,7 @@ use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\Repository\VoteRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Domain\Service\RateLimitService;
-use App\Infrastructure\AI\LLPhantAIService;
+use App\Infrastructure\AI\AIService;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\Auth\AuthService;
@@ -133,7 +133,7 @@ class ConfigProvider {
                     // Production mode limits model selection to cost-effective options
                     $isProduction = ($appConfig['env'] ?? 'production') === 'production';
 
-                    return new LLPhantAIService(
+                    return new AIService(
                         anthropicApiKey: $aiConfig['anthropic_api_key'] ?? null,
                         openaiApiKey: $aiConfig['openai_api_key'] ?? null,
                         documentRepository: $container->get(DocumentRepositoryInterface::class),

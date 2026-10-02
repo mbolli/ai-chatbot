@@ -46,8 +46,8 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 | Aspect | Next.js | PHP/Swoole | Ratio |
 |--------|---------|------------|-------|
-| **Dependencies (prod)** | 799 packages | **63 packages** | **12.7x fewer** |
-| **node_modules / vendor** | 793 MB | **19 MB** | **41.7x smaller** |
+| **Dependencies (prod)** | 799 packages | **50 packages** | **16x fewer** |
+| **node_modules / vendor** | 793 MB | **11 MB** | **72x smaller** |
 | **Build Step** | Required | **None** | — |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | — |
 
@@ -145,7 +145,7 @@ Visit **http://localhost:8080** in your browser.
 │  ├── Http/Handler/Command/  → POST/PUT/DELETE mutations         │
 │  ├── Http/Handler/Query/    → GET read operations               │
 │  ├── Http/Listener/         → SseRequestListener for streaming  │
-│  └── AI/                    → LLPhantAIService, streaming tools │
+│  └── AI/                    → AIService, streaming clients      │
 ├─────────────────────────────────────────────────────────────────┤
 │  Application Layer (Events)                                     │
 │  ├── Domain/Event/          → MessageStreamingEvent, ChatUpdated│
@@ -555,7 +555,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🙏 Acknowledgments
 
 - **Baseline:** [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) — the Next.js reference implementation we're comparing against
-- **AI Integration:** [LLPhant](https://github.com/theodo-group/LLPhant) — PHP library for LLM interactions, used for chat titles (responses stream through custom Swoole clients)
 - **Reactivity:** [Datastar](https://data-star.dev/) — HTML-over-the-wire without the JS framework tax
 
 ---

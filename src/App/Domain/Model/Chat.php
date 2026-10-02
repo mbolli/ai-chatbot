@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Model;
 
-use App\Infrastructure\AI\LLPhantAIService;
+use App\Infrastructure\AI\AIService;
 use Ramsey\Uuid\Uuid;
 
 final class Chat {
@@ -20,7 +20,7 @@ final class Chat {
 
     public static function create(
         int $userId,
-        string $model = LLPhantAIService::DEFAULT_MODEL,
+        string $model = AIService::DEFAULT_MODEL,
         string $visibility = 'private',
         ?string $title = null,
     ): self {
