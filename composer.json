@@ -57,7 +57,8 @@
         "cs": "php-cs-fixer fix --dry-run --diff",
         "cs:fix": "php-cs-fixer fix",
         "stan": "phpstan analyse",
-        "db:init": "php bin/init-db.php"
+        "db:init": "php bin/init-db.php",
+        "db:migrate": "php bin/migrate.php"
     },
     "config": {
         "sort-packages": true,
