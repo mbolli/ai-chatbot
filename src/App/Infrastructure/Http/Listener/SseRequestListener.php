@@ -14,6 +14,7 @@ use App\Domain\Event\VoteUpdatedEvent;
 use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\SuggestionRepositoryInterface;
+use App\Domain\Service\RateLimitType;
 use App\Infrastructure\EventBus\EventBusInterface;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
 use App\Infrastructure\Template\TemplateRenderer;
@@ -329,9 +330,14 @@ final class SseRequestListener {
         $accountType = $event->isGuest ? 'Guest' : 'Registered';
 
         // Show toast notification
-        $message = $event->isGuest
-            ? "You've reached your daily limit of {$event->limit} messages. Sign up for more!"
-            : "You've reached your daily limit of {$event->limit} messages. Limit resets at midnight.";
+        $message = match ($event->type) {
+            RateLimitType::HourlyRequests => "You've sent {$event->limit} messages in the last hour. Please wait a bit before sending more.",
+            RateLimitType::DailyTokens => "You've used today's AI budget. Limit resets at midnight.",
+            RateLimitType::DailyMessages => "You've reached your daily limit of {$event->limit} messages. Limit resets at midnight.",
+        };
+        if ($event->isGuest) {
+            $message .= ' Sign up for more!';
+        }
 
         $toastHtml = <<<HTML
         <div id="toast-rate-limit" class="toast toast-error" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: var(--red-9); color: white; border-radius: 8px; box-shadow: var(--shadow-3); display: flex; align-items: center; gap: 8px; animation: slideUp 0.3s ease-out;">

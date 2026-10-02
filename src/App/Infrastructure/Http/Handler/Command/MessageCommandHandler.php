@@ -618,6 +618,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             used: $exceeded->used,
             limit: $exceeded->limit,
             isGuest: $exceeded->isGuest,
+            type: $exceeded->type,
         ));
 
         return true;
