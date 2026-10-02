@@ -5,6 +5,7 @@
 ?>
 <dialog id="about-modal"
         class="modal-popover about-modal"
+        data-preserve-attr="open"
         aria-labelledby="about-modal-title"
         data-on-signal-patch="$_aboutOpen ? el.open || el.showModal() : el.close()"
         data-on-signal-patch-filter="{include: /^_aboutOpen$/}"

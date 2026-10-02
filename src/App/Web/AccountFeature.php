@@ -73,6 +73,18 @@ final class AccountFeature {
     }
 
     /**
+     * True, after scheduling a reload, when the tab acts for a user its session no longer has.
+     */
+    public function guard(Context $ctx, User $user): bool {
+        if (!$this->sessionChanged($ctx, $user)) {
+            return false;
+        }
+        $ctx->execScript(self::RELOAD);
+
+        return true;
+    }
+
+    /**
      * Title and visibility of the open chat, live in every tab of its viewers.
      *
      * @return callable(): string
@@ -171,18 +183,6 @@ final class AccountFeature {
             $this->container->eventBus()->emit($before->id, new AccountChangedEvent($before->id));
         }
         $ctx->execScript(self::RELOAD);
-    }
-
-    /**
-     * True, after scheduling a reload, when the tab acts for a user its session no longer has.
-     */
-    private function guard(Context $ctx, User $user): bool {
-        if (!$this->sessionChanged($ctx, $user)) {
-            return false;
-        }
-        $ctx->execScript(self::RELOAD);
-
-        return true;
     }
 
     private function query(Context $ctx, string $name): string {

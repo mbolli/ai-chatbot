@@ -241,6 +241,31 @@ final class MessageCommands {
     }
 
     /**
+     * Emit RateLimitExceededEvent when the user has reached a limit.
+     */
+    /**
+     * True, after notifying the user, when any of their limits is used up.
+     */
+    public function isRateLimited(int $userId, string $chatId = ''): bool {
+        $exceeded = $this->rateLimitService->exceededLimit($userId);
+
+        if ($exceeded === null) {
+            return false;
+        }
+
+        $this->eventBus->emit($userId, new RateLimitExceededEvent(
+            userId: $userId,
+            chatId: $chatId,
+            used: $exceeded->used,
+            limit: $exceeded->limit,
+            isGuest: $exceeded->isGuest,
+            type: $exceeded->type,
+        ));
+
+        return true;
+    }
+
+    /**
      * Check if message is a test command and return the method name if so.
      */
     private function getTestCommand(string $message, bool $isLocalhost): ?string {
@@ -557,28 +582,6 @@ final class MessageCommands {
         } catch (\Throwable $e) {
             error_log("Recording AI usage failed for message {$messageId}: " . $e->getMessage());
         }
-    }
-
-    /**
-     * Emit RateLimitExceededEvent when the user has reached a limit.
-     */
-    private function isRateLimited(int $userId, string $chatId): bool {
-        $exceeded = $this->rateLimitService->exceededLimit($userId);
-
-        if ($exceeded === null) {
-            return false;
-        }
-
-        $this->eventBus->emit($userId, new RateLimitExceededEvent(
-            userId: $userId,
-            chatId: $chatId,
-            used: $exceeded->used,
-            limit: $exceeded->limit,
-            isGuest: $exceeded->isGuest,
-            type: $exceeded->type,
-        ));
-
-        return true;
     }
 
     /**

@@ -42,8 +42,9 @@ final class ChatApp {
         $message = $c->signal('', 'message');
         $model = $c->signal($chat->model ?? $this->container->ai()->getDefaultModel(), 'model');
 
-        $account = (new AccountFeature($this->container))->register($c, $user, $chat);
-        $actions = $this->registerActions($c, $user, $chat, $message, $model) + $account['actions'];
+        $accounts = new AccountFeature($this->container);
+        $account = $accounts->register($c, $user, $chat);
+        $actions = $this->registerActions($c, $user, $chat, $message, $model, $accounts) + $account['actions'];
         $slots = $this->registerComponents($c, $user, $chat, $actions) + $account['slots'];
 
         $c->view(fn (): string => $this->renderPage($c->getId(), $user, $chat, $message, $model, $actions, $slots), cacheUpdates: false);
@@ -52,35 +53,51 @@ final class ChatApp {
     /**
      * @return array<string, string> action name => URL
      */
-    private function registerActions(Context $c, User $user, ?Chat $chat, Signal $message, Signal $model): array {
-        $send = $c->action(function (Context $ctx) use ($user, $chat, $message, $model): void {
+    private function registerActions(Context $c, User $user, ?Chat $chat, Signal $message, Signal $model, AccountFeature $accounts): array {
+        $send = $c->action(function (Context $ctx) use ($user, $chat, $message, $model, $accounts): void {
             $text = mb_trim($message->string());
-            if ($text === '') {
+            if ($text === '' || $accounts->guard($ctx, $user)) {
                 return;
             }
 
-            $message->setValue('');
-            $ctx->syncSignals();
+            $commands = $this->container->messageCommands();
+            // A rejected message keeps its text in the input
+            $clearInput = static function () use ($message, $ctx): void {
+                $message->setValue('');
+                $ctx->syncSignals();
+            };
 
             if ($chat === null) {
+                if ($commands->isRateLimited($user->id)) {
+                    return;
+                }
                 $created = $this->container->chatCommands()->create($user->id, $model->string(), $text);
-                $this->container->messageCommands()->generate($user->id, $created->id);
+                $commands->generate($user->id, $created->id);
+                $clearInput();
                 $ctx->execScript('window.location.href = ' . json_encode('/chat/' . $created->id));
 
                 return;
             }
 
-            $this->container->messageCommands()->send($user->id, $chat->id, $text);
+            if ($commands->send($user->id, $chat->id, $text) === 204) {
+                $clearInput();
+            }
         }, 'send');
 
         $actions = ['send' => $send->url()];
 
         if ($chat !== null) {
-            $actions['stop'] = $c->action(function () use ($user, $chat): void {
+            $actions['stop'] = $c->action(function (Context $ctx) use ($user, $chat, $accounts): void {
+                if ($accounts->guard($ctx, $user)) {
+                    return;
+                }
                 $this->container->messageCommands()->stop($user->id, $chat->id);
             }, 'stop')->url();
 
-            $actions['model'] = $c->action(function () use ($user, $chat, $model): void {
+            $actions['model'] = $c->action(function (Context $ctx) use ($user, $chat, $model, $accounts): void {
+                if ($accounts->guard($ctx, $user)) {
+                    return;
+                }
                 $this->container->chatCommands()->model($user->id, $chat->id, $model->string());
             }, 'model')->url();
         }
