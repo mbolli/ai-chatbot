@@ -75,12 +75,8 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
          class="app-container"
          data-signals='{
             "_sidebarOpen": true,
-            "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
             "_artifactOpen": false,
-            "_artifactId": null,
             "_artifactEditing": false,
-            "_artifactContent": "",
-            "_documentVersion": 1,
             "_output": "",
             "_generatingMessage": "",
             "_authModal": null,

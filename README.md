@@ -184,7 +184,6 @@ Each update carries the whole reply as rendered HTML, so the browser runs no Mar
 ├── data/
 │   ├── schema.sql            # Database schema
 │   └── db.sqlite             # SQLite database (created on init)
-├── legacy/                   # Mezzio-era handlers, reference while they are ported; not autoloaded
 ├── public/
 │   ├── css/                  # app.css, open-props-bundle.css
 │   ├── icons.svg             # SVG icon sprite

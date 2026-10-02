@@ -32,7 +32,7 @@ PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium pnpm test:e2e   # Playwright; starts 
 
 There is no stop or reload command. The server runs in the foreground: stop it with Ctrl+C or SIGTERM, and restart it after any PHP change, because the worker keeps the code in memory.
 
-The e2e suite (`tests/e2e/`, `playwright.config.ts`) only sends the free test commands. Its web server runs `php bin/server.php` with `E2E_DATA_DIR` set, and `bin/server.php` then merges `config/e2e.php`: a temp database, `127.0.0.1:E2E_PORT`, `APP_ENV=testing` and placeholder AI keys, so `data/db.sqlite` is never touched and a stray AI call fails. Stop any server on that port first. Specs for features not yet ported to php-via (documents, the visibility and delete actions) are marked `test.fixme()`.
+The e2e suite (`tests/e2e/`, `playwright.config.ts`) only sends the free test commands. Its web server runs `php bin/server.php` with `E2E_DATA_DIR` set, and `bin/server.php` then merges `config/e2e.php`: a temp database, `127.0.0.1:E2E_PORT`, `APP_ENV=testing` and placeholder AI keys, so `data/db.sqlite` is never touched and a stray AI call fails. Stop any server on that port first.
 
 `pnpm install` runs a postinstall that copies the Datastar bundle and the on-keys plugin into `public/js/`. Those files are committed, so a Datastar upgrade shows up as a diff there. Datastar is pinned to a GitHub tag in `package.json`.
 
@@ -47,9 +47,11 @@ Outside production (`APP_ENV` other than `production`), chat messages such as `{
 - actions `send`, plus `stop` and `model` on a chat page; templates post to the URL in `$actions[...]`,
 - live components `sidebar` and `toasts` (scope: user), `messages` (scope: chat) and `stream` (scope: chat stream, rendered inside `messages`).
 
+Two feature classes add their own actions and slots the same way: `AccountFeature` (sign-in, register, guest upgrade, sign-out, votes, visibility, chat deletion, the `header` component) and `DocumentFeature` (the `artifact` panel component and its open/version/save/delete/suggestion actions, rendered by `DocumentPanel`). Their actions call `AccountFeature::guard()` first, which reloads a tab whose session switched user. Per-item ids travel in the action URL's query string (`$ctx->input('id')`); a custom `@post` payload would drop `via_ctx`.
+
 The page itself joins no scope, so a broadcast re-renders only the components in that scope, never the whole page. `App\Web\Scopes` builds the scope names.
 
-**Live updates.** `App\Application\ChatCommands` and `MessageCommands` change state and emit domain events on `EventBusInterface`; they return an HTTP-like status code and never render. `ViaEventBus` turns events into `LiveState` changes and `Via::broadcast()` calls: a chat update broadcasts the chat and user scopes, a streaming chunk updates the reply in `LiveState` and broadcasts the chat stream scope, at most once per 50 ms per chat with a trailing broadcast for the latest text. Components render from the database plus `LiveState`. To change what the user sees after an action, change the component's view or the event handling in `ViaEventBus`, not the action.
+**Live updates.** The services in `App\Application` (`ChatCommands`, `MessageCommands`, `DocumentCommands`, `SuggestionCommands`, `VoteCommands`) change state and emit domain events on `EventBusInterface`; they return an HTTP-like status code and never render. `ViaEventBus` turns events into `LiveState` changes and `Via::broadcast()` calls: a chat update broadcasts the chat and user scopes, a streaming chunk updates the reply in `LiveState` and broadcasts the chat stream scope, at most once per 50 ms per chat with a trailing broadcast for the latest text. Components render from the database plus `LiveState`. To change what the user sees after an action, change the component's view or the event handling in `ViaEventBus`, not the action.
 
 `LiveState` (reply being streamed, toasts), the php-via session data and `StreamingSessionManager`'s OpenSwoole table live in worker memory. The server therefore runs one worker, and a restart logs everybody out and drops running streams.
 
@@ -72,8 +74,6 @@ The page itself joins no scope, so a broadcast re-renders only the components in
 **Domain models** (`Domain/Model`) are immutable: readonly properties, `fromArray()` from snake_case DB rows, `toArray()` back, and `update*`/`append*` methods return new instances. Repository interfaces live in `Domain/Repository`, SQLite implementations in `Infrastructure/Persistence`. `App\Container` wires everything by hand, one method per service.
 
 **Datastar conventions.** Client-only signals are underscore-prefixed (`$_sidebarOpen`, `$_artifactOpen`, `$_aboutOpen`) and declared on `#app` in `templates/layout/default.php`. Server data arrives as HTML, not signals. Templates are plain PHP in `templates/`, rendered by `TemplateRenderer`, with Parsedown for markdown.
-
-**legacy/** holds the Mezzio-era handlers and listeners (auth, documents, suggestions, votes, queries, the old SSE listener) as the reference for porting them to php-via. It is not autoloaded, analysed or tested. `ChatCommands::delete()` and `visibility()` exist, but no action calls them yet.
 
 ## Configuration
 
