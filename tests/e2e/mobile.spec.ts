@@ -33,7 +33,6 @@ test('mobile: chat and markdown fit the screen', async ({ page }) => {
 });
 
 test('mobile: the artifact panel fits the screen', async ({ page }) => {
-    test.fixme(true, 'needs documents (the artifact panel), not yet ported to php-via');
     await startChat(page, '{markdown}');
     await waitForReply(page, 1);
 

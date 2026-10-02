@@ -45,8 +45,8 @@ final class ViaEventBus implements EventBusInterface {
             $event instanceof MessageStreamingEvent => $this->onStreaming($event),
             $event instanceof MessageThinkingEvent => $this->onThinking($event),
             $event instanceof ChatUpdatedEvent => $this->onChatUpdated($event),
-            $event instanceof DocumentUpdatedEvent,
-            $event instanceof SuggestionsUpdatedEvent,
+            $event instanceof DocumentUpdatedEvent => $this->onDocumentUpdated($event),
+            $event instanceof SuggestionsUpdatedEvent => $this->onSuggestionsUpdated($event),
             $event instanceof VoteUpdatedEvent => $this->broadcast(Scopes::chat($event->chatId)),
             $event instanceof RateLimitExceededEvent => $this->onRateLimited($event),
             $event instanceof AccountChangedEvent => $this->broadcast(Scopes::user($event->userId)),
@@ -81,6 +81,23 @@ final class ViaEventBus implements EventBusInterface {
 
         $this->broadcast(Scopes::chat($event->chatId));
         $this->broadcast(Scopes::user($event->userId));
+    }
+
+    private function onDocumentUpdated(DocumentUpdatedEvent $event): void {
+        // A document the reply creates or changes opens in the chat's tabs; a user's own edit leaves them be
+        if ($event->action === 'created' || ($event->action === 'updated' && $this->state->stream($event->chatId) !== null)) {
+            $this->state->requestDocument($event->chatId, $event->documentId);
+        }
+
+        $this->broadcast(Scopes::chat($event->chatId));
+    }
+
+    private function onSuggestionsUpdated(SuggestionsUpdatedEvent $event): void {
+        if ($event->action === SuggestionsUpdatedEvent::ACTION_REQUESTED) {
+            $this->state->requestDocument($event->chatId, $event->documentId);
+        }
+
+        $this->broadcast(Scopes::chat($event->chatId));
     }
 
     private function onRateLimited(RateLimitExceededEvent $event): void {

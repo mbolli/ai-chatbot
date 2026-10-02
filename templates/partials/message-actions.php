@@ -9,7 +9,7 @@ declare(strict_types=1);
  * @var string $chatId Chat ID
  * @var null|bool $vote User's vote (true=upvote, false=downvote, null=no vote)
  * @var null|array{id: string, title: string} $artifact Artifact info if message has one
- * @var array<string, string> $actions Action URLs; 'vote' is set for the chat's owner only
+ * @var array<string, string> $actions Action URLs; 'vote' is set for the chat's owner only, openDocument opens a document in this tab's artifact panel
  * @var callable $e Escape function
  */
 $vote = $vote ?? null;
@@ -18,8 +18,8 @@ $upvoted = $vote === true ? 'voted' : '';
 $downvoted = $vote === false ? 'voted' : '';
 ?>
 <div class="message-actions" id="message-<?php echo $e($messageId); ?>-actions">
-    <?php if ($artifact !== null) { ?>
-    <button id="artifact-btn-<?php echo $e($messageId); ?>" class="btn-icon" title="Open artifact: <?php echo $e($artifact['title']); ?>" aria-label="Open artifact: <?php echo $e($artifact['title']); ?>" data-on:click="@post('/api/documents/<?php echo $e($artifact['id']); ?>/open')">
+    <?php if ($artifact !== null && isset($actions['openDocument'])) { ?>
+    <button id="artifact-btn-<?php echo $e($messageId); ?>" class="btn-icon" title="Open artifact: <?php echo $e($artifact['title']); ?>" aria-label="Open artifact: <?php echo $e($artifact['title']); ?>" data-on:click="@post('<?php echo $e($actions['openDocument'] . '?id=' . rawurlencode($artifact['id'])); ?>')">
         <svg class="icon" aria-hidden="true"><use href="#icon-file-alt"></use></svg>
     </button>
     <?php } ?>

@@ -36,7 +36,3 @@ $chatId = null;
 include __DIR__ . '/../partials/chat-input.php';
 ?>
 </div>
-
-<!-- Right Column: Artifact Panel (3 grid areas) -->
-<?php include __DIR__ . '/../partials/artifact-panel.php'; ?>
-

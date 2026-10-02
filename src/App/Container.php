@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App;
 
 use App\Application\ChatCommands;
+use App\Application\DocumentCommands;
 use App\Application\MessageCommands;
+use App\Application\SuggestionCommands;
 use App\Application\VoteCommands;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
@@ -168,6 +170,23 @@ final class Container {
             $this->votes(),
             $this->chats(),
             $this->messages(),
+            $this->eventBus(),
+        ));
+    }
+
+    public function documentCommands(): DocumentCommands {
+        return $this->shared(DocumentCommands::class, fn (): DocumentCommands => new DocumentCommands(
+            $this->documents(),
+            $this->chats(),
+            $this->eventBus(),
+        ));
+    }
+
+    public function suggestionCommands(): SuggestionCommands {
+        return $this->shared(SuggestionCommands::class, fn (): SuggestionCommands => new SuggestionCommands(
+            $this->suggestions(),
+            $this->documents(),
+            $this->chats(),
             $this->eventBus(),
         ));
     }

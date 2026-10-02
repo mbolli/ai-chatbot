@@ -44,8 +44,9 @@ final class ChatApp {
 
         $accounts = new AccountFeature($this->container);
         $account = $accounts->register($c, $user, $chat);
-        $actions = $this->registerActions($c, $user, $chat, $message, $model, $accounts) + $account['actions'];
-        $slots = $this->registerComponents($c, $user, $chat, $actions) + $account['slots'];
+        $documents = $chat !== null ? (new DocumentFeature($this->container))->register($c, $user, $chat) : ['actions' => [], 'slots' => []];
+        $actions = $this->registerActions($c, $user, $chat, $message, $model, $accounts) + $account['actions'] + $documents['actions'];
+        $slots = $this->registerComponents($c, $user, $chat, $actions) + $account['slots'] + $documents['slots'];
 
         $c->view(fn (): string => $this->renderPage($c->getId(), $user, $chat, $message, $model, $actions, $slots), cacheUpdates: false);
     }

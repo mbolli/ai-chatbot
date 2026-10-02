@@ -34,7 +34,7 @@ $title = $chat->title ?? 'New Chat';
 </div>
 
 <!-- Right Column: Artifact Panel (3 grid areas) -->
-<?php include __DIR__ . '/../partials/artifact-panel.php'; ?>
+<?php echo $slots['artifact'](); ?>
 
 <script>
     // Scroll to bottom on initial page load

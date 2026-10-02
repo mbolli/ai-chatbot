@@ -5,23 +5,32 @@ use App\Domain\Model\Suggestion;
 use App\Infrastructure\Template\TemplateRenderer;
 
 /**
- * Artifact content wrapper - rendered into #artifact-content via SSE.
+ * The document in the artifact panel, with the editor for the chat's owner.
  *
  * @var Document $document
- * @var list<Suggestion> $suggestions Pending suggestions (text documents only)
+ * @var bool $latest Whether $document is the latest version
+ * @var list<Suggestion> $suggestions Pending suggestions that apply to $document
+ * @var bool $canEdit Whether the user owns the chat
+ * @var array<string, string> $actions Action URLs
+ * @var string $contentSignal php-via signal holding the edited content
  * @var TemplateRenderer $renderer
  * @var callable $e Escape function
  */
-$e ??= fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$view = [
+    'document' => $document,
+    'canEdit' => $canEdit,
+    'actions' => $actions,
+    'contentSignal' => $contentSignal,
+    'e' => $e,
+];
 ?>
-<div id="artifact-content" class="artifact-content" data-class="{'artifact-closed': !$_artifactOpen}" role="region" aria-label="Artifact content" data-document-id="<?php echo $e($document->id); ?>">
-    <?php
-    echo match ($document->kind) {
-        'code' => $renderer->partial('artifact-code', ['document' => $document]),
-        'text' => $renderer->partial('artifact-text', ['document' => $document, 'suggestions' => $suggestions ?? []]),
-        'sheet' => $renderer->partial('artifact-sheet', ['document' => $document]),
-        'image' => $renderer->partial('artifact-image', ['document' => $document]),
-        default => '<pre>' . $e($document->content ?? '') . '</pre>',
-    };
-?>
-</div>
+<?php if (!$latest) { ?>
+    <p class="artifact-version-note" role="status">Viewing version <?php echo $document->currentVersion; ?>, not the latest.<?php echo $canEdit ? ' Saving an edit stores it as a new version.' : ''; ?></p>
+<?php } ?>
+<?php echo match ($document->kind) {
+    Document::KIND_CODE => $renderer->partial('artifact-code', $view),
+    Document::KIND_TEXT => $renderer->partial('artifact-text', $view + ['suggestions' => $suggestions]),
+    Document::KIND_SHEET => $renderer->partial('artifact-sheet', $view),
+    Document::KIND_IMAGE => $renderer->partial('artifact-image', $view),
+    default => '<pre>' . $e($document->content ?? '') . '</pre>',
+};

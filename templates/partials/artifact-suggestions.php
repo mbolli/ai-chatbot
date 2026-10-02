@@ -6,6 +6,7 @@ use App\Domain\Model\Suggestion;
  * Pending writing suggestions of a text document, included by artifact-text.php.
  *
  * @var list<Suggestion> $suggestions
+ * @var array<string, string> $actions Action URLs
  * @var callable $e Escape function
  */
 ?>
@@ -22,10 +23,10 @@ use App\Domain\Model\Suggestion;
                 <ins><?php echo $e($suggestion->suggestedText); ?></ins>
             </p>
             <div class="suggestion-actions">
-                <button class="btn btn-secondary btn-sm" data-on:click="@post('/cmd/suggestion/<?php echo $e($suggestion->id); ?>/dismiss')">
+                <button class="btn btn-secondary btn-sm" data-on:click="@post('<?php echo $e($actions['dismiss'] . '?id=' . rawurlencode($suggestion->id)); ?>')">
                     Dismiss
                 </button>
-                <button class="btn btn-primary btn-sm" data-on:click="@post('/cmd/suggestion/<?php echo $e($suggestion->id); ?>/accept')">
+                <button class="btn btn-primary btn-sm" data-on:click="@post('<?php echo $e($actions['accept'] . '?id=' . rawurlencode($suggestion->id)); ?>')">
                     <svg class="icon" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Accept
                 </button>
             </div>
