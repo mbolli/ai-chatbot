@@ -1,6 +1,6 @@
 {
     "name": "app/ai-chatbot",
-    "description": "AI Chatbot - PHP/Swoole/Mezzio/Datastar implementation",
+    "description": "AI Chatbot - PHP/OpenSwoole/php-via/Datastar implementation",
     "type": "project",
     "license": "MIT",
     "require": {

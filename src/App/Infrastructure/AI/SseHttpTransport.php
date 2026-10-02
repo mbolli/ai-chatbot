@@ -7,7 +7,7 @@ namespace App\Infrastructure\AI;
 use OpenSwoole\Coroutine\Socket;
 
 /**
- * HTTP/1.1 over a TLS-verified Swoole coroutine socket. recv() yields to the scheduler,
+ * HTTP/1.1 over a TLS-verified OpenSwoole coroutine socket. recv() yields to the scheduler,
  * so events reach the caller as soon as they arrive.
  */
 final readonly class SseHttpTransport implements SseTransport {

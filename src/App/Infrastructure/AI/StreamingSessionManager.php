@@ -8,7 +8,7 @@ use OpenSwoole\Table;
 
 /**
  * Manages active AI streaming sessions for stop generation feature.
- * Uses Swoole Table for shared state across coroutines.
+ * Uses an OpenSwoole Table for shared state across coroutines.
  */
 final class StreamingSessionManager {
     private const int TABLE_SIZE = 1024;
