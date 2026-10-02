@@ -362,6 +362,13 @@ composer test
 composer test:coverage
 ```
 
+End-to-end tests use Playwright and only the free localhost test commands, so they never call an AI provider. The config starts its own Swoole server on a temporary database (port `E2E_PORT`, default 8094). Browsers are not downloaded; point `PLAYWRIGHT_CHROMIUM_PATH` at a local Chromium:
+
+```bash
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install
+PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium pnpm test:e2e
+```
+
 ### Code Style
 
 This project uses PHP-CS-Fixer with PSR-12 style:
