@@ -533,10 +533,10 @@ server {
 ```dockerfile
 FROM php:8.5-cli
 
-# Swoole needs OpenSSL for the HTTPS connections to the AI providers
-RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev libicu-dev libpng-dev libzip-dev unzip \
-    && docker-php-ext-install intl gd zip \
-    && pecl install -D 'enable-openssl="yes" enable-swoole-curl="yes"' swoole \
+# Swoole picks up OpenSSL (needed for HTTPS to the AI providers) and Brotli from the dev packages
+RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev libbrotli-dev libicu-dev unzip \
+    && docker-php-ext-install intl \
+    && pecl install swoole \
     && docker-php-ext-enable swoole
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
