@@ -7,25 +7,44 @@ namespace App\Infrastructure\AI;
 use App\Domain\Service\Stream\StopReason;
 use App\Domain\Service\Stream\StreamEnd;
 use App\Domain\Service\Stream\TextDelta;
+use App\Domain\Service\Stream\ThinkingDelta;
 use App\Domain\Service\Stream\ToolCall;
 use App\Domain\Service\Stream\ToolResult;
+use App\Domain\Service\Stream\Usage;
 use App\Infrastructure\AI\Tools\ToolInterface;
-use Swoole\Coroutine\Socket;
 
 /**
- * Anthropic API client with true real-time streaming using Swoole coroutines.
+ * Streaming client for the Anthropic Messages API.
  *
- * Uses Swoole's raw coroutine Socket with recv() to read SSE events as they
- * arrive, yielding text chunks immediately without buffering the entire response.
- * The recv() call properly yields to the coroutine scheduler while waiting for data.
- *
- * Supports tool use (function calling) for document creation.
+ * Runs the tool loop itself: each tool_use response is answered with the tool results
+ * in a continuation request, up to $maxSteps requests per call.
  */
 final class AnthropicStreamingClient {
     private const string API_HOST = 'api.anthropic.com';
     private const string API_VERSION = '2023-06-01';
     private const int DEFAULT_MAX_TOKENS = 4096;
+    private const int DEFAULT_MAX_STEPS = 5;
     private const array LOW_EFFORT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5'];
+
+    /**
+     * These models always think; without display "summarized" their thinking deltas are empty.
+     */
+    private const array SUMMARIZED_THINKING_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5'];
+
+    /**
+     * HTTP status equivalent of the error types an SSE error event can carry, for the retry decision.
+     */
+    private const array ERROR_STATUSES = [
+        'invalid_request_error' => 400,
+        'authentication_error' => 401,
+        'permission_error' => 403,
+        'not_found_error' => 404,
+        'request_too_large' => 413,
+        'rate_limit_error' => 429,
+        'api_error' => 500,
+        'timeout_error' => 504,
+        'overloaded_error' => 529,
+    ];
 
     /** @var list<ToolInterface> */
     private array $tools = [];
@@ -33,6 +52,9 @@ final class AnthropicStreamingClient {
     public function __construct(
         private readonly string $apiKey,
         private readonly int $maxTokens = self::DEFAULT_MAX_TOKENS,
+        private readonly int $maxSteps = self::DEFAULT_MAX_STEPS,
+        private readonly SseTransport $transport = new SseHttpTransport(self::API_HOST),
+        private readonly RetryPolicy $retryPolicy = new RetryPolicy(),
     ) {}
 
     /**
@@ -43,322 +65,228 @@ final class AnthropicStreamingClient {
     }
 
     /**
-     * Stream chat completion from Anthropic API with true real-time streaming.
-     *
      * @param array<array{role: string, content: string}> $messages Conversation messages
      * @param string                                      $model    Model ID (e.g., claude-haiku-4-5)
      * @param null|string                                 $system   Optional system prompt
      *
-     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult> Ends with exactly one StreamEnd
+     * @return \Generator<int, StreamEnd|TextDelta|ThinkingDelta|ToolCall|ToolResult> Ends with exactly one StreamEnd
      *
      * @throws \RuntimeException On API errors with descriptive message
      */
     public function streamChatRealtime(array $messages, string $model, ?string $system = null): \Generator {
-        // Build tools array if available
-        $tools = $this->buildToolsArray();
+        $messages = $this->formatMessages($messages);
+        $usage = new Usage();
 
-        $payload = $this->basePayload($model, $messages);
+        for ($step = 1;; ++$step) {
+            $response = yield from $this->request($this->buildPayload($model, $messages, $system));
+            $usage = $usage->add($response['usage']);
 
-        if ($system !== null) {
-            $payload['system'] = $system;
+            $toolUses = array_values(array_filter($response['content'], static fn (array $b): bool => ($b['type'] ?? '') === 'tool_use'));
+
+            // A tool_use block cut off by max_tokens has incomplete input, so only a tool_use stop runs tools
+            if ($response['stop_reason'] !== 'tool_use' || $toolUses === []) {
+                yield new StreamEnd(self::mapStopReason($response['stop_reason']), $usage);
+
+                return;
+            }
+
+            if ($step >= $this->maxSteps) {
+                yield new StreamEnd(StopReason::ToolLimit, $usage);
+
+                return;
+            }
+
+            $toolResults = yield from $this->executeToolCalls($toolUses);
+
+            // Echo the assistant turn back unchanged (thinking blocks must keep their signatures)
+            $messages[] = ['role' => 'assistant', 'content' => $response['content']];
+            $messages[] = ['role' => 'user', 'content' => $toolResults];
         }
-
-        if (!empty($tools)) {
-            $payload['tools'] = $tools;
-        }
-
-        yield from $this->executeStreamingRequest($payload, $messages, $model, $system);
     }
 
     /**
-     * Execute a streaming request to Anthropic API using raw socket for true streaming.
+     * @param array<string, mixed> $payload
      *
-     * @param array<string, mixed>                                     $payload
-     * @param array<array{role: string, content: array<mixed>|string}> $originalMessages
-     *
-     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
+     * @return \Generator<int, TextDelta|ThinkingDelta, mixed, array{content: list<array<string, mixed>>, stop_reason: string, usage: Usage}>
      */
-    private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
-        $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
+    private function request(array $payload): \Generator {
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
 
-        // Create SSL socket connection
-        $socket = new Socket(AF_INET, SOCK_STREAM, 0);
-        $socket->setProtocol([
-            'open_ssl' => true,
-            'ssl_host_name' => self::API_HOST,
-            'ssl_verify_peer' => true,
-        ]);
-
-        if (!$socket->connect(self::API_HOST, 443, 30)) {
-            throw new \RuntimeException('connection error: Failed to connect to Anthropic API - ' . $socket->errMsg);
+        try {
+            return yield from $this->retryPolicy->run($this->attempt(...), $body);
+        } catch (TransportException $e) {
+            throw new \RuntimeException($this->describeError($e), $e->getCode(), $e);
         }
+    }
 
-        // Build HTTP request
-        $contentLength = \strlen($jsonPayload);
-        $request = "POST /v1/messages HTTP/1.1\r\n";
-        $request .= 'Host: ' . self::API_HOST . "\r\n";
-        $request .= "Content-Type: application/json\r\n";
-        $request .= "Accept: text/event-stream\r\n";
-        $request .= "x-api-key: {$this->apiKey}\r\n";
-        $request .= 'anthropic-version: ' . self::API_VERSION . "\r\n";
-        $request .= "Content-Length: {$contentLength}\r\n";
-        $request .= "Connection: close\r\n";
-        $request .= "\r\n";
-        $request .= $jsonPayload;
+    /**
+     * One HTTP request: streams text and thinking, returns the complete assistant content.
+     *
+     * @return \Generator<int, TextDelta|ThinkingDelta, mixed, array{content: list<array<string, mixed>>, stop_reason: string, usage: Usage}>
+     *
+     * @throws TransportException
+     */
+    private function attempt(string $body): \Generator {
+        $events = $this->transport->stream('/v1/messages', [
+            'x-api-key' => $this->apiKey,
+            'anthropic-version' => self::API_VERSION,
+        ], $body);
 
-        if (!$socket->sendAll($request)) {
-            $socket->close();
-
-            throw new \RuntimeException('connection error: Failed to send request');
-        }
-
-        // Read HTTP response headers
-        $headerBuffer = '';
-        $headers = '';
-        $remaining = '';
-        while (true) {
-            $data = $socket->recv(4096, 30);
-            if ($data === false || $data === '') {
-                $socket->close();
-
-                throw new \RuntimeException('connection error: Connection closed while reading headers');
-            }
-
-            $headerBuffer .= $data;
-
-            $headerEnd = strpos($headerBuffer, "\r\n\r\n");
-            if ($headerEnd !== false) {
-                $headers = substr($headerBuffer, 0, $headerEnd);
-                $remaining = substr($headerBuffer, $headerEnd + 4);
-
-                break;
-            }
-        }
-
-        // Parse status code
-        if (!preg_match('/HTTP\/[\d.]+ (\d+)/', $headers, $matches)) {
-            $socket->close();
-
-            throw new \RuntimeException('API error: Invalid HTTP response');
-        }
-
-        $statusCode = (int) $matches[1];
-
-        $decoder = preg_match('/^transfer-encoding:\s*chunked/im', $headers) === 1 ? new ChunkedDecoder() : null;
-        $remaining = $decoder?->decode($remaining) ?? $remaining;
-
-        if ($statusCode >= 400) {
-            // Read error body
-            $errorBody = $remaining;
-            while (true) {
-                $data = $socket->recv(4096, 5);
-                if ($data === false || $data === '') {
-                    break;
-                }
-
-                $errorBody .= $decoder?->decode($data) ?? $data;
-            }
-
-            $socket->close();
-
-            throw new \RuntimeException($this->parseErrorMessage($errorBody, $statusCode), $statusCode);
-        }
-
-        // Process SSE stream in real-time
-        $buffer = $remaining;
-        $hasYieldedContent = false;
-
-        // All content blocks by index, echoed back unchanged when continuing after tool use
         /** @var array<int, array<string, mixed>> $blocks */
         $blocks = [];
 
         /** @var array<int, string> $toolInputJson */
         $toolInputJson = [];
-        $stopReason = StopReason::Unknown;
 
-        while (true) {
-            // Process complete lines from buffer
-            while (($lineEnd = strpos($buffer, "\n")) !== false) {
-                $line = substr($buffer, 0, $lineEnd);
-                $buffer = substr($buffer, $lineEnd + 1);
-                $line = trim($line);
+        /** @var array<string, mixed> $usage */
+        $usage = [];
+        $stopReason = null;
 
-                if ($line === '' || !str_starts_with($line, 'data: ')) {
-                    continue;
+        foreach ($events as $sse) {
+            try {
+                $event = json_decode($sse->data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
+
+            if (!\is_array($event)) {
+                continue;
+            }
+
+            $type = (string) ($event['type'] ?? '');
+            $index = (int) ($event['index'] ?? 0);
+
+            if ($type === 'content_block_delta' && isset($blocks[$index])) {
+                $delta = (array) ($event['delta'] ?? []);
+                $deltaType = (string) ($delta['type'] ?? '');
+
+                if ($deltaType === 'text_delta' || $deltaType === 'thinking_delta') {
+                    $field = $deltaType === 'text_delta' ? 'text' : 'thinking';
+                    $text = (string) ($delta[$field] ?? '');
+                    $blocks[$index][$field] = (string) ($blocks[$index][$field] ?? '') . $text;
+
+                    if ($text !== '') {
+                        yield $deltaType === 'text_delta' ? new TextDelta($text) : new ThinkingDelta($text);
+                    }
+                } elseif ($deltaType === 'signature_delta') {
+                    $blocks[$index]['signature'] = (string) ($delta['signature'] ?? '');
+                } elseif ($deltaType === 'input_json_delta') {
+                    $toolInputJson[$index] = ($toolInputJson[$index] ?? '') . (string) ($delta['partial_json'] ?? '');
                 }
-
-                $jsonStr = substr($line, 6); // Remove 'data: ' prefix
-
+            } elseif ($type === 'content_block_start') {
+                $blocks[$index] = (array) ($event['content_block'] ?? []);
+            } elseif ($type === 'content_block_stop' && ($blocks[$index]['type'] ?? '') === 'tool_use') {
                 try {
-                    $event = json_decode($jsonStr, true, 512, JSON_THROW_ON_ERROR);
+                    $input = json_decode(($toolInputJson[$index] ?? '') ?: '{}', true, 512, JSON_THROW_ON_ERROR);
                 } catch (\JsonException) {
-                    continue;
+                    $input = [];
                 }
+                // An empty PHP array would encode as [], the API expects an object
+                $blocks[$index]['input'] = \is_array($input) && $input !== [] ? $input : new \stdClass();
+            } elseif ($type === 'message_start') {
+                $usage = (array) ($event['message']['usage'] ?? []);
+            } elseif ($type === 'message_delta') {
+                $stopReason = (string) ($event['delta']['stop_reason'] ?? '');
+                // Usage here is cumulative for the request and supersedes message_start
+                $usage = array_merge($usage, array_filter((array) ($event['usage'] ?? []), static fn (mixed $v): bool => $v !== null));
+            } elseif ($type === 'message_stop') {
+                break;
+            } elseif ($type === 'error') {
+                $errorType = (string) ($event['error']['type'] ?? '');
 
-                $type = $event['type'] ?? '';
-
-                $index = (int) ($event['index'] ?? 0);
-
-                if ($type === 'content_block_delta' && isset($blocks[$index])) {
-                    $delta = $event['delta'] ?? [];
-
-                    switch ($delta['type'] ?? '') {
-                        case 'text_delta':
-                            $hasYieldedContent = true;
-                            $blocks[$index]['text'] .= $delta['text'];
-
-                            yield new TextDelta($delta['text']);
-
-                            break;
-
-                        case 'thinking_delta':
-                            $blocks[$index]['thinking'] .= $delta['thinking'];
-
-                            break;
-
-                        case 'signature_delta':
-                            $blocks[$index]['signature'] = $delta['signature'];
-
-                            break;
-
-                        case 'input_json_delta':
-                            $toolInputJson[$index] = ($toolInputJson[$index] ?? '') . $delta['partial_json'];
-
-                            break;
-                    }
-                } elseif ($type === 'content_block_start') {
-                    $blocks[$index] = $event['content_block'] ?? [];
-                } elseif ($type === 'content_block_stop' && ($blocks[$index]['type'] ?? '') === 'tool_use') {
-                    try {
-                        $input = json_decode(($toolInputJson[$index] ?? '') ?: '{}', true, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException) {
-                        $input = [];
-                    }
-                    // An empty PHP array would encode as [], the API expects an object
-                    $blocks[$index]['input'] = \is_array($input) && $input !== [] ? $input : new \stdClass();
-                } elseif ($type === 'message_delta') {
-                    $stopReason = match ($event['delta']['stop_reason'] ?? null) {
-                        'end_turn', 'tool_use' => StopReason::EndTurn,
-                        'max_tokens' => StopReason::MaxTokens,
-                        'refusal' => StopReason::Refusal,
-                        'stop_sequence' => StopReason::StopSequence,
-                        default => StopReason::Unknown,
-                    };
-                } elseif ($type === 'message_stop') {
-                    $toolCalls = array_values(array_filter($blocks, static fn (array $b): bool => ($b['type'] ?? '') === 'tool_use'));
-
-                    if ($toolCalls !== []) {
-                        $socket->close();
-
-                        $toolResults = yield from $this->executeToolCalls($toolCalls);
-
-                        // Echo the assistant turn back unchanged (thinking blocks must keep their signatures)
-                        ksort($blocks);
-                        $assistantContent = array_values(array_filter(
-                            $blocks,
-                            static fn (array $b): bool => ($b['type'] ?? '') !== 'text' || ($b['text'] ?? '') !== '',
-                        ));
-
-                        $continuationMessages = $originalMessages;
-                        $continuationMessages[] = [
-                            'role' => 'assistant',
-                            'content' => $assistantContent,
-                        ];
-                        $continuationMessages[] = [
-                            'role' => 'user',
-                            'content' => $this->buildToolResultContent($toolResults),
-                        ];
-
-                        // Continue streaming with tool results
-                        $continuationPayload = $this->basePayload($model, $continuationMessages);
-
-                        if ($system !== null) {
-                            $continuationPayload['system'] = $system;
-                        }
-
-                        $tools = $this->buildToolsArray();
-                        if (!empty($tools)) {
-                            $continuationPayload['tools'] = $tools;
-                        }
-
-                        // Recursively stream the continuation (allows multiple tool calls)
-                        yield from $this->executeStreamingRequest($continuationPayload, $continuationMessages, $model, $system);
-
-                        return;
-                    }
-
-                    $socket->close();
-
-                    yield new StreamEnd($stopReason);
-
-                    return;
-                }
-
-                if ($type === 'error') {
-                    $socket->close();
-
-                    throw new \RuntimeException($event['error']['message'] ?? 'Unknown Anthropic error');
-                }
+                throw new TransportException("stream error: {$errorType}", self::ERROR_STATUSES[$errorType] ?? 500, $sse->data);
             }
-
-            // Read more data from socket (yields to scheduler while waiting)
-            $data = $socket->recv(4096, 60);
-            if ($data === false || $data === '') {
-                break; // Connection closed or timeout
-            }
-
-            $buffer .= $decoder?->decode($data) ?? $data;
         }
 
-        $socket->close();
-
-        if (!$hasYieldedContent) {
-            error_log('Anthropic API stream ended without content. Remaining buffer: ' . substr($buffer, 0, 200));
+        if ($stopReason === null) {
+            throw new TransportException('Stream from ' . self::API_HOST . ' ended before the response was complete');
         }
 
-        yield new StreamEnd($stopReason);
+        ksort($blocks);
+
+        return [
+            // The API rejects empty text blocks when the turn is echoed back
+            'content' => array_values(array_filter($blocks, static fn (array $b): bool => ($b['type'] ?? '') !== 'text' || ($b['text'] ?? '') !== '')),
+            'stop_reason' => $stopReason,
+            'usage' => new Usage(
+                inputTokens: (int) ($usage['input_tokens'] ?? 0),
+                outputTokens: (int) ($usage['output_tokens'] ?? 0),
+                cacheReadTokens: (int) ($usage['cache_read_input_tokens'] ?? 0),
+                cacheWriteTokens: (int) ($usage['cache_creation_input_tokens'] ?? 0),
+            ),
+        ];
     }
 
     /**
-     * @param array<array{role: string, content: array<mixed>|string}> $messages
+     * Keys stay in the same order and nothing varies per request, so the tools + system + messages
+     * prefix is byte-stable across turns and the automatic cache breakpoint can hit.
+     *
+     * @param list<array{role: string, content: array<mixed>|string}> $messages
      *
      * @return array<string, mixed>
      */
-    private function basePayload(string $model, array $messages): array {
+    private function buildPayload(string $model, array $messages, ?string $system): array {
         $payload = [
             'model' => $model,
             'max_tokens' => $this->maxTokens,
-            'messages' => $this->formatMessages($messages),
-            'stream' => true,
+            'cache_control' => ['type' => 'ephemeral'],
         ];
+
+        $tools = $this->buildToolsArray();
+        if ($tools !== []) {
+            $payload['tools'] = $tools;
+        }
+
+        if ($system !== null) {
+            $payload['system'] = $system;
+        }
+
+        $payload['messages'] = $messages;
+
+        if (\in_array($model, self::SUMMARIZED_THINKING_MODELS, true)) {
+            $payload['thinking'] = ['type' => 'adaptive', 'display' => 'summarized'];
+        }
 
         // These models always think, and thinking tokens count against max_tokens
         if (\in_array($model, self::LOW_EFFORT_MODELS, true)) {
             $payload['output_config'] = ['effort' => 'low'];
         }
 
+        $payload['stream'] = true;
+
         return $payload;
     }
 
-    /**
-     * Parse error message from API response.
-     */
-    private function parseErrorMessage(string $body, int $statusCode): string {
-        try {
-            $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-            $message = $data['error']['message'] ?? "HTTP {$statusCode}";
-        } catch (\JsonException) {
-            $message = "HTTP {$statusCode}";
+    private static function mapStopReason(string $reason): StopReason {
+        return match ($reason) {
+            'end_turn', 'tool_use' => StopReason::EndTurn,
+            'max_tokens', 'model_context_window_exceeded' => StopReason::MaxTokens,
+            'refusal' => StopReason::Refusal,
+            'stop_sequence' => StopReason::StopSequence,
+            default => StopReason::Unknown,
+        };
+    }
+
+    private function describeError(TransportException $e): string {
+        if ($e->status === null) {
+            return 'connection error: ' . $e->getMessage();
         }
 
-        return match ($statusCode) {
+        try {
+            $data = json_decode($e->body, true, 512, JSON_THROW_ON_ERROR);
+            $message = \is_array($data) ? (string) ($data['error']['message'] ?? "HTTP {$e->status}") : "HTTP {$e->status}";
+        } catch (\JsonException) {
+            $message = "HTTP {$e->status}";
+        }
+
+        return match ($e->status) {
             401 => 'invalid_api_key: ' . $message,
             429 => 'rate limit exceeded: ' . $message,
             529 => 'overloaded: Anthropic API is overloaded',
             408 => 'timeout: Request timed out',
-            default => $statusCode >= 500
-                ? "server error (HTTP {$statusCode}): {$message}"
-                : "API error (HTTP {$statusCode}): {$message}",
+            default => $e->status >= 500
+                ? "server error (HTTP {$e->status}): {$message}"
+                : "API error (HTTP {$e->status}): {$message}",
         };
     }
 
@@ -374,17 +302,17 @@ final class AnthropicStreamingClient {
     }
 
     /**
-     * @param list<array<string, mixed>> $toolCalls tool_use content blocks
+     * @param list<array<string, mixed>> $toolUses tool_use content blocks
      *
-     * @return \Generator<int, ToolCall|ToolResult, mixed, list<array{tool_use_id: string, content: string, is_error: bool}>>
+     * @return \Generator<int, ToolCall|ToolResult, mixed, list<array{type: string, tool_use_id: string, content: string, is_error: bool}>>
      */
-    private function executeToolCalls(array $toolCalls): \Generator {
+    private function executeToolCalls(array $toolUses): \Generator {
         $results = [];
 
-        foreach ($toolCalls as $toolCall) {
-            $id = (string) $toolCall['id'];
-            $name = (string) $toolCall['name'];
-            $input = (array) $toolCall['input'];
+        foreach ($toolUses as $toolUse) {
+            $id = (string) $toolUse['id'];
+            $name = (string) $toolUse['name'];
+            $input = (array) $toolUse['input'];
 
             yield new ToolCall($id, $name, $input);
 
@@ -399,40 +327,16 @@ final class AnthropicStreamingClient {
 
             yield new ToolResult($id, $name, $content, $isError);
 
-            $results[] = ['tool_use_id' => $id, 'content' => $content, 'is_error' => $isError];
+            $results[] = ['type' => 'tool_result', 'tool_use_id' => $id, 'content' => $content, 'is_error' => $isError];
         }
 
         return $results;
     }
 
     /**
-     * Build user message content with tool results.
-     *
-     * @param list<array{tool_use_id: string, content: string, is_error: bool}> $toolResults
-     *
-     * @return list<array{type: string, tool_use_id: string, content: string, is_error: bool}>
-     */
-    private function buildToolResultContent(array $toolResults): array {
-        $content = [];
-
-        foreach ($toolResults as $result) {
-            $content[] = [
-                'type' => 'tool_result',
-                'tool_use_id' => $result['tool_use_id'],
-                'content' => $result['content'],
-                'is_error' => $result['is_error'],
-            ];
-        }
-
-        return $content;
-    }
-
-    /**
-     * Format messages array for Anthropic API.
-     *
      * @param array<array{role: string, content: array<mixed>|string}> $messages
      *
-     * @return array<array{role: string, content: array<mixed>|string}>
+     * @return list<array{role: string, content: array<mixed>|string}>
      */
     private function formatMessages(array $messages): array {
         $formatted = [];

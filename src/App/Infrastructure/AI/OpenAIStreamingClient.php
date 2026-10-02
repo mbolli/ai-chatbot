@@ -9,21 +9,19 @@ use App\Domain\Service\Stream\StreamEnd;
 use App\Domain\Service\Stream\TextDelta;
 use App\Domain\Service\Stream\ToolCall;
 use App\Domain\Service\Stream\ToolResult;
+use App\Domain\Service\Stream\Usage;
 use App\Infrastructure\AI\Tools\ToolInterface;
-use Swoole\Coroutine\Socket;
 
 /**
- * OpenAI API client with true real-time streaming using Swoole coroutines.
+ * Streaming client for the OpenAI Chat Completions API.
  *
- * Uses Swoole's raw coroutine Socket with recv() to read SSE events as they
- * arrive, yielding text chunks immediately without buffering the entire response.
- * The recv() call properly yields to the coroutine scheduler while waiting for data.
- *
- * Supports tool use (function calling) for document creation.
+ * Runs the tool loop itself: each tool_calls response is answered with the tool results
+ * in a continuation request, up to $maxSteps requests per call.
  */
 final class OpenAIStreamingClient {
     private const string API_HOST = 'api.openai.com';
     private const int DEFAULT_MAX_TOKENS = 4096;
+    private const int DEFAULT_MAX_STEPS = 5;
 
     /**
      * Reasoning models reject function tools on /v1/chat/completions unless reasoning is off.
@@ -37,6 +35,9 @@ final class OpenAIStreamingClient {
     public function __construct(
         private readonly string $apiKey,
         private readonly int $maxTokens = self::DEFAULT_MAX_TOKENS,
+        private readonly int $maxSteps = self::DEFAULT_MAX_STEPS,
+        private readonly SseTransport $transport = new SseHttpTransport(self::API_HOST),
+        private readonly RetryPolicy $retryPolicy = new RetryPolicy(),
     ) {}
 
     /**
@@ -47,10 +48,8 @@ final class OpenAIStreamingClient {
     }
 
     /**
-     * Stream chat completion from OpenAI API with true real-time streaming.
-     *
      * @param array<array{role: string, content: string}> $messages Conversation messages
-     * @param string                                      $model    Model ID (e.g., gpt-5-nano)
+     * @param string                                      $model    Model ID (e.g., gpt-6-luna)
      * @param null|string                                 $system   Optional system prompt
      *
      * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult> Ends with exactly one StreamEnd
@@ -58,33 +57,181 @@ final class OpenAIStreamingClient {
      * @throws \RuntimeException On API errors with descriptive message
      */
     public function streamChatRealtime(array $messages, string $model, ?string $system = null): \Generator {
-        // Build tools array if available
-        $tools = $this->buildToolsArray();
-
-        // Format messages for OpenAI (system message is part of messages array)
-        $formattedMessages = [];
+        /** @var list<array<string, mixed>> $formatted */
+        $formatted = [];
         if ($system !== null) {
-            $formattedMessages[] = [
-                'role' => 'system',
-                'content' => $system,
-            ];
+            $formatted[] = ['role' => 'system', 'content' => $system];
         }
-
         foreach ($messages as $message) {
-            $formattedMessages[] = [
-                'role' => $message['role'],
-                'content' => $message['content'],
-            ];
+            $formatted[] = ['role' => $message['role'], 'content' => $message['content']];
         }
 
+        $usage = new Usage();
+
+        for ($step = 1;; ++$step) {
+            $response = yield from $this->request($this->buildPayload($model, $formatted));
+            $usage = $usage->add($response['usage']);
+
+            if ($response['finish_reason'] !== 'tool_calls' || $response['tool_calls'] === []) {
+                yield new StreamEnd(self::mapStopReason($response['finish_reason']), $usage);
+
+                return;
+            }
+
+            if ($step >= $this->maxSteps) {
+                yield new StreamEnd(StopReason::ToolLimit, $usage);
+
+                return;
+            }
+
+            $formatted[] = [
+                'role' => 'assistant',
+                'content' => $response['content'] !== '' ? $response['content'] : null,
+                'tool_calls' => array_map(static fn (array $call): array => [
+                    'id' => $call['id'],
+                    'type' => 'function',
+                    'function' => ['name' => $call['name'], 'arguments' => $call['arguments']],
+                ], $response['tool_calls']),
+            ];
+
+            foreach ((yield from $this->executeToolCalls($response['tool_calls'])) as $toolMessage) {
+                $formatted[] = $toolMessage;
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     *
+     * @return \Generator<int, TextDelta, mixed, array{content: string, tool_calls: list<array{id: string, name: string, arguments: string}>, finish_reason: string, usage: Usage}>
+     */
+    private function request(array $payload): \Generator {
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        try {
+            return yield from $this->retryPolicy->run($this->attempt(...), $body);
+        } catch (TransportException $e) {
+            throw new \RuntimeException(
+                $e->status === null
+                    ? 'Failed to connect to OpenAI API: ' . $e->getMessage()
+                    : "HTTP error from AI engine ({$e->status}): {$e->body}",
+                $e->getCode(),
+                $e,
+            );
+        }
+    }
+
+    /**
+     * One HTTP request: streams text, returns the accumulated text and tool calls.
+     *
+     * @return \Generator<int, TextDelta, mixed, array{content: string, tool_calls: list<array{id: string, name: string, arguments: string}>, finish_reason: string, usage: Usage}>
+     *
+     * @throws TransportException
+     */
+    private function attempt(string $body): \Generator {
+        $events = $this->transport->stream('/v1/chat/completions', ['Authorization' => "Bearer {$this->apiKey}"], $body);
+
+        $content = '';
+
+        /** @var array<int, array{id: string, name: string, arguments: string}> $toolCalls */
+        $toolCalls = [];
+        $finishReason = null;
+        $done = false;
+        $usage = new Usage();
+
+        foreach ($events as $sse) {
+            if ($sse->data === '[DONE]') {
+                $done = true;
+
+                break;
+            }
+
+            try {
+                $event = json_decode($sse->data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
+
+            if (!\is_array($event)) {
+                continue;
+            }
+
+            if (isset($event['error'])) {
+                throw new TransportException('stream error', 500, $sse->data);
+            }
+
+            // With include_usage the last chunk carries usage and no choices
+            if (\is_array($event['usage'] ?? null)) {
+                $cached = (int) ($event['usage']['prompt_tokens_details']['cached_tokens'] ?? 0);
+                // prompt_tokens includes cached tokens (Anthropic's input_tokens does not), report uncached input for both
+                $usage = new Usage(
+                    inputTokens: max(0, (int) ($event['usage']['prompt_tokens'] ?? 0) - $cached),
+                    outputTokens: (int) ($event['usage']['completion_tokens'] ?? 0),
+                    cacheReadTokens: $cached,
+                );
+            }
+
+            $choice = $event['choices'][0] ?? null;
+            if (!\is_array($choice)) {
+                continue;
+            }
+
+            $delta = (array) ($choice['delta'] ?? []);
+
+            $text = (string) ($delta['content'] ?? '');
+            if ($text !== '') {
+                $content .= $text;
+
+                yield new TextDelta($text);
+            }
+
+            foreach ((array) ($delta['tool_calls'] ?? []) as $toolCallDelta) {
+                $index = (int) ($toolCallDelta['index'] ?? 0);
+                $call = $toolCalls[$index] ?? ['id' => '', 'name' => '', 'arguments' => ''];
+
+                if (isset($toolCallDelta['id'])) {
+                    $call['id'] = (string) $toolCallDelta['id'];
+                }
+                $call['name'] .= (string) ($toolCallDelta['function']['name'] ?? '');
+                $call['arguments'] .= (string) ($toolCallDelta['function']['arguments'] ?? '');
+                $toolCalls[$index] = $call;
+            }
+
+            if (isset($choice['finish_reason'])) {
+                $finishReason = (string) $choice['finish_reason'];
+            }
+        }
+
+        if ($finishReason === null && !$done) {
+            throw new TransportException('Stream from ' . self::API_HOST . ' ended before the response was complete');
+        }
+
+        ksort($toolCalls);
+
+        return [
+            'content' => $content,
+            'tool_calls' => array_values($toolCalls),
+            'finish_reason' => $finishReason ?? '',
+            'usage' => $usage,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     *
+     * @return array<string, mixed>
+     */
+    private function buildPayload(string $model, array $messages): array {
         $payload = [
             'model' => $model,
             'max_completion_tokens' => $this->maxTokens,
-            'messages' => $formattedMessages,
+            'messages' => $messages,
             'stream' => true,
+            'stream_options' => ['include_usage' => true],
         ];
 
-        if (!empty($tools)) {
+        $tools = $this->buildToolsArray();
+        if ($tools !== []) {
             $payload['tools'] = $tools;
             $payload['tool_choice'] = 'auto';
         }
@@ -93,200 +240,29 @@ final class OpenAIStreamingClient {
             $payload['reasoning_effort'] = 'none';
         }
 
-        yield from $this->executeStreamingRequest($payload, $messages, $model, $system);
+        return $payload;
+    }
+
+    private static function mapStopReason(string $finishReason): StopReason {
+        return match ($finishReason) {
+            'stop', 'tool_calls' => StopReason::EndTurn,
+            'length' => StopReason::MaxTokens,
+            'content_filter' => StopReason::Refusal,
+            default => StopReason::Unknown,
+        };
     }
 
     /**
-     * Execute a streaming request to OpenAI API using raw socket for true streaming.
+     * @param list<array{id: string, name: string, arguments: string}> $toolCalls
      *
-     * @param array<string, mixed>       $payload
-     * @param list<array<string, mixed>> $originalMessages
-     *
-     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
+     * @return \Generator<int, ToolCall|ToolResult, mixed, list<array{role: string, tool_call_id: string, content: string}>>
      */
-    private function executeStreamingRequest(array $payload, array $originalMessages, string $model, ?string $system): \Generator {
-        $jsonPayload = json_encode($payload, JSON_THROW_ON_ERROR);
-
-        // Create SSL socket connection
-        $socket = new Socket(AF_INET, SOCK_STREAM, 0);
-        $socket->setProtocol([
-            'open_ssl' => true,
-            'ssl_host_name' => self::API_HOST,
-            'ssl_verify_peer' => true,
-        ]);
-
-        if (!$socket->connect(self::API_HOST, 443, 30)) {
-            throw new \RuntimeException('Failed to connect to OpenAI API: ' . $socket->errMsg);
-        }
-
-        // Build HTTP request
-        $contentLength = \strlen($jsonPayload);
-        $request = "POST /v1/chat/completions HTTP/1.1\r\n";
-        $request .= 'Host: ' . self::API_HOST . "\r\n";
-        $request .= "Authorization: Bearer {$this->apiKey}\r\n";
-        $request .= "Content-Type: application/json\r\n";
-        $request .= "Content-Length: {$contentLength}\r\n";
-        $request .= "Accept: text/event-stream\r\n";
-        $request .= "Connection: close\r\n";
-        $request .= "\r\n";
-        $request .= $jsonPayload;
-
-        if (!$socket->sendAll($request)) {
-            $socket->close();
-
-            throw new \RuntimeException('Failed to send request to OpenAI API');
-        }
-
-        // Read and parse HTTP response headers
-        $headers = '';
-        $remaining = '';
-        while (true) {
-            $data = $socket->recv(4096, 30);
-            if ($data === false || $data === '') {
-                break;
-            }
-            $headers .= $data;
-            if (($pos = strpos($headers, "\r\n\r\n")) !== false) {
-                $remaining = substr($headers, $pos + 4);
-                $headers = substr($headers, 0, $pos);
-
-                break;
-            }
-        }
-
-        // Parse status code
-        if (!preg_match('/HTTP\/\d\.\d (\d{3})/', $headers, $matches)) {
-            $socket->close();
-
-            throw new \RuntimeException('Invalid HTTP response from OpenAI API');
-        }
-
-        $statusCode = (int) $matches[1];
-
-        $decoder = preg_match('/^transfer-encoding:\s*chunked/im', $headers) === 1 ? new ChunkedDecoder() : null;
-        $remaining = $decoder?->decode($remaining) ?? $remaining;
-        if ($statusCode >= 400) {
-            // Read error body
-            $errorBody = $remaining;
-            while (($chunk = $socket->recv(4096, 5)) !== false && $chunk !== '') {
-                $errorBody .= $decoder?->decode($chunk) ?? $chunk;
-            }
-            $socket->close();
-
-            throw new \RuntimeException("HTTP error from AI engine ({$statusCode}): {$errorBody}");
-        }
-
-        // Track tool calls being accumulated
-        $toolCalls = [];
-        $stopReason = StopReason::Unknown;
-
-        // Stream SSE events
-        $buffer = $remaining;
-        while (true) {
-            $chunk = $socket->recv(4096, 30);
-            if ($chunk === false || $chunk === '') {
-                break;
-            }
-
-            $buffer .= $decoder?->decode($chunk) ?? $chunk;
-
-            // Process complete lines from buffer
-            while (($lineEnd = strpos($buffer, "\n")) !== false) {
-                $line = substr($buffer, 0, $lineEnd);
-                $buffer = substr($buffer, $lineEnd + 1);
-
-                $line = trim($line);
-                if ($line === '') {
-                    continue;
-                }
-
-                // Parse SSE data lines
-                if (str_starts_with($line, 'data: ')) {
-                    $data = substr($line, 6);
-
-                    // End of stream
-                    if ($data === '[DONE]') {
-                        break 2;
-                    }
-
-                    try {
-                        /** @var array{choices?: array<array{delta?: array{content?: string, tool_calls?: array<array{index?: int, id?: string, function?: array{name?: string, arguments?: string}}>}, finish_reason?: string}>} $event */
-                        $event = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
-
-                        if (isset($event['choices'][0]['delta'])) {
-                            $delta = $event['choices'][0]['delta'];
-
-                            // Handle content chunks
-                            if (isset($delta['content']) && $delta['content'] !== '') {
-                                yield new TextDelta($delta['content']);
-                            }
-
-                            // Handle tool calls
-                            if (isset($delta['tool_calls'])) {
-                                foreach ($delta['tool_calls'] as $toolCallDelta) {
-                                    $index = $toolCallDelta['index'] ?? 0;
-
-                                    // Initialize new tool call
-                                    if (isset($toolCallDelta['id'])) {
-                                        $toolCalls[$index] = [
-                                            'id' => $toolCallDelta['id'],
-                                            'function' => [
-                                                'name' => $toolCallDelta['function']['name'] ?? '',
-                                                'arguments' => $toolCallDelta['function']['arguments'] ?? '',
-                                            ],
-                                        ];
-                                    } elseif (isset($toolCalls[$index], $toolCallDelta['function']['arguments'])) {
-                                        $toolCalls[$index]['function']['arguments'] .= $toolCallDelta['function']['arguments'];
-                                    }
-                                }
-                            }
-                        }
-
-                        // Check for finish reason
-                        $finishReason = $event['choices'][0]['finish_reason'] ?? null;
-                        if ($finishReason === 'tool_calls' && !empty($toolCalls)) {
-                            $socket->close();
-
-                            // The continuation ends with its own StreamEnd
-                            yield from $this->processToolCalls($toolCalls, $originalMessages, $model, $system);
-
-                            return;
-                        }
-
-                        if ($finishReason !== null) {
-                            $stopReason = match ($finishReason) {
-                                'stop' => StopReason::EndTurn,
-                                'length' => StopReason::MaxTokens,
-                                'content_filter' => StopReason::Refusal,
-                                default => StopReason::Unknown,
-                            };
-                        }
-                    } catch (\JsonException) {
-                        // Skip malformed JSON
-                    }
-                }
-            }
-        }
-
-        $socket->close();
-
-        yield new StreamEnd($stopReason);
-    }
-
-    /**
-     * Process tool calls and continue the conversation.
-     *
-     * @param array<int, array{id: string, function: array{name: string, arguments: string}}> $toolCalls
-     * @param list<array<string, mixed>>                                                      $originalMessages
-     *
-     * @return \Generator<int, StreamEnd|TextDelta|ToolCall|ToolResult>
-     */
-    private function processToolCalls(array $toolCalls, array $originalMessages, string $model, ?string $system): \Generator {
-        $toolResults = [];
+    private function executeToolCalls(array $toolCalls): \Generator {
+        $results = [];
 
         foreach ($toolCalls as $toolCall) {
-            $name = $toolCall['function']['name'];
-            $decoded = json_decode($toolCall['function']['arguments'], true);
+            $name = $toolCall['name'];
+            $decoded = json_decode($toolCall['arguments'], true);
             $input = \is_array($decoded) ? $decoded : [];
 
             yield new ToolCall($toolCall['id'], $name, $input);
@@ -301,67 +277,10 @@ final class OpenAIStreamingClient {
 
             yield new ToolResult($toolCall['id'], $name, $content, str_starts_with($content, 'Error:'));
 
-            $toolResults[] = [
-                'tool_call_id' => $toolCall['id'],
-                'role' => 'tool',
-                'content' => $content,
-            ];
+            $results[] = ['role' => 'tool', 'tool_call_id' => $toolCall['id'], 'content' => $content];
         }
 
-        // Build messages with tool results for continuation
-        $continuationMessages = $originalMessages;
-
-        // Add assistant message with tool calls
-        $assistantToolCalls = [];
-        foreach ($toolCalls as $toolCall) {
-            $assistantToolCalls[] = [
-                'id' => $toolCall['id'],
-                'type' => 'function',
-                'function' => [
-                    'name' => $toolCall['function']['name'],
-                    'arguments' => $toolCall['function']['arguments'],
-                ],
-            ];
-        }
-        $continuationMessages[] = [
-            'role' => 'assistant',
-            'content' => null,
-            'tool_calls' => $assistantToolCalls,
-        ];
-
-        // Add tool results
-        foreach ($toolResults as $result) {
-            $continuationMessages[] = $result;
-        }
-
-        // Format messages for OpenAI
-        $formattedMessages = [];
-        if ($system !== null) {
-            $formattedMessages[] = ['role' => 'system', 'content' => $system];
-        }
-        foreach ($continuationMessages as $msg) {
-            $formattedMessages[] = $msg;
-        }
-
-        // Continue streaming with tool results
-        $payload = [
-            'model' => $model,
-            'max_completion_tokens' => $this->maxTokens,
-            'messages' => $formattedMessages,
-            'stream' => true,
-        ];
-
-        $tools = $this->buildToolsArray();
-        if (!empty($tools)) {
-            $payload['tools'] = $tools;
-            $payload['tool_choice'] = 'auto';
-        }
-
-        if (\in_array($model, self::NO_REASONING_MODELS, true)) {
-            $payload['reasoning_effort'] = 'none';
-        }
-
-        yield from $this->executeStreamingRequest($payload, $continuationMessages, $model, $system);
+        return $results;
     }
 
     /**
