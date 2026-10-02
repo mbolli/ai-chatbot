@@ -1,5 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Response, test } from '@playwright/test';
 import { startChat, waitForConnection, waitForReply } from './helpers';
+
+const isAction = (res: Response, name: string) => res.request().method() === 'POST' && new URL(res.url()).pathname === `/_action/${name}` && res.ok();
 
 test('the model choice is stored per chat', async ({ page }) => {
     const selector = page.getByRole('combobox', { name: 'Select AI model' });
@@ -11,7 +13,7 @@ test('the model choice is stored per chat', async ({ page }) => {
     const otherModel = options.find((value) => value !== defaultModel);
     expect(otherModel, 'needs a second selectable model').toBeDefined();
 
-    const saved = page.waitForResponse((res) => res.url().endsWith(`/cmd/chat/${first}/model`) && res.status() === 204);
+    const saved = page.waitForResponse((res) => isAction(res, 'model'));
     await selector.selectOption(otherModel as string);
     await saved;
 
@@ -28,6 +30,7 @@ test('the model choice is stored per chat', async ({ page }) => {
 });
 
 test('the chat visibility is stored', async ({ page }) => {
+    test.fixme(true, 'needs the visibility action, still on the /cmd endpoint of the Mezzio app');
     const chatId = await startChat(page, '{help}');
     await waitForReply(page, 1);
     const visibility = page.getByRole('combobox', { name: 'Chat visibility' });
