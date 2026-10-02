@@ -2212,6 +2212,74 @@ html, body {
 
 /* === Suggestions & reasoning === */
 
+.message-reasoning {
+    margin-bottom: var(--size-2);
+    font-size: var(--font-size-1);
+    color: var(--text-secondary);
+}
+
+/* Present in every streaming message, shown once reasoning arrives */
+.message-reasoning:has(> .message-reasoning-text:empty) {
+    display: none;
+}
+
+.message-reasoning summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-2);
+    padding: 0;
+    background: none;
+    font-weight: var(--font-weight-5);
+    color: inherit;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+
+.message-reasoning summary::-webkit-details-marker {
+    display: none;
+}
+
+.message-reasoning summary::after {
+    content: '';
+    width: 0.4em;
+    height: 0.4em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s var(--ease-3);
+}
+
+.message-reasoning[open] summary::after {
+    transform: rotate(45deg);
+}
+
+.message-reasoning summary:hover {
+    color: var(--text-primary);
+}
+
+.message-reasoning-live,
+.message[data-streaming="true"] .message-reasoning-done {
+    display: none;
+}
+
+.message[data-streaming="true"] .message-reasoning-live {
+    display: inline;
+    animation: reasoning-pulse 1.6s var(--ease-in-out-2) infinite;
+}
+
+@keyframes reasoning-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.message-reasoning-text {
+    margin-top: var(--size-2);
+    padding-left: var(--size-3);
+    border-left: 2px solid var(--surface-3);
+    line-height: var(--font-lineheight-3);
+}
+
 .artifact-suggestions {
     display: flex;
     flex-direction: column;

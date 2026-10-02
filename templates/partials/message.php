@@ -32,6 +32,11 @@ $vote = $vote ?? null;
     </div>
     <div class="message-content">
         <div class="message-role"><?php echo $isUser ? 'You' : 'Assistant'; ?></div>
+        <?php if ($isAssistant && $streaming) {
+            $thinking = '';
+
+            include __DIR__ . '/message-reasoning.php';
+        } ?>
         <div class="message-text markdown-content" id="message-<?php echo $e($id); ?>-content"><?php
             if ($content) {
                 if (!$streaming) {

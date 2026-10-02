@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Listener;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
+use App\Domain\Event\MessageThinkingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
 use App\Domain\Event\SuggestionsUpdatedEvent;
 use App\Domain\Event\VoteUpdatedEvent;
@@ -126,6 +127,12 @@ final class SseRequestListener {
                 return;
             }
             // If complete, continue to handleMessageStreaming for completion signal
+        }
+
+        if ($event instanceof MessageThinkingEvent) {
+            $this->sendThinking($response, $event);
+
+            return;
         }
 
         if ($event instanceof SuggestionsUpdatedEvent) {
@@ -275,6 +282,17 @@ final class SseRequestListener {
         $patch = new PatchElements($html);
         $this->safeWrite($response, $patch->getOutput());
         // Scrolling handled client-side via data-on:datastar-fetch__window
+    }
+
+    private function sendThinking(SwooleHttpResponse $response, MessageThinkingEvent $event): void {
+        // Patch only the inner text: morphing the <details> would reset whether the user opened it
+        $html = $this->renderer->partial('message-reasoning-text', [
+            'id' => $event->messageId,
+            'thinking' => $event->fullThinking,
+            'e' => TemplateRenderer::escape(...),
+        ]);
+
+        $this->safeWrite($response, new PatchElements($html)->getOutput());
     }
 
     private function handleSuggestionsUpdated(SwooleHttpResponse $response, SuggestionsUpdatedEvent $event): void {
