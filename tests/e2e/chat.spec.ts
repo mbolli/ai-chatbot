@@ -57,10 +57,6 @@ test('empty input does not submit', async ({ page }) => {
 });
 
 test('stop button ends a slow stream', async ({ page }) => {
-    // Known bug: Swoole runtime hooks are off (mezzio-swoole only calls Runtime::enableCoroutine()
-    // for a top-level 'enable_coroutine' key), so usleep() in the test commands blocks the only
-    // worker and the stop request is served after the stream ends. Remove test.fail() once fixed.
-    test.fail();
     await startChat(page, '{help}');
     await waitForReply(page, 1);
 
@@ -74,7 +70,8 @@ test('stop button ends a slow stream', async ({ page }) => {
     await expect(stop).toBeHidden();
     await expect(page.getByRole('button', { name: 'Send message' })).toBeVisible();
 
-    // The full reply takes about ten seconds; after a stop it must not keep growing.
+    // The final event appends the stop marker; after that the reply must not keep growing.
+    await expect(text).toContainText('⏹');
     const stoppedAt = await text.innerText();
     await page.waitForTimeout(1500);
     await expect(text).toHaveText(stoppedAt);
@@ -92,10 +89,6 @@ test('the error command ends the stream and stores the error', async ({ page }) 
 });
 
 test('the error command shows the error while streaming', async ({ page }) => {
-    // Known backend bug: finalizeTestMessage (and the catch block in streamAiResponse) emit the
-    // final MessageStreamingEvent with an empty chunk or empty fullContent, so the error text only
-    // appears after a reload. Remove test.fail() once MessageCommandHandler sends the final content.
-    test.fail();
     await startChat(page, '{error}');
     await waitForReply(page, 1);
     await expect(lastAssistantMessage(page)).toContainText('Simulated error', { timeout: 3000 });

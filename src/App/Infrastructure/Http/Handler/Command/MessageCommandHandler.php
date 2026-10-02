@@ -725,7 +725,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 fullContent: $fullContent,
             ));
 
-            usleep(50000); // 50ms between chunks
+            Coroutine::sleep(0.05); // 50ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -757,7 +757,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 fullContent: $fullContent,
             ));
 
-            usleep(500000); // 500ms between words
+            Coroutine::sleep(0.5); // 500ms between words
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -781,7 +781,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 isComplete: false,
                 fullContent: $fullContent,
             ));
-            usleep(100000); // 100ms
+            Coroutine::sleep(0.1); // 100ms
         }
 
         // Then emit an error
@@ -961,7 +961,7 @@ HELP;
                 fullContent: $fullContent,
             ));
 
-            usleep(20000); // 20ms between chunks
+            Coroutine::sleep(0.02); // 20ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);

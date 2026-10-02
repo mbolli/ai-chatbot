@@ -118,10 +118,8 @@ final class SseRequestListener {
 
         // Handle MessageStreamingEvent specially with append mode
         if ($eventClass === 'MessageStreamingEvent' && $event instanceof MessageStreamingEvent) {
-            // Send chunk content if present (even on completion for error messages)
-            if (!empty($event->chunk)) {
-                $this->sendMessageChunk($response, $event);
-            }
+            // Always render: the completion event carries the final text (errors, stop marker, notices)
+            $this->sendMessageChunk($response, $event);
 
             // If not complete, we're done - don't process further
             if (!$event->isComplete) {
@@ -268,7 +266,8 @@ final class SseRequestListener {
     }
 
     private function sendMessageChunk(SwooleHttpResponse $response, MessageStreamingEvent $event): void {
-        if (empty($event->chunk) || !$response->isWritable()) {
+        // The final event may carry an empty chunk but still the full text (errors, stop marker, notices)
+        if ($event->fullContent === '' || !$response->isWritable()) {
             return;
         }
 
