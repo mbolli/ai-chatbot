@@ -61,6 +61,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         private readonly StreamingSessionManager $sessionManager,
         private readonly RateLimitService $rateLimitService,
         private readonly int $contextMaxTokens = 8000,
+        private readonly bool $testCommandsEnabled = false,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface {
@@ -279,6 +280,11 @@ final class MessageCommandHandler implements RequestHandlerInterface {
      * Check if request is from localhost (for test commands).
      */
     private function isLocalhost(ServerRequestInterface $request): bool {
+        // Behind a reverse proxy every request comes from 127.0.0.1, so production never allows them
+        if (!$this->testCommandsEnabled) {
+            return false;
+        }
+
         $serverParams = $request->getServerParams();
         $remoteAddr = $serverParams['REMOTE_ADDR'] ?? '';
         $host = $request->getUri()->getHost();

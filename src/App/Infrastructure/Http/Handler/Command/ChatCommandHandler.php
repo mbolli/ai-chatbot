@@ -118,6 +118,9 @@ final class ChatCommandHandler implements RequestHandlerInterface {
 
         $data = $this->getRequestData($request);
         $visibility = $data['visibility'] ?? 'private';
+        if (!\in_array($visibility, ['private', 'public'], true)) {
+            return new EmptyResponse(400);
+        }
 
         $updatedChat = $chat->updateVisibility($visibility);
         $this->chatRepository->save($updatedChat);

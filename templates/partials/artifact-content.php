@@ -14,7 +14,7 @@ use App\Infrastructure\Template\TemplateRenderer;
  */
 $e ??= fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 ?>
-<div id="artifact-content" class="artifact-content" data-class="{'artifact-closed': !$_artifactOpen}" data-document-id="<?php echo $e($document->id); ?>">
+<div id="artifact-content" class="artifact-content" data-class="{'artifact-closed': !$_artifactOpen}" role="region" aria-label="Artifact content" data-document-id="<?php echo $e($document->id); ?>">
     <?php
     echo match ($document->kind) {
         'code' => $renderer->partial('artifact-code', ['document' => $document]),

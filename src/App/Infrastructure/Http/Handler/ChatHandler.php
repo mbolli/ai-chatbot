@@ -66,7 +66,8 @@ final class ChatHandler implements RequestHandlerInterface {
         // Check if there's a pending user message that needs AI response
         // This happens when a chat was created with an initial message from home page
         $needsAiResponse = false;
-        if (!empty($messages)) {
+        // Only the owner may trigger generation; visitors of a public chat would get a 403
+        if (!empty($messages) && $chat->isOwnedBy($userId)) {
             $lastMessage = end($messages);
             if ($lastMessage->role === 'user') {
                 $needsAiResponse = true;

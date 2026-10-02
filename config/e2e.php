@@ -11,6 +11,8 @@ if ($dataDir === false || $dataDir === '') {
 }
 
 return [
+    // Test commands only run outside production
+    'app' => ['env' => 'testing'],
     'database' => [
         'path' => $dataDir . '/db.sqlite',
     ],
@@ -20,8 +22,8 @@ return [
         'openai_api_key' => 'e2e-offline',
     ],
     'rate_limits' => [
-        'guest' => ['daily_messages' => 10000],
-        'registered' => ['daily_messages' => 10000],
+        'guest' => ['daily_messages' => 10000, 'requests_per_hour' => 10000],
+        'registered' => ['daily_messages' => 10000, 'requests_per_hour' => 10000],
     ],
     'mezzio-swoole' => [
         'swoole-http-server' => [

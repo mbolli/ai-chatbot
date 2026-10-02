@@ -195,6 +195,7 @@ class ConfigProvider {
                         $container->get(StreamingSessionManager::class),
                         $container->get(RateLimitService::class),
                         contextMaxTokens: $aiConfig['context_max_tokens'] ?? 8000,
+                        testCommandsEnabled: ($config['app']['env'] ?? 'production') !== 'production',
                     );
                 },
                 DocumentCommandHandler::class => fn (ContainerInterface $container): DocumentCommandHandler => new DocumentCommandHandler(

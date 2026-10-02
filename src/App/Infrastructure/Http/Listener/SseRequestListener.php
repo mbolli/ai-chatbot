@@ -325,10 +325,6 @@ final class SseRequestListener {
     }
 
     private function handleRateLimitExceeded(SwooleHttpResponse $response, RateLimitExceededEvent $event): void {
-        $remaining = $event->limit - $event->used;
-        $accountType = $event->isGuest ? 'Guest' : 'Registered';
-
-        // Show toast notification
         $message = match ($event->type) {
             RateLimitType::HourlyRequests => "You've sent {$event->limit} messages in the last hour. Please wait a bit before sending more.",
             RateLimitType::DailyTokens => "You've used today's AI budget. Limit resets at midnight.",
@@ -338,37 +334,23 @@ final class SseRequestListener {
             $message .= ' Sign up for more!';
         }
 
-        $toastHtml = <<<HTML
-        <div id="toast-rate-limit" class="toast toast-error" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; background: var(--red-9); color: white; border-radius: 8px; box-shadow: var(--shadow-3); display: flex; align-items: center; gap: 8px; animation: slideUp 0.3s ease-out;">
-            <i class="fas fa-exclamation-circle"></i>
-            <span>{$message}</span>
-            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; margin-left: 8px;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        HTML;
+        // Toast shape documented in templates/partials/toast.php
+        $toastHtml = '<div class="toast" data-type="error" data-init="setTimeout(() => el.remove(), 8000)">'
+            . '<span class="toast-message">' . htmlspecialchars($message, ENT_QUOTES) . '</span>'
+            . '<button type="button" class="toast-close btn-icon" aria-label="Dismiss" data-on:click="el.closest(\'.toast\').remove()">×</button>'
+            . '</div>';
 
-        $patchEvent = new PatchElements(
-            $toastHtml,
-            [
-                'selector' => 'body',
-                'mode' => ElementPatchMode::Append,
-            ],
-        );
-        $this->safeWrite($response, $patchEvent->getOutput());
-
-        // Auto-remove toast after 5 seconds
-        $this->sendExecuteScript($response, "setTimeout(() => document.getElementById('toast-rate-limit')?.remove(), 5000)");
+        $this->safeWrite($response, new PatchElements($toastHtml, [
+            'selector' => '#toast-container',
+            'mode' => ElementPatchMode::Append,
+        ])->getOutput());
 
         // Reset generating state (use empty string, not null - null means delete in Datastar)
-        $this->sendPatchSignals($response, [
-            '_generatingMessage' => '',
-        ]);
-
-        // If guest, also show the register modal
+        $signals = ['_generatingMessage' => ''];
         if ($event->isGuest) {
-            $this->sendPatchSignals($response, ['_showRegisterModal' => true]);
+            $signals['_authModal'] = 'upgrade';
         }
+        $this->sendPatchSignals($response, $signals);
     }
 
     private function handleVoteUpdated(SwooleHttpResponse $response, VoteUpdatedEvent $event): void {
