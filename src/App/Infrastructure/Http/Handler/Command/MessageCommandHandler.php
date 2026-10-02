@@ -339,8 +339,10 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 ));
             }
 
-            // Handle empty response (AI returned nothing)
-            if (empty(mb_trim($fullContent)) && !$wasStopped) {
+            $createdDocument = $this->documentRepository->findByMessageId($assistantMessage->id);
+
+            // Handle empty response (AI returned nothing, not even a document)
+            if (empty(mb_trim($fullContent)) && !$wasStopped && $createdDocument === null) {
                 error_log("AI returned empty response for chat {$chatId}, model: {$chat->model}, chunks received: {$chunkCount}");
 
                 $errorContent = '⚠️ The AI returned an empty response. This could be due to content filtering or a temporary issue. Please try rephrasing your message or try again.';
@@ -362,16 +364,15 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             $updatedMessage = $assistantMessage->appendContent($fullContent);
             $this->messageRepository->update($updatedMessage);
 
-            // Check for created documents and emit events
-            foreach ($this->aiService->getCreatedDocuments() as $document) {
+            if ($createdDocument !== null) {
                 $this->eventBus->emit($userId, new DocumentUpdatedEvent(
-                    documentId: $document->id,
+                    documentId: $createdDocument->id,
                     chatId: $chatId,
                     userId: $userId,
                     action: 'created',
-                    version: $document->currentVersion,
-                    kind: $document->kind,
-                    language: $document->language,
+                    version: $createdDocument->currentVersion,
+                    kind: $createdDocument->kind,
+                    language: $createdDocument->language,
                 ));
             }
 

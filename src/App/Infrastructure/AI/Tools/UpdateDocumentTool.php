@@ -16,8 +16,12 @@ use App\Domain\Repository\DocumentRepositoryInterface;
 final class UpdateDocumentTool {
     private ?Document $lastUpdatedDocument = null;
 
+    /**
+     * @param null|string $chatId Restricts updates to documents of this chat
+     */
     public function __construct(
         private readonly DocumentRepositoryInterface $documentRepository,
+        private readonly ?string $chatId = null,
     ) {}
 
     public function getLastUpdatedDocument(): ?Document {
@@ -40,7 +44,7 @@ final class UpdateDocumentTool {
     ): string {
         $document = $this->documentRepository->findWithContent($documentId);
 
-        if ($document === null) {
+        if ($document === null || ($this->chatId !== null && $document->chatId !== $this->chatId)) {
             return "Error: Document with ID '{$documentId}' not found.";
         }
 

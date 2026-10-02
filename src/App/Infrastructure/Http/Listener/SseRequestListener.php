@@ -423,7 +423,7 @@ final class SseRequestListener {
         // Fetch the document to render its content
         $document = $this->documentRepository->findWithContent($event->documentId);
 
-        if ($document === null) {
+        if ($document === null || $document->chatId !== $event->chatId) {
             return null;
         }
 
@@ -458,7 +458,7 @@ final class SseRequestListener {
         // Fetch the updated document
         $document = $this->documentRepository->findWithContent($event->documentId);
 
-        if ($document === null) {
+        if ($document === null || $document->chatId !== $event->chatId) {
             return null;
         }
 

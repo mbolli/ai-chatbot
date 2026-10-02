@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use App\Domain\Model\Document;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
@@ -12,8 +11,6 @@ use App\Infrastructure\AI\Tools\UpdateDocumentTool;
 use LLPhant\AnthropicConfig;
 use LLPhant\Chat\AnthropicChat;
 use LLPhant\Chat\ChatInterface;
-use LLPhant\Chat\FunctionInfo\FunctionBuilder;
-use LLPhant\Chat\Message;
 use LLPhant\Chat\OpenAIChat;
 use LLPhant\OpenAIConfig;
 
@@ -75,137 +72,48 @@ final class LLPhantAIService implements AIServiceInterface {
     private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5';
     private const string TITLE_MODEL_OPENAI = 'gpt-6-luna';
 
-    private CreateDocumentTool $createDocumentTool;
-    private UpdateDocumentTool $updateDocumentTool;
-    private ?AnthropicStreamingClient $anthropicClient = null;
-    private ?OpenAIStreamingClient $openaiClient = null;
-
-    /** @var list<Document> */
-    private array $createdDocuments = [];
-
     public function __construct(
         private readonly ?string $anthropicApiKey = null,
         private readonly ?string $openaiApiKey = null,
-        ?DocumentRepositoryInterface $documentRepository = null,
+        private readonly ?DocumentRepositoryInterface $documentRepository = null,
         private readonly int $maxTokens = 2048,
         private readonly ?string $defaultModel = null,
         private readonly bool $productionMode = false,
         private readonly string $responseFormat = 'markdown',
-    ) {
-        // Initialize tools if repository is provided
-        if ($documentRepository !== null) {
-            $this->createDocumentTool = new CreateDocumentTool($documentRepository);
-            $this->updateDocumentTool = new UpdateDocumentTool($documentRepository);
-        }
-
-        // Initialize custom Anthropic client for true streaming
-        if ($this->anthropicApiKey !== null) {
-            $this->anthropicClient = new AnthropicStreamingClient(
-                $this->anthropicApiKey,
-                $this->maxTokens,
-            );
-        }
-
-        // Initialize custom OpenAI client for true streaming
-        if ($this->openaiApiKey !== null) {
-            $this->openaiClient = new OpenAIStreamingClient(
-                $this->openaiApiKey,
-                $this->maxTokens,
-            );
-        }
-    }
+    ) {}
 
     public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator {
-        $this->createdDocuments = [];
-
         // Stored chats may reference retired models, and the model command accepts any string
         if (!($this->getAvailableModels()[$model]['available'] ?? false)) {
             $model = $this->getDefaultModel();
         }
 
-        $provider = $this->getProvider($model);
-
-        // Use custom streaming client for Anthropic (true streaming)
-        if ($provider === 'anthropic' && $this->anthropicClient !== null) {
-            // Configure tools on the streaming client
-            if (isset($this->createDocumentTool) && $chatId !== null) {
-                $this->createDocumentTool->setChatContext($chatId, $messageId);
-                $this->anthropicClient->setTools($this->createDocumentTool, $this->updateDocumentTool);
-            } else {
-                $this->anthropicClient->setTools(null, null);
-            }
-
-            yield from $this->streamAnthropicChat($messages, $model);
-
-            // Collect any created documents
-            if (isset($this->createDocumentTool)) {
-                $doc = $this->createDocumentTool->getLastCreatedDocument();
-                if ($doc !== null) {
-                    $this->createdDocuments[] = $doc;
-                }
-            }
-
-            return;
+        // Clients and tools are created per call: this service is shared by all coroutines in the worker
+        $createTool = null;
+        $updateTool = null;
+        if ($this->documentRepository !== null && $chatId !== null) {
+            $createTool = new CreateDocumentTool($this->documentRepository);
+            $createTool->setChatContext($chatId, $messageId);
+            $updateTool = new UpdateDocumentTool($this->documentRepository, $chatId);
         }
 
-        // Use custom streaming client for OpenAI (true streaming)
-        if ($provider === 'openai' && $this->openaiClient !== null) {
-            // Configure tools on the streaming client
-            if (isset($this->createDocumentTool) && $chatId !== null) {
-                $this->createDocumentTool->setChatContext($chatId, $messageId);
-                $this->openaiClient->setTools($this->createDocumentTool, $this->updateDocumentTool);
-            } else {
-                $this->openaiClient->setTools(null, null);
+        if ($this->getProvider($model) === 'openai') {
+            if ($this->openaiApiKey === null) {
+                throw new \RuntimeException('OpenAI API key not configured');
             }
 
-            yield from $this->streamOpenAIChat($messages, $model);
-
-            // Collect any created documents
-            if (isset($this->createDocumentTool)) {
-                $doc = $this->createDocumentTool->getLastCreatedDocument();
-                if ($doc !== null) {
-                    $this->createdDocuments[] = $doc;
-                }
+            $client = new OpenAIStreamingClient($this->openaiApiKey, $this->maxTokens);
+        } else {
+            if ($this->anthropicApiKey === null) {
+                throw new \RuntimeException('Anthropic API key not configured');
             }
 
-            return;
+            $client = new AnthropicStreamingClient($this->anthropicApiKey, $this->maxTokens);
         }
 
-        // Fallback to LLPhant (when custom clients unavailable)
-        $chat = $this->createChat($model);
-        $llMessages = $this->convertMessages($messages);
+        $client->setTools($createTool, $updateTool);
 
-        // Set system message with tool instructions
-        $chat->setSystemMessage($this->getSystemPrompt());
-
-        // Configure tools if available and chat ID is provided
-        if (isset($this->createDocumentTool) && $chatId !== null) {
-            $this->createDocumentTool->setChatContext($chatId, $messageId);
-            $this->configureTools($chat);
-        }
-
-        // Stream the response using generateChatStream
-        $stream = $chat->generateChatStream($llMessages);
-
-        // Read chunks from the PSR-7 stream
-        while (!$stream->eof()) {
-            $chunk = $stream->read(1024);
-            if ($chunk !== '') {
-                yield $chunk;
-            }
-        }
-
-        // Collect any created documents
-        if (isset($this->createDocumentTool)) {
-            $doc = $this->createDocumentTool->getLastCreatedDocument();
-            if ($doc !== null) {
-                $this->createdDocuments[] = $doc;
-            }
-        }
-    }
-
-    public function getCreatedDocuments(): array {
-        return $this->createdDocuments;
+        yield from $client->streamChatRealtime($messages, $model, $this->getSystemPrompt());
     }
 
     public function getDefaultModel(): string {
@@ -274,59 +182,6 @@ final class LLPhantAIService implements AIServiceInterface {
         return $models;
     }
 
-    /**
-     * Stream chat using custom Anthropic client for true real-time streaming.
-     *
-     * @param array<array{role: string, content: string}> $messages
-     *
-     * @return \Generator<string>
-     */
-    private function streamAnthropicChat(array $messages, string $model): \Generator {
-        if ($this->anthropicClient === null) {
-            throw new \RuntimeException('Anthropic API key not configured');
-        }
-
-        yield from $this->anthropicClient->streamChatRealtime(
-            $messages,
-            $model,
-            $this->getSystemPrompt(),
-        );
-    }
-
-    /**
-     * Stream chat using custom OpenAI client for true real-time streaming.
-     *
-     * @param array<array{role: string, content: string}> $messages
-     *
-     * @return \Generator<string>
-     */
-    private function streamOpenAIChat(array $messages, string $model): \Generator {
-        if ($this->openaiClient === null) {
-            throw new \RuntimeException('OpenAI API key not configured');
-        }
-
-        yield from $this->openaiClient->streamChatRealtime(
-            $messages,
-            $model,
-            $this->getSystemPrompt(),
-        );
-    }
-
-    private function configureTools(ChatInterface $chat): void {
-        // Build function info for tools
-        $createDocFn = FunctionBuilder::buildFunctionInfo($this->createDocumentTool, 'createDocument');
-        $updateDocFn = FunctionBuilder::buildFunctionInfo($this->updateDocumentTool, 'updateDocument');
-
-        // Add tools to the chat
-        if ($chat instanceof AnthropicChat) {
-            $chat->addTool($createDocFn);
-            $chat->addTool($updateDocFn);
-        } elseif ($chat instanceof OpenAIChat) {
-            $chat->addTool($createDocFn);
-            $chat->addTool($updateDocFn);
-        }
-    }
-
     private function getProvider(string $model): string {
         // Check all model lists (including prod variants for complete coverage)
         if (\array_key_exists($model, self::ANTHROPIC_MODELS) || \array_key_exists($model, self::ANTHROPIC_MODELS_PROD)) {
@@ -391,31 +246,6 @@ final class LLPhantAIService implements AIServiceInterface {
         $config->apiKey = $this->openaiApiKey;
 
         return new OpenAIChat($config);
-    }
-
-    /**
-     * @param array<array{role: string, content: string}> $messages
-     *
-     * @return Message[]
-     */
-    private function convertMessages(array $messages): array {
-        $llMessages = [];
-
-        foreach ($messages as $msg) {
-            $role = $msg['role'];
-            $content = $msg['content'];
-
-            $llMessage = match ($role) {
-                'user' => Message::user($content),
-                'assistant' => Message::assistant($content),
-                'system' => Message::system($content),
-                default => Message::user($content),
-            };
-
-            $llMessages[] = $llMessage;
-        }
-
-        return $llMessages;
     }
 
     private function getSystemPrompt(): string {

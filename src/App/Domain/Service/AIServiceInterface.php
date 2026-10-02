@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
-use App\Domain\Model\Document;
-
 /**
  * Interface for AI chat services.
  */
@@ -44,11 +42,4 @@ interface AIServiceInterface {
      * @return string Model ID
      */
     public function getDefaultModel(): string;
-
-    /**
-     * Get documents created by tools during the last chat.
-     *
-     * @return array<Document>
-     */
-    public function getCreatedDocuments(): array;
 }

@@ -67,6 +67,18 @@ describe('CreateDocumentTool', function (): void {
 });
 
 describe('UpdateDocumentTool', function (): void {
+    it('refuses to update a document from another chat', function (): void {
+        $foreignDoc = Document::text('other-chat', 'Private', 'Secret');
+
+        $repo = Mockery::mock(DocumentRepositoryInterface::class);
+        $repo->shouldReceive('findWithContent')->andReturn($foreignDoc);
+        $repo->shouldNotReceive('save');
+
+        $tool = new UpdateDocumentTool($repo, 'chat-123');
+
+        expect($tool->updateDocument($foreignDoc->id, 'Overwritten'))->toContain('not found');
+    });
+
     it('updates document content', function (): void {
         $existingDoc = Document::text('chat-123', 'Original', 'Old content');
 
