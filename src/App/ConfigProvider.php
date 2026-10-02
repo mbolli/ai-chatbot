@@ -121,6 +121,10 @@ class ConfigProvider {
                         userRepository: $container->get(UserRepositoryInterface::class),
                         guestDailyLimit: $rateLimits['guest']['daily_messages'] ?? 20,
                         registeredDailyLimit: $rateLimits['registered']['daily_messages'] ?? 100,
+                        guestHourlyLimit: $rateLimits['guest']['requests_per_hour'] ?? 0,
+                        registeredHourlyLimit: $rateLimits['registered']['requests_per_hour'] ?? 0,
+                        guestDailyTokenLimit: $rateLimits['guest']['daily_tokens'] ?? 0,
+                        registeredDailyTokenLimit: $rateLimits['registered']['daily_tokens'] ?? 0,
                     );
                 },
 

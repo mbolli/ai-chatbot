@@ -87,6 +87,28 @@ it('returns false when over limit', function (): void {
     expect($this->repo->isUnderLimit(1, $today, 3))->toBeFalse();
 });
 
+it('adds tokens without touching the message count', function (): void {
+    $today = date('Y-m-d');
+
+    $this->repo->addTokens(1, $today, 120);
+    $this->repo->incrementMessageCount(1, $today);
+    $this->repo->addTokens(1, $today, 30);
+
+    expect($this->repo->getTokenCount(1, $today))->toBe(150)
+        ->and($this->repo->getMessageCount(1, $today))->toBe(1)
+    ;
+});
+
+it('counts requests in a time window and prunes those older than an hour', function (): void {
+    $this->repo->recordRequest(1, 1000);
+    $this->repo->recordRequest(1, 2000);
+    $this->repo->recordRequest(1, 5000);
+
+    expect($this->repo->countRequestsSince(1, 1500))->toBe(2)
+        ->and((int) $this->pdo->query('SELECT COUNT(*) FROM rate_limit_requests')->fetchColumn())->toBe(2)
+    ;
+});
+
 it('cleans up old records', function (): void {
     $today = date('Y-m-d');
     $oldDate = date('Y-m-d', strtotime('-10 days'));

@@ -51,15 +51,17 @@ return [
         'response_format' => $_ENV['AI_RESPONSE_FORMAT'] ?? 'markdown',
     ],
 
-    // Rate limits - protect your budget!
+    // Rate limits - protect your budget! Hourly and token limits: 0 = unlimited.
     'rate_limits' => [
         'guest' => [
             'requests_per_hour' => (int) ($_ENV['RATE_LIMIT_GUEST_HOURLY'] ?? 10),
             'daily_messages' => (int) ($_ENV['RATE_LIMIT_GUEST_DAILY'] ?? 20),
+            'daily_tokens' => (int) ($_ENV['RATE_LIMIT_GUEST_DAILY_TOKENS'] ?? 0),
         ],
         'registered' => [
             'requests_per_hour' => (int) ($_ENV['RATE_LIMIT_USER_HOURLY'] ?? 30),
             'daily_messages' => (int) ($_ENV['RATE_LIMIT_USER_DAILY'] ?? 100),
+            'daily_tokens' => (int) ($_ENV['RATE_LIMIT_USER_DAILY_TOKENS'] ?? 0),
         ],
     ],
 

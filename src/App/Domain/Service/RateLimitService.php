@@ -7,30 +7,86 @@ namespace App\Domain\Service;
 use App\Domain\Repository\RateLimitRepositoryInterface;
 use App\Domain\Repository\UserRepositoryInterface;
 
+/**
+ * Per-user limits: messages per day, AI requests per sliding hour and tokens per day.
+ * An hourly or token limit of 0 disables it; a daily message limit of 0 blocks the user type.
+ */
 final class RateLimitService {
+    private readonly \Closure $clock;
+
+    /**
+     * @param null|\Closure(): int $clock Returns the current Unix timestamp
+     */
     public function __construct(
         private readonly RateLimitRepositoryInterface $rateLimitRepository,
         private readonly UserRepositoryInterface $userRepository,
         private readonly int $guestDailyLimit = 20,
         private readonly int $registeredDailyLimit = 100,
-    ) {}
-
-    /**
-     * Check if user can send a message (under daily limit).
-     */
-    public function canSendMessage(int $userId): bool {
-        $limit = $this->getDailyLimit($userId);
-        $today = $this->getToday();
-
-        return $this->rateLimitRepository->isUnderLimit($userId, $today, $limit);
+        private readonly int $guestHourlyLimit = 0,
+        private readonly int $registeredHourlyLimit = 0,
+        private readonly int $guestDailyTokenLimit = 0,
+        private readonly int $registeredDailyTokenLimit = 0,
+        ?\Closure $clock = null,
+    ) {
+        $this->clock = $clock ?? time(...);
     }
 
     /**
-     * Record that a user sent a message.
+     * Check if user can send a message (under every limit).
+     */
+    public function canSendMessage(int $userId): bool {
+        return $this->exceededLimit($userId) === null;
+    }
+
+    /**
+     * The first limit the user has reached, or null when another request is allowed.
+     *
+     * The token limit is checked before a request, so the request that crosses it still completes.
+     */
+    public function exceededLimit(int $userId): ?RateLimitExceeded {
+        $isGuest = $this->isGuestUser($userId);
+        $today = $this->getToday();
+
+        $dailyLimit = $isGuest ? $this->guestDailyLimit : $this->registeredDailyLimit;
+        $used = $this->rateLimitRepository->getMessageCount($userId, $today);
+        if ($used >= $dailyLimit) {
+            return new RateLimitExceeded(RateLimitType::DailyMessages, $used, $dailyLimit, $isGuest);
+        }
+
+        $tokenLimit = $isGuest ? $this->guestDailyTokenLimit : $this->registeredDailyTokenLimit;
+        if ($tokenLimit > 0) {
+            $tokens = $this->rateLimitRepository->getTokenCount($userId, $today);
+            if ($tokens >= $tokenLimit) {
+                return new RateLimitExceeded(RateLimitType::DailyTokens, $tokens, $tokenLimit, $isGuest);
+            }
+        }
+
+        $hourlyLimit = $isGuest ? $this->guestHourlyLimit : $this->registeredHourlyLimit;
+        if ($hourlyLimit > 0) {
+            $requests = $this->rateLimitRepository->countRequestsSince($userId, ($this->clock)() - 3600);
+            if ($requests >= $hourlyLimit) {
+                return new RateLimitExceeded(RateLimitType::HourlyRequests, $requests, $hourlyLimit, $isGuest);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Record that a user sent a message (counts toward the daily and hourly limits).
      */
     public function recordMessage(int $userId): void {
-        $today = $this->getToday();
-        $this->rateLimitRepository->incrementMessageCount($userId, $today);
+        $this->rateLimitRepository->incrementMessageCount($userId, $this->getToday());
+        $this->rateLimitRepository->recordRequest($userId, ($this->clock)());
+    }
+
+    /**
+     * Add tokens consumed by a response to today's tally.
+     */
+    public function recordTokens(int $userId, int $tokens): void {
+        if ($tokens > 0) {
+            $this->rateLimitRepository->addTokens($userId, $this->getToday(), $tokens);
+        }
     }
 
     /**
@@ -67,13 +123,7 @@ final class RateLimitService {
      * Get the daily limit for a user based on their account type.
      */
     public function getDailyLimit(int $userId): int {
-        $user = $this->userRepository->findById($userId);
-
-        if ($user === null || $user->isGuest) {
-            return $this->guestDailyLimit;
-        }
-
-        return $this->registeredDailyLimit;
+        return $this->isGuestUser($userId) ? $this->guestDailyLimit : $this->registeredDailyLimit;
     }
 
     /**
@@ -86,6 +136,6 @@ final class RateLimitService {
     }
 
     private function getToday(): string {
-        return date('Y-m-d');
+        return date('Y-m-d', ($this->clock)());
     }
 }
