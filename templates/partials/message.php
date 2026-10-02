@@ -33,19 +33,14 @@ $vote = $vote ?? null;
     <div class="message-content">
         <div class="message-role"><?php echo $isUser ? 'You' : 'Assistant'; ?></div>
         <?php if ($isAssistant && $streaming) {
-            $thinking = '';
+            $thinking = $thinking ?? '';
 
             include __DIR__ . '/message-reasoning.php';
         } ?>
         <div class="message-text markdown-content" id="message-<?php echo $e($id); ?>-content"><?php
             if ($content) {
-                if (!$streaming) {
-                    // Parse markdown for completed messages (both user and assistant)
-                    echo $md($content);
-                } else {
-                    // Streaming: plain text until complete
-                    echo nl2br($e($content));
-                }
+                // Streaming replies are rendered as markdown too: each update morphs the full text
+                echo $md($content);
             }
 ?></div>
         <?php if ($isAssistant && !$streaming && $chatId) {

@@ -2,21 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Infrastructure\EventBus\SwooleEventBus;
-
 /*
 |--------------------------------------------------------------------------
 | Test Case
 |--------------------------------------------------------------------------
 */
 
-uses()
-    ->beforeEach(function (): void {
-        // Reset singleton for each test
-        SwooleEventBus::reset();
-    })
-    ->in('Unit', 'Feature')
-;
+uses()->in('Unit', 'Feature');
 
 /*
 |--------------------------------------------------------------------------

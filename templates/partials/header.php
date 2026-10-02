@@ -25,6 +25,10 @@ $canShare = isset($chatId, $chat) && $chat->isOwnedBy((int) ($user['id'] ?? 0));
     </div>
 
     <div class="header-actions">
+        <button class="btn-icon" type="button" data-on:click="$_aboutOpen = true"
+                title="About this project" aria-label="About this project" aria-haspopup="dialog">
+            <svg class="icon" aria-hidden="true"><use href="#icon-info-circle"></use></svg>
+        </button>
         <?php if ($canShare) { ?>
             <select class="visibility-selector"
                     aria-label="Chat visibility"

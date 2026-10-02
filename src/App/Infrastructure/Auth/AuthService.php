@@ -6,10 +6,9 @@ namespace App\Infrastructure\Auth;
 
 use App\Domain\Model\User;
 use App\Domain\Repository\UserRepositoryInterface;
-use Mezzio\Session\SessionInterface;
 
 /**
- * Authentication service using Mezzio session-based authentication.
+ * Session-based authentication for guest and registered users.
  *
  * This service manages user authentication through request-scoped sessions,
  * making it fully compatible with Swoole coroutines (no global state).

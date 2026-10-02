@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Application\MessageCommands;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
 use App\Domain\Event\RateLimitExceededEvent;
@@ -22,15 +23,13 @@ use App\Domain\Service\Stream\Usage;
 use App\Infrastructure\AI\StreamingSessionManager;
 use App\Infrastructure\AI\Tools\CreateDocumentTool;
 use App\Infrastructure\AI\Tools\UpdateDocumentTool;
-use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
-use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
 use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
 use App\Infrastructure\Persistence\SqliteMessageRepository;
 use App\Infrastructure\Persistence\SqliteRateLimitRepository;
 use App\Infrastructure\Repository\SqliteUserRepository;
-use Laminas\Diactoros\ServerRequest;
+use OpenSwoole\Coroutine;
 
 /**
  * Plays back scripted turns. Tool steps run the real document tools, like the streaming clients do.
@@ -94,17 +93,9 @@ final class RecordingEventBus implements EventBusInterface {
      */
     public array $events = [];
 
-    public function subscribe(int $userId, callable $callback): string {
-        return 'sub';
-    }
-
-    public function unsubscribe(string $subscriptionId): void {}
-
     public function emit(int $userId, object $event): void {
         $this->events[] = $event;
     }
-
-    public function broadcast(object $event): void {}
 
     /**
      * @template T of object
@@ -135,7 +126,7 @@ beforeEach(function (): void {
 
     $this->limits = [];
     $this->contextMaxTokens = 8000;
-    $this->handler = fn (): MessageCommandHandler => new MessageCommandHandler(
+    $this->handler = fn (): MessageCommands => new MessageCommands(
         $this->chats,
         $this->messages,
         $this->documents,
@@ -153,14 +144,10 @@ beforeEach(function (): void {
     );
 
     $this->send = function (string $text, string $method = 'send'): int {
-        $request = (new ServerRequest(serverParams: ['REMOTE_ADDR' => '203.0.113.5'], uri: 'https://chat.example.com/cmd', method: 'POST'))
-            ->withAttribute('chatId', $this->chat->id)
-            ->withAttribute(AuthMiddleware::ATTR_USER_ID, 1)
-            ->withParsedBody(['message' => $text])
-        ;
         $status = 0;
-        \Swoole\Coroutine\run(function () use ($request, $method, &$status): void {
-            $status = ($this->handler)()->{$method}($request)->getStatusCode();
+        Coroutine::run(function () use ($text, $method, &$status): void {
+            $commands = ($this->handler)();
+            $status = $method === 'send' ? $commands->send(1, $this->chat->id, $text) : $commands->generate(1, $this->chat->id);
         });
 
         return $status;

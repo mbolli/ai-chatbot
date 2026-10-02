@@ -18,9 +18,9 @@ $isGuest = ($user['isGuest'] ?? true);
 <div class="sidebar-header" data-class="{'sidebar-closed': !$_sidebarOpen, 'sidebar-open': $_sidebarOpen}">
     <h2>AI Chatbot</h2>
     <div class="sidebar-header-actions">
-        <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat" aria-label="New Chat">
+        <a class="btn-icon" href="/" title="New Chat (Ctrl+K)" aria-label="New Chat">
             <svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
-        </button>
+        </a>
         <button class="btn-icon sidebar-close" data-on:click="$_sidebarOpen = false" title="Close sidebar" aria-label="Close sidebar">
             <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
         </button>
@@ -45,9 +45,10 @@ $isGuest = ($user['isGuest'] ?? true);
 
 <!-- Bottom Left: Connection Status + Auth -->
 <div class="sidebar-footer" data-class="{'sidebar-closed': !$_sidebarOpen, 'sidebar-open': $_sidebarOpen}">
-    <div id="connection-status" class="connection-indicator">
+    <div id="connection-status" class="connection-indicator" data-connected="false"
+         data-attr:data-connected="$_disconnected === false ? 'true' : 'false'">
         <span class="dot"></span>
-        <span>Connecting...</span>
+        <span data-text="$_disconnected === false ? 'Connected' : 'Connecting...'">Connecting...</span>
     </div>
 
     <?php if ($isGuest) { ?>

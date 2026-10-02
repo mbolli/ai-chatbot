@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use Swoole\Coroutine;
+use OpenSwoole\Coroutine;
 
 /**
  * Retries a provider request on transient failures, but only while it has not yielded anything to the caller.
@@ -15,7 +15,7 @@ final readonly class RetryPolicy {
     /**
      * @param int                         $maxAttempts Attempts per request, the first one included
      * @param float                       $maxDelay    A longer retry-after fails immediately instead of blocking the user
-     * @param null|\Closure(float): mixed $sleep       Defaults to Swoole\Coroutine::sleep()
+     * @param null|\Closure(float): mixed $sleep       Defaults to a coroutine sleep
      */
     public function __construct(
         private int $maxAttempts = 3,
@@ -82,7 +82,8 @@ final readonly class RetryPolicy {
 
                 $delay = $this->delay($n, $e->retryAfter);
                 error_log(\sprintf('AI request failed (%s), retrying in %.2fs', $e->getMessage(), $delay));
-                ($this->sleep ?? Coroutine::sleep(...))($delay);
+                // OpenSwoole's Coroutine::sleep() only takes whole seconds
+                ($this->sleep ?? static fn (float $s) => Coroutine::usleep((int) round($s * 1_000_000)))($delay);
             }
         }
     }

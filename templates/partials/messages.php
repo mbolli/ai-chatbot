@@ -8,11 +8,17 @@
  * @var null|string $chatId Chat ID (for voting)
  * @var callable $e Escape function
  * @var callable $md Markdown parser function
+ * @var null|string $streamingMessageId Assistant message currently streamed (rendered by $stream)
+ * @var null|callable(): string $stream Renders the streaming reply component
  */
 $messageDocuments = $messageDocuments ?? [];
 $votes = $votes ?? [];
+$streamingMessageId = $streamingMessageId ?? null;
 ?>
 <div id="messages" class="messages">
+    <?php // A new element per state change re-runs data-init, which syncs the client-side generating flag?>
+    <span hidden id="generating-<?php echo $e($streamingMessageId ?? 'idle-' . (end($messages) ?: null)?->id); ?>"
+          data-init="$_generatingMessage = <?php echo $e(json_encode($streamingMessageId !== null ? 'message-' . $streamingMessageId : '')); ?>"></span>
     <?php if (empty($messages)) { ?>
             <div class="greeting">
                 <h1>How can I help you today?</h1>
@@ -20,6 +26,11 @@ $votes = $votes ?? [];
             </div>
         <?php } else { ?>
             <?php foreach ($messages as $message) { ?>
+                <?php if ($message->id === $streamingMessageId && isset($stream)) {
+                    echo $stream();
+
+                    continue;
+                } ?>
                 <?php
                     $doc = $messageDocuments[$message->id] ?? null;
                 $artifact = $doc !== null ? ['id' => $doc->id, 'title' => $doc->title] : null;

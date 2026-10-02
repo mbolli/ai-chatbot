@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use Swoole\Coroutine\Socket;
+use OpenSwoole\Coroutine\Socket;
 
 /**
  * HTTP/1.1 over a TLS-verified Swoole coroutine socket. recv() yields to the scheduler,

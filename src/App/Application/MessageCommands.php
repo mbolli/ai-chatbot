@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Http\Handler\Command;
+namespace App\Application;
 
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
@@ -27,16 +27,13 @@ use App\Domain\Service\Stream\ToolCall;
 use App\Domain\Service\Stream\ToolResult;
 use App\Domain\Service\Stream\Usage;
 use App\Infrastructure\AI\StreamingSessionManager;
-use App\Infrastructure\Auth\AuthMiddleware;
 use App\Infrastructure\EventBus\EventBusInterface;
-use Laminas\Diactoros\Response\EmptyResponse;
-use Mezzio\Router\RouteResult;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-use Swoole\Coroutine;
+use OpenSwoole\Coroutine;
 
-final class MessageCommandHandler implements RequestHandlerInterface {
+/**
+ * Sending, generating and stopping assistant replies. Methods return an HTTP-like status code.
+ */
+final class MessageCommands {
     /**
      * Special test commands that work without AI service.
      * These are only available on localhost for development/testing.
@@ -64,49 +61,28 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         private readonly bool $testCommandsEnabled = false,
     ) {}
 
-    public function handle(ServerRequestInterface $request): ResponseInterface {
-        /** @var null|RouteResult $routeResult */
-        $routeResult = $request->getAttribute(RouteResult::class);
-        $routeName = $routeResult?->getMatchedRouteName() ?? '';
-
-        return match (true) {
-            str_ends_with($routeName, '.send') => $this->send($request),
-            str_ends_with($routeName, '.stop') => $this->stop($request),
-            str_ends_with($routeName, '.generate') => $this->generate($request),
-            default => new EmptyResponse(404),
-        };
-    }
-
-    public function send(ServerRequestInterface $request): ResponseInterface {
-        $chatId = $request->getAttribute('chatId');
-
-        /** @var int $userId */
-        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
-
+    public function send(int $userId, string $chatId, string $content): int {
         $chat = $this->chatRepository->find($chatId);
 
         if ($chat === null) {
-            return new EmptyResponse(404);
+            return 404;
         }
 
         if (!$chat->isOwnedBy($userId)) {
-            return new EmptyResponse(403);
+            return 403;
         }
 
-        $data = $this->getRequestData($request);
-        $content = $data['_message'] ?? $data['message'] ?? $data['content'] ?? '';
-
         if (empty(mb_trim($content))) {
-            return new EmptyResponse(400);
+            return 400;
         }
 
         // Check if there's already an active streaming session
         if ($this->sessionManager->hasActiveSession($chatId, $userId)) {
-            return new EmptyResponse(409); // Conflict - already streaming
+            return 409; // Conflict - already streaming
         }
 
         if ($this->isRateLimited($userId, $chatId)) {
-            return new EmptyResponse(429);
+            return 429;
         }
 
         $this->rateLimitService->recordMessage($userId);
@@ -143,34 +119,28 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         // Start streaming session
         $this->sessionManager->startSession($chatId, $userId, $assistantMessage->id);
 
-        // Check if localhost for test commands
-        $isLocalhost = $this->isLocalhost($request);
+        $isLocalhost = $this->testCommandsEnabled;
 
         // Stream AI response in a coroutine
         Coroutine::create(function () use ($userId, $chatId, $chat, $userMessage, $assistantMessage, $isLocalhost): void {
             $this->streamAiResponse($userId, $chatId, $chat, $userMessage, $assistantMessage, $isLocalhost);
         });
 
-        return new EmptyResponse(204);
+        return 204;
     }
 
     /**
      * Stop an active AI generation stream.
      */
-    public function stop(ServerRequestInterface $request): ResponseInterface {
-        $chatId = $request->getAttribute('chatId');
-
-        /** @var int $userId */
-        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
-
+    public function stop(int $userId, string $chatId): int {
         $chat = $this->chatRepository->find($chatId);
 
         if ($chat === null) {
-            return new EmptyResponse(404);
+            return 404;
         }
 
         if (!$chat->isOwnedBy($userId)) {
-            return new EmptyResponse(403);
+            return 403;
         }
 
         $stopped = $this->sessionManager->requestStop($chatId, $userId);
@@ -184,32 +154,27 @@ final class MessageCommandHandler implements RequestHandlerInterface {
             ));
         }
 
-        return new EmptyResponse($stopped ? 204 : 404);
+        return $stopped ? 204 : 404;
     }
 
     /**
      * Generate AI response for the last user message in a chat.
      * Used when page loads with a pending user message (e.g., after new chat creation).
      */
-    public function generate(ServerRequestInterface $request): ResponseInterface {
-        $chatId = $request->getAttribute('chatId');
-
-        /** @var int $userId */
-        $userId = $request->getAttribute(AuthMiddleware::ATTR_USER_ID);
-
+    public function generate(int $userId, string $chatId): int {
         $chat = $this->chatRepository->find($chatId);
 
         if ($chat === null) {
-            return new EmptyResponse(404);
+            return 404;
         }
 
         if (!$chat->isOwnedBy($userId)) {
-            return new EmptyResponse(403);
+            return 403;
         }
 
         // Check if there's already an active streaming session
         if ($this->sessionManager->hasActiveSession($chatId, $userId)) {
-            return new EmptyResponse(409); // Conflict - already streaming
+            return 409; // Conflict - already streaming
         }
 
         // Get the last user message
@@ -225,7 +190,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         }
 
         if ($lastUserMessage === null) {
-            return new EmptyResponse(400); // No user message to respond to
+            return 400; // No user message to respond to
         }
 
         // Check if there's already an assistant response after this user message
@@ -237,13 +202,13 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 continue;
             }
             if ($foundUserMessage && $message->role === 'assistant' && !empty($message->content)) {
-                return new EmptyResponse(204); // Already has a response
+                return 204; // Already has a response
             }
         }
 
         // The first message of a new chat is answered here, not in send()
         if ($this->isRateLimited($userId, $chatId)) {
-            return new EmptyResponse(429);
+            return 429;
         }
 
         $this->rateLimitService->recordMessage($userId);
@@ -265,32 +230,14 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         // Start streaming session
         $this->sessionManager->startSession($chatId, $userId, $assistantMessage->id);
 
-        // Check if localhost for test commands
-        $isLocalhost = $this->isLocalhost($request);
+        $isLocalhost = $this->testCommandsEnabled;
 
         // Stream AI response in a coroutine
         Coroutine::create(function () use ($userId, $chatId, $chat, $lastUserMessage, $assistantMessage, $isLocalhost): void {
             $this->streamAiResponse($userId, $chatId, $chat, $lastUserMessage, $assistantMessage, $isLocalhost);
         });
 
-        return new EmptyResponse(204);
-    }
-
-    /**
-     * Check if request is from localhost (for test commands).
-     */
-    private function isLocalhost(ServerRequestInterface $request): bool {
-        // Behind a reverse proxy every request comes from 127.0.0.1, so production never allows them
-        if (!$this->testCommandsEnabled) {
-            return false;
-        }
-
-        $serverParams = $request->getServerParams();
-        $remoteAddr = $serverParams['REMOTE_ADDR'] ?? '';
-        $host = $request->getUri()->getHost();
-
-        return \in_array($remoteAddr, ['127.0.0.1', '::1'], true)
-            || \in_array($host, ['localhost', '127.0.0.1'], true);
+        return 204;
     }
 
     /**
@@ -659,26 +606,6 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function getRequestData(ServerRequestInterface $request): array {
-        $contentType = $request->getHeaderLine('Content-Type');
-
-        if (str_contains($contentType, 'application/json')) {
-            $body = (string) $request->getBody();
-            $data = json_decode($body, true) ?? [];
-
-            if (isset($data['datastar'])) {
-                $data = $data['datastar'];
-            }
-
-            return $data;
-        }
-
-        return $request->getParsedBody() ?? [];
-    }
-
     // ==========================================
     // Test Command Implementations
     // ==========================================
@@ -731,7 +658,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 fullContent: $fullContent,
             ));
 
-            Coroutine::sleep(0.05); // 50ms between chunks
+            Coroutine::usleep(50000); // 50ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -763,7 +690,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 fullContent: $fullContent,
             ));
 
-            Coroutine::sleep(0.5); // 500ms between words
+            Coroutine::usleep(500000); // 500ms between words
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);
@@ -787,7 +714,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 isComplete: false,
                 fullContent: $fullContent,
             ));
-            Coroutine::sleep(0.1); // 100ms
+            Coroutine::usleep(100000); // 100ms
         }
 
         // Then emit an error
@@ -967,7 +894,7 @@ HELP;
                 fullContent: $fullContent,
             ));
 
-            Coroutine::sleep(0.02); // 20ms between chunks
+            Coroutine::usleep(20000); // 20ms between chunks
         }
 
         $this->finalizeTestMessage($userId, $chatId, $assistantMessage, $fullContent);

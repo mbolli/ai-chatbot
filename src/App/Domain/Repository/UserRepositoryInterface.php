@@ -9,7 +9,7 @@ use App\Domain\Model\User;
 /**
  * Repository interface for User persistence.
  *
- * This extends the concept from Mezzio\Authentication\UserRepositoryInterface
+ * User persistence, including guest accounts
  * but provides domain-specific methods.
  */
 interface UserRepositoryInterface {

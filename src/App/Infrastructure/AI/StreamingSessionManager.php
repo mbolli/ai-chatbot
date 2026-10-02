@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\AI;
 
-use Swoole\Table;
+use OpenSwoole\Table;
 
 /**
  * Manages active AI streaming sessions for stop generation feature.
@@ -114,8 +114,17 @@ final class StreamingSessionManager {
         }
 
         $data = $table->get($sessionId);
+        if (!\is_array($data)) {
+            return null;
+        }
 
-        return $data !== false ? $data : null;
+        return [
+            'chat_id' => (string) $data['chat_id'],
+            'user_id' => (int) $data['user_id'],
+            'message_id' => (string) $data['message_id'],
+            'stop_requested' => (int) $data['stop_requested'],
+            'created_at' => (int) $data['created_at'],
+        ];
     }
 
     /**

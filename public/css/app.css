@@ -2391,6 +2391,50 @@ html, body {
     animation: 300ms var(--ease-out-3) both;
 }
 
+/* php-via wraps each live component in <div id="c-…">; keep it out of the grid and flex layouts */
+[id^="c-"] {
+    display: contents;
+}
+
+.connection-warning {
+    position: fixed;
+    top: var(--size-2);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: var(--size-1) var(--size-3);
+    border-radius: var(--radius-2);
+    background: var(--orange-9);
+    color: var(--gray-0);
+    font-size: var(--font-size-0);
+}
+
+.about-modal .modal-content {
+    max-width: 36rem;
+}
+
+.about-body {
+    padding: var(--size-4);
+    display: grid;
+    gap: var(--size-3);
+    line-height: var(--font-lineheight-3);
+}
+
+.about-body h3 {
+    margin: var(--size-2) 0 0;
+    font-size: var(--font-size-2);
+}
+
+.about-tech {
+    display: grid;
+    gap: var(--size-2);
+    padding-inline-start: var(--size-4);
+}
+
+.about-links {
+    font-size: var(--font-size-0);
+}
+
 /* === Suggestions & reasoning === */
 
 .message-reasoning {

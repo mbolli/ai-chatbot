@@ -8,14 +8,12 @@
  * @var null|array $user
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$md = fn ($s): string => (new Parsedown())->setSafeMode(true)->text((string) $s);
 $currentChatId = null;
 $title = 'New Chat';
-$selectedModel = $defaultModel;
 ?>
 
 <!-- Left Column: Sidebar (3 grid areas) -->
-<?php include __DIR__ . '/../partials/sidebar.php'; ?>
+<?php echo $slots['sidebar'](); ?>
 
 <!-- Center Column: Header, Messages, Input -->
 <?php include __DIR__ . '/../partials/header.php'; ?>

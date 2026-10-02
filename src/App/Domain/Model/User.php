@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Model;
 
-use Mezzio\Authentication\UserInterface;
-
 /**
- * User model implementing Mezzio's UserInterface.
+ * Registered or guest user.
  */
-final class User implements UserInterface {
+final class User {
     /**
      * @param array<string>        $roles
      * @param array<string, mixed> $details

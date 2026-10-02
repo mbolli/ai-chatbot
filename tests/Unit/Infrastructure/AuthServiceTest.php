@@ -7,7 +7,7 @@ namespace Tests\Unit\Infrastructure;
 use App\Domain\Model\User;
 use App\Infrastructure\Auth\AuthService;
 use App\Infrastructure\Repository\SqliteUserRepository;
-use Mezzio\Session\Session;
+use Tests\Support\ArraySession;
 
 /**
  * Get the simplified auth schema.
@@ -36,7 +36,7 @@ beforeEach(function (): void {
     $this->authService = new AuthService($this->userRepository);
 
     // Create a fresh session for each test
-    $this->session = new Session([]);
+    $this->session = new ArraySession();
 });
 
 describe('AuthService', function (): void {
@@ -94,7 +94,7 @@ describe('AuthService', function (): void {
             );
 
             $result = $this->authService->register(
-                new Session([]),
+                new ArraySession(),
                 'test@example.com',
                 'different123'
             );

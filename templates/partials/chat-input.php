@@ -5,15 +5,16 @@
  * @var null|string $chatId Chat ID (null for new chat)
  * @var array $models Available models
  * @var string $selectedModel Currently selected model
+ * @var array<string, string> $actions Action URLs
+ * @var array{message: string, model: string} $signals php-via signal ids
  * @var callable $e Escape function
  */
 $isNewChat = $chatId === null;
-$formAction = $isNewChat
-    ? '/cmd/chat'
-    : '/cmd/chat/' . $e($chatId) . '/message';
-$formSubmit = $isNewChat
-    ? 'if (!$_message.trim() || $_generatingMessage) return; $_generatingMessage = true; @post(\'/cmd/chat\', {payload: {message: $_message, model: $_model}})'
-    : 'if (!$_message.trim() || $_generatingMessage) return; document.getElementById(\'messages-container\').dataset.pinned = true; $_generatingMessage = true; @post(\'/cmd/chat/' . $e($chatId) . '/message\', {payload: {message: $_message}})';
+$msg = '$' . $signals['message'];
+$model = '$' . $signals['model'];
+$formSubmit = 'if (!' . $msg . '.trim() || $_generatingMessage) return; '
+    . ($isNewChat ? '' : 'document.getElementById(\'messages-container\').dataset.pinned = true; ')
+    . '$_generatingMessage = true; @post(\'' . $e($actions['send']) . '\')';
 ?>
 <div class="input-container">
     <form class="input-form" method="POST"
@@ -23,7 +24,7 @@ $formSubmit = $isNewChat
             <textarea
                 name="message"
                 class="message-input"
-                data-bind="_message"
+                data-bind="<?php echo $e($signals['message']); ?>"
                 autofocus
                 placeholder="Send a message..."
                 rows="1"
@@ -33,12 +34,12 @@ $formSubmit = $isNewChat
         <div class="input-toolbar">
             <div class="input-toolbar-left">
                 <?php if (isset($chatId)) { ?>
-                <select class="model-selector-compact" data-bind="_model"
-                        data-on:change="@patch('/cmd/chat/<?php echo $e($chatId); ?>/model', {payload: {model: $_model}})"
+                <select class="model-selector-compact" data-bind="<?php echo $e($signals['model']); ?>"
+                        data-on:change="@post('<?php echo $e($actions['model']); ?>')"
                         aria-label="Select AI model"
                         title="Select AI model">
                 <?php } else { ?>
-                <select class="model-selector-compact" data-bind="_model"
+                <select class="model-selector-compact" data-bind="<?php echo $e($signals['model']); ?>"
                         aria-label="Select AI model"
                         title="Select AI model">
                 <?php } ?>
@@ -54,14 +55,14 @@ $formSubmit = $isNewChat
             <p class="disclaimer">AI can make mistakes. Please verify information independently.</p>
             <div class="input-actions">
                 <?php if ($isNewChat) { ?>
-                    <button type="submit" class="btn btn-primary btn-send" data-attr:disabled="!$_message.trim() || !!$_generatingMessage" aria-label="Send message" title="Send message">
+                    <button type="submit" class="btn btn-primary btn-send" data-attr:disabled="!<?php echo $msg; ?>.trim() || !!$_generatingMessage" aria-label="Send message" title="Send message">
                         <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
                     </button>
                 <?php } else { ?>
-                    <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr:disabled="!$_message.trim()" aria-label="Send message" title="Send message">
+                    <button type="submit" class="btn btn-primary btn-send" data-show="!$_generatingMessage" data-attr:disabled="!<?php echo $msg; ?>.trim()" aria-label="Send message" title="Send message">
                         <svg class="icon" aria-hidden="true"><use href="#icon-paper-plane"></use></svg>
                     </button>
-                    <button type="button" class="btn btn-danger btn-stop" data-show="$_generatingMessage" data-on:click="@post('/cmd/chat/<?php echo $e($chatId); ?>/stop')" title="Stop generating" aria-label="Stop generating">
+                    <button type="button" class="btn btn-danger btn-stop" data-show="$_generatingMessage" data-on:click="@post('<?php echo $e($actions['stop']); ?>')" title="Stop generating" aria-label="Stop generating">
                         <svg class="icon" aria-hidden="true"><use href="#icon-stop"></use></svg>
                     </button>
                 <?php } ?>
