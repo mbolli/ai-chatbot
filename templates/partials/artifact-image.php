@@ -4,11 +4,12 @@ use App\Domain\Model\Document;
 
 /**
  * @var Document $document
+ * @var bool $canEdit
+ * @var array<string, string> $actions Action URLs
+ * @var string $contentSignal
+ * @var callable $e Escape function
  */
-$e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $content = $document->content ?? '';
-
-// Determine if content is SVG or base64 image
 $isSvg = str_starts_with(mb_trim($content), '<svg') || str_starts_with(mb_trim($content), '<?xml');
 $isBase64 = str_starts_with($content, 'data:image/');
 ?>
@@ -28,29 +29,9 @@ $isBase64 = str_starts_with($content, 'data:image/');
         <?php } ?>
     </div>
 
-    <?php if ($isSvg) { ?>
-        <div class="artifact-image-edit" data-show="$_artifactEditing">
-            <textarea
-                class="artifact-svg-textarea"
-                data-bind="_artifactContent"
-                placeholder="Enter SVG code..."
-                spellcheck="false"
-            ><?php echo $e($content); ?></textarea>
+    <?php if ($canEdit && $isSvg) {
+        [$editLabel, $textareaClass, $placeholder] = ['Edit SVG', 'artifact-svg-textarea', 'Enter SVG code...'];
 
-            <div class="artifact-edit-actions">
-                <button class="btn btn-secondary" data-on:click="$_artifactEditing = false">
-                    Cancel
-                </button>
-                <button class="btn btn-primary"
-                        data-on:click="@put('/cmd/document/<?php echo $e($document->id); ?>', {payload: {content: $_artifactContent}}); $_artifactEditing = false">
-                    Save
-                </button>
-            </div>
-        </div>
-
-        <button class="btn btn-edit" data-show="!$_artifactEditing"
-                data-on:click="$_artifactEditing = true; $_artifactContent = <?php echo $e(json_encode($content)); ?>">
-            <svg class="icon"><use href="#icon-edit"></use></svg> Edit SVG
-        </button>
-    <?php } ?>
+        include __DIR__ . '/artifact-editor.php';
+    } ?>
 </div>

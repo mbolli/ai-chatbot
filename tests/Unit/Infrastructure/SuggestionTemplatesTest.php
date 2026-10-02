@@ -12,34 +12,71 @@ beforeEach(function (): void {
 });
 
 describe('artifact suggestions', function (): void {
-    it('renders applicable suggestions with accept and dismiss commands and highlights them', function (): void {
-        $document = Document::text('chat', 'Essay', "# Title\n\nIt's a error. Fine sentence.");
-        $applicable = Suggestion::create($document->id, "It's a error.", "It's an error.", 'Use "an" before vowels');
-        $stale = Suggestion::create($document->id, 'Deleted sentence.', 'Gone.', 'Stale');
-
-        $html = $this->renderer->partial('artifact-content', [
+    beforeEach(function (): void {
+        $this->content = fn (Document $document, array $suggestions = [], bool $canEdit = true): string => $this->renderer->partial('artifact-content', [
             'document' => $document,
-            'suggestions' => [$applicable, $stale],
+            'latest' => true,
+            'suggestions' => $suggestions,
+            'canEdit' => $canEdit,
+            'actions' => ['accept' => '/_action/artifact-accept', 'dismiss' => '/_action/artifact-dismiss', 'save' => '/_action/artifact-save'],
+            'contentSignal' => 'artifact_content____n',
             'renderer' => $this->renderer,
+            'e' => TemplateRenderer::escape(...),
         ]);
+    });
+
+    it('renders suggestions with accept and dismiss actions and highlights them', function (): void {
+        $document = Document::text('chat', 'Essay', "# Title\n\nIt's a error. Fine sentence.");
+        $suggestion = Suggestion::create($document->id, "It's a error.", "It's an error.", 'Use "an" before vowels');
+
+        $html = ($this->content)($document, [$suggestion]);
 
         expect($html)->toContain('id="artifact-suggestions"')
             ->toContain('1 suggestion<')
-            ->toContain("@post('/cmd/suggestion/{$applicable->id}/accept')")
-            ->toContain("@post('/cmd/suggestion/{$applicable->id}/dismiss')")
+            ->toContain("@post('/_action/artifact-accept?id={$suggestion->id}')")
+            ->toContain("@post('/_action/artifact-dismiss?id={$suggestion->id}')")
             ->toContain('Use &quot;an&quot; before vowels')
-            ->toContain('<mark class="suggestion-highlight" id="suggestion-' . $applicable->id . '-highlight"')
+            ->toContain('<mark class="suggestion-highlight" id="suggestion-' . $suggestion->id . '-highlight"')
             ->toContain(">It's a error.</mark> Fine sentence.")
-            ->not->toContain($stale->id)
         ;
     });
 
     it('renders no suggestion block without suggestions', function (): void {
-        $document = Document::text('chat', 'Essay', 'Plain.');
-
-        $html = $this->renderer->partial('artifact-content', ['document' => $document, 'renderer' => $this->renderer]);
+        $html = ($this->content)(Document::text('chat', 'Essay', 'Plain.'));
 
         expect($html)->not->toContain('artifact-suggestions')->toContain('Plain.');
+    });
+});
+
+describe('artifact editor', function (): void {
+    beforeEach(function (): void {
+        $this->content = fn (Document $document, bool $canEdit = true): string => $this->renderer->partial('artifact-content', [
+            'document' => $document,
+            'latest' => true,
+            'suggestions' => [],
+            'canEdit' => $canEdit,
+            'actions' => ['save' => '/_action/artifact-save'],
+            'contentSignal' => 'artifact_content____n',
+            'renderer' => $this->renderer,
+            'e' => TemplateRenderer::escape(...),
+        ]);
+    });
+
+    it('binds an empty textarea to the content signal that the edit button fills', function (): void {
+        $html = ($this->content)(Document::code('chat', 'Script', 'echo "$total";'));
+
+        expect($html)->toContain('data-bind="artifact_content____n"')
+            ->toMatch('#<textarea[^>]*>\s*</textarea>#')
+            ->toContain('$artifact_content____n = &quot;echo \\&quot;$total\\&quot;;&quot;; $_artifactEditing = true')
+            ->toContain("@post('/_action/artifact-save')")
+        ;
+    });
+
+    it('offers no editor to visitors and none for a raster image', function (): void {
+        expect(($this->content)(Document::sheet('chat', 'Data', 'a,b'), canEdit: false))->not->toContain('artifact-edit')
+            ->and(($this->content)(Document::image('chat', 'Photo', 'data:image/png;base64,AAAA')))->not->toContain('artifact-edit')
+            ->and(($this->content)(Document::image('chat', 'Logo', '<svg xmlns="http://www.w3.org/2000/svg"></svg>')))->toContain('Edit SVG')
+        ;
     });
 });
 

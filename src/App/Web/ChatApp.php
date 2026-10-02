@@ -42,8 +42,9 @@ final class ChatApp {
         $message = $c->signal('', 'message');
         $model = $c->signal($chat->model ?? $this->container->ai()->getDefaultModel(), 'model');
 
-        $actions = $this->registerActions($c, $user, $chat, $message, $model);
-        $slots = $this->registerComponents($c, $user, $chat);
+        $documents = $chat !== null ? (new DocumentFeature($this->container))->register($c, $user, $chat) : ['actions' => [], 'slots' => []];
+        $actions = $this->registerActions($c, $user, $chat, $message, $model) + $documents['actions'];
+        $slots = $this->registerComponents($c, $user, $chat, $actions) + $documents['slots'];
 
         $c->view(fn (): string => $this->renderPage($c->getId(), $user, $chat, $message, $model, $actions, $slots), cacheUpdates: false);
     }
@@ -88,9 +89,11 @@ final class ChatApp {
     }
 
     /**
+     * @param array<string, string> $actions
+     *
      * @return array<string, callable(): string> slot name => component renderer
      */
-    private function registerComponents(Context $c, User $user, ?Chat $chat): array {
+    private function registerComponents(Context $c, User $user, ?Chat $chat, array $actions): array {
         $currentChatId = $chat?->id;
 
         $slots = [
@@ -121,9 +124,9 @@ final class ChatApp {
             $cc->view(fn (): string => $this->renderStream($chat->id), cacheUpdates: false);
         }, 'stream');
 
-        $slots['messages'] = $c->component(function (Context $cc) use ($user, $chat, $stream): void {
+        $slots['messages'] = $c->component(function (Context $cc) use ($user, $chat, $stream, $actions): void {
             $cc->addScope(Scopes::chat($chat->id));
-            $cc->view(fn (): string => $this->renderMessages($user, $chat->id, $stream), cacheUpdates: false);
+            $cc->view(fn (): string => $this->renderMessages($user, $chat->id, $stream, $actions), cacheUpdates: false);
         }, 'messages');
 
         return $slots;
@@ -162,9 +165,10 @@ final class ChatApp {
     }
 
     /**
-     * @param callable(): string $stream
+     * @param callable(): string    $stream
+     * @param array<string, string> $actions
      */
-    private function renderMessages(User $user, string $chatId, callable $stream): string {
+    private function renderMessages(User $user, string $chatId, callable $stream, array $actions): string {
         $documents = [];
         foreach ($this->container->documents()->findByChat($chatId) as $document) {
             if ($document->messageId !== null) {
@@ -181,6 +185,7 @@ final class ChatApp {
             'chatId' => $chatId,
             'streamingMessageId' => $live['messageId'] ?? null,
             'stream' => $stream,
+            'actions' => $actions,
             'e' => TemplateRenderer::escape(...),
             'md' => TemplateRenderer::md(...),
         ]);
