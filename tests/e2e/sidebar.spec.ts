@@ -40,7 +40,6 @@ test('chat history navigates between chats', async ({ page }) => {
 });
 
 test('deleting a chat removes it from the history', async ({ page }) => {
-    test.fixme(true, 'needs the delete chat action, still on the /cmd endpoint of the Mezzio app');
     const first = await startChat(page, '{help}');
     await waitForReply(page, 1);
     const second = await startChat(page, '{help}');

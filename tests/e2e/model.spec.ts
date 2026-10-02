@@ -30,13 +30,12 @@ test('the model choice is stored per chat', async ({ page }) => {
 });
 
 test('the chat visibility is stored', async ({ page }) => {
-    test.fixme(true, 'needs the visibility action, still on the /cmd endpoint of the Mezzio app');
-    const chatId = await startChat(page, '{help}');
+    await startChat(page, '{help}');
     await waitForReply(page, 1);
     const visibility = page.getByRole('combobox', { name: 'Chat visibility' });
     await expect(visibility).toHaveValue('private');
 
-    const saved = page.waitForResponse((res) => res.url().endsWith(`/cmd/chat/${chatId}/visibility`) && res.status() === 204);
+    const saved = page.waitForResponse((res) => res.url().includes('/_action/visibility') && res.ok());
     await visibility.selectOption('public');
     await saved;
 
