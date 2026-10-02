@@ -78,6 +78,17 @@ describe('artifact editor', function (): void {
             ->and(($this->content)(Document::image('chat', 'Logo', '<svg xmlns="http://www.w3.org/2000/svg"></svg>')))->toContain('Edit SVG')
         ;
     });
+
+    it('renders an SVG as an image, so its scripts never run', function (): void {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script></svg>';
+
+        $html = ($this->content)(Document::image('chat', 'Logo', $svg));
+
+        expect($html)->toContain('<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '"')
+            ->not->toContain('<script>')
+            ->not->toContain('<svg xmlns')
+        ;
+    });
 });
 
 describe('SuggestionHighlighter', function (): void {

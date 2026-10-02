@@ -14,11 +14,10 @@ $isSvg = str_starts_with(mb_trim($content), '<svg') || str_starts_with(mb_trim($
 $isBase64 = str_starts_with($content, 'data:image/');
 ?>
 <div class="artifact-image">
-    <div class="artifact-image-preview">
+    <div class="artifact-image-preview" id="artifact-content-text">
         <?php if ($isSvg) { ?>
-            <div class="svg-container" id="artifact-content-text">
-                <?php echo $content; ?>
-            </div>
+            <?php // As an image, scripts and event handlers in the SVG never run?>
+            <img src="data:image/svg+xml;base64,<?php echo base64_encode($content); ?>" alt="<?php echo $e($document->title); ?>" />
         <?php } elseif ($isBase64) { ?>
             <img src="<?php echo $e($content); ?>" alt="<?php echo $e($document->title); ?>" />
         <?php } else { ?>
