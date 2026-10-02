@@ -21,6 +21,12 @@ final class OpenAIStreamingClient {
     private const string API_HOST = 'api.openai.com';
     private const int DEFAULT_MAX_TOKENS = 4096;
 
+    /**
+     * Reasoning models reject function tools on /v1/chat/completions unless reasoning is off.
+     * gpt-6-astra and gpt-6.1-sol do not accept 'none' and need the Responses API instead.
+     */
+    private const array NO_REASONING_MODELS = ['gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna'];
+
     private ?CreateDocumentTool $createDocumentTool = null;
     private ?UpdateDocumentTool $updateDocumentTool = null;
 
@@ -80,14 +86,18 @@ final class OpenAIStreamingClient {
             $payload['tool_choice'] = 'auto';
         }
 
+        if (\in_array($model, self::NO_REASONING_MODELS, true)) {
+            $payload['reasoning_effort'] = 'none';
+        }
+
         yield from $this->executeStreamingRequest($payload, $messages, $model, $system);
     }
 
     /**
      * Execute a streaming request to OpenAI API using raw socket for true streaming.
      *
-     * @param array<string, mixed>                        $payload
-     * @param array<array{role: string, content: string}> $originalMessages
+     * @param array<string, mixed>       $payload
+     * @param list<array<string, mixed>> $originalMessages
      *
      * @return \Generator<string>
      */
@@ -165,7 +175,6 @@ final class OpenAIStreamingClient {
 
         // Track tool calls being accumulated
         $toolCalls = [];
-        $currentToolIndex = -1;
 
         // Stream SSE events
         $buffer = $remaining;
@@ -222,12 +231,8 @@ final class OpenAIStreamingClient {
                                                 'arguments' => $toolCallDelta['function']['arguments'] ?? '',
                                             ],
                                         ];
-                                        $currentToolIndex = $index;
-                                    } elseif ($currentToolIndex >= 0 && isset($toolCalls[$currentToolIndex])) {
-                                        // Append to existing tool call arguments
-                                        if (isset($toolCallDelta['function']['arguments'])) {
-                                            $toolCalls[$currentToolIndex]['function']['arguments'] .= $toolCallDelta['function']['arguments'];
-                                        }
+                                    } elseif (isset($toolCalls[$index], $toolCallDelta['function']['arguments'])) {
+                                        $toolCalls[$index]['function']['arguments'] .= $toolCallDelta['function']['arguments'];
                                     }
                                 }
                             }
@@ -253,7 +258,7 @@ final class OpenAIStreamingClient {
      * Process tool calls and continue the conversation.
      *
      * @param array<int, array{id: string, function: array{name: string, arguments: string}}> $toolCalls
-     * @param array<array{role: string, content: string}>                                     $originalMessages
+     * @param list<array<string, mixed>>                                                      $originalMessages
      *
      * @return \Generator<string>
      */
@@ -311,7 +316,7 @@ final class OpenAIStreamingClient {
         // Continue streaming with tool results
         $payload = [
             'model' => $model,
-            'max_tokens' => $this->maxTokens,
+            'max_completion_tokens' => $this->maxTokens,
             'messages' => $formattedMessages,
             'stream' => true,
         ];
@@ -320,6 +325,10 @@ final class OpenAIStreamingClient {
         if (!empty($tools)) {
             $payload['tools'] = $tools;
             $payload['tool_choice'] = 'auto';
+        }
+
+        if (\in_array($model, self::NO_REASONING_MODELS, true)) {
+            $payload['reasoning_effort'] = 'none';
         }
 
         yield from $this->executeStreamingRequest($payload, $continuationMessages, $model, $system);

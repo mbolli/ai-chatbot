@@ -105,7 +105,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 # OPENAI_API_KEY=sk-your-key-here
 
 # Optional: Model and token configuration
-AI_DEFAULT_MODEL=claude-sonnet-4-5
+AI_DEFAULT_MODEL=claude-haiku-4-5
 AI_MAX_TOKENS=4096
 ```
 
@@ -275,26 +275,18 @@ The application follows the Command Query Responsibility Segregation pattern:
 
 ### Supported Models
 
-**Anthropic (Claude 4.5)**
-- `claude-opus-4-5` - Claude Opus 4.5 (Maximum intelligence)
-- `claude-sonnet-4-5` - Claude Sonnet 4.5 (Best balance)
-- `claude-haiku-4-5` - Claude Haiku 4.5 (Fast/Cheap)
+**Anthropic**
+- `claude-opus-5-5` - Claude Opus 5.5 (Maximum intelligence)
+- `claude-sonnet-5-5` - Claude Sonnet 5.5 (Best balance)
+- `claude-haiku-4-5` - Claude Haiku 4.5 (Fast/Cheap, the only Anthropic model in production mode)
 
-**Anthropic (Legacy)**
-- `claude-opus-4-1` - Claude Opus 4.1
-- `claude-opus-4` - Claude Opus 4
-- `claude-sonnet-4` - Claude Sonnet 4
-- `claude-3-5-haiku-20241022` - Claude Haiku 3.5
-- `claude-3-haiku-20240307` - Claude Haiku 3 (Cheapest!)
+**OpenAI**
+- `gpt-6-sol` / `gpt-5.6-terra` - Full capability
+- `gpt-6-luna` - Cheapest
+- `gpt-5.6-luna`
+- `gpt-4.1-mini` / `gpt-4o-mini`
 
-**OpenAI (GPT-5.x)**
-- `gpt-5.2` / `gpt-5.1` / `gpt-5` - Full capability
-- `gpt-5-mini` - Balanced (cost-effective)
-- `gpt-5-nano` - Cheapest
-
-**OpenAI (GPT-4.x)**
-- `gpt-4.1` / `gpt-4.1-mini` / `gpt-4.1-nano`
-- `gpt-4o` / `gpt-4o-mini`
+In production mode (`APP_ENV=production`) only the cheap models are offered: Haiku 4.5, GPT-6 Luna, GPT-4o Mini, GPT-5.6 Luna, GPT-4.1 Mini. Chats stored with a model that is no longer offered fall back to the default.
 
 ### AI Tools
 
@@ -441,7 +433,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 OPENAI_API_KEY=sk-your-key-here
 
 # AI Model Configuration
-AI_DEFAULT_MODEL=claude-3-haiku-20240307
+AI_DEFAULT_MODEL=claude-haiku-4-5
 AI_MAX_TOKENS=2048
 
 # Context compression settings

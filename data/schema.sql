@@ -28,7 +28,7 @@ CREATE TABLE "chats" (
     "id" TEXT PRIMARY KEY NOT NULL,
     "user_id" INTEGER NOT NULL,
     "title" TEXT DEFAULT NULL,
-    "model" TEXT NOT NULL DEFAULT 'claude-3-5-sonnet',
+    "model" TEXT NOT NULL DEFAULT 'claude-haiku-4-5',
     "visibility" TEXT NOT NULL DEFAULT 'private' CHECK ("visibility" IN ('private', 'public')),
     "created_at" INTEGER NOT NULL,
     "updated_at" INTEGER NOT NULL,

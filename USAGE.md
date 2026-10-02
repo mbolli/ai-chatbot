@@ -21,10 +21,10 @@ Select your preferred AI model from the dropdown in the input toolbar:
 
 | Model | Provider | Best For |
 |-------|----------|----------|
-| Claude Sonnet 4 | Anthropic | Balanced speed & quality |
-| Claude Haiku | Anthropic | Fast responses |
-| GPT-4o | OpenAI | Complex reasoning |
-| GPT-4o Mini | OpenAI | Quick tasks |
+| Claude Sonnet 5.5 | Anthropic | Balanced speed & quality |
+| Claude Haiku 4.5 | Anthropic | Fast responses |
+| GPT-6 Sol | OpenAI | Complex reasoning |
+| GPT-6 Luna | OpenAI | Quick tasks |
 
 ### 📄 Artifacts
 

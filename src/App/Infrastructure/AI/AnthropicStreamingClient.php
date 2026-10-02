@@ -21,6 +21,7 @@ final class AnthropicStreamingClient {
     private const string API_HOST = 'api.anthropic.com';
     private const string API_VERSION = '2023-06-01';
     private const int DEFAULT_MAX_TOKENS = 4096;
+    private const array LOW_EFFORT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5'];
 
     private ?CreateDocumentTool $createDocumentTool = null;
     private ?UpdateDocumentTool $updateDocumentTool = null;
@@ -42,7 +43,7 @@ final class AnthropicStreamingClient {
      * Stream chat completion from Anthropic API with true real-time streaming.
      *
      * @param array<array{role: string, content: string}> $messages Conversation messages
-     * @param string                                      $model    Model ID (e.g., claude-sonnet-4-5-20250929)
+     * @param string                                      $model    Model ID (e.g., claude-haiku-4-5)
      * @param null|string                                 $system   Optional system prompt
      *
      * @return \Generator<string> Yields text chunks as they arrive
@@ -53,12 +54,7 @@ final class AnthropicStreamingClient {
         // Build tools array if available
         $tools = $this->buildToolsArray();
 
-        $payload = [
-            'model' => $model,
-            'max_tokens' => $this->maxTokens,
-            'messages' => $this->formatMessages($messages),
-            'stream' => true,
-        ];
+        $payload = $this->basePayload($model, $messages);
 
         if ($system !== null) {
             $payload['system'] = $system;
@@ -169,11 +165,12 @@ final class AnthropicStreamingClient {
         $buffer = $remaining;
         $hasYieldedContent = false;
 
-        // Track tool use state
-        $toolUseState = [
-            'activeToolUse' => null,
-            'pendingToolCalls' => [],
-        ];
+        // All content blocks by index, echoed back unchanged when continuing after tool use
+        /** @var array<int, array<string, mixed>> $blocks */
+        $blocks = [];
+
+        /** @var array<int, string> $toolInputJson */
+        $toolInputJson = [];
 
         while (true) {
             // Process complete lines from buffer
@@ -206,58 +203,64 @@ final class AnthropicStreamingClient {
 
                 $type = $event['type'] ?? '';
 
-                // Handle text content
-                if ($type === 'content_block_delta') {
+                $index = (int) ($event['index'] ?? 0);
+
+                if ($type === 'content_block_delta' && isset($blocks[$index])) {
                     $delta = $event['delta'] ?? [];
-                    $deltaType = $delta['type'] ?? '';
 
-                    if ($deltaType === 'text_delta' && isset($delta['text'])) {
-                        $hasYieldedContent = true;
+                    switch ($delta['type'] ?? '') {
+                        case 'text_delta':
+                            $hasYieldedContent = true;
+                            $blocks[$index]['text'] .= $delta['text'];
 
-                        yield $delta['text'];
-                    } elseif ($deltaType === 'input_json_delta' && isset($delta['partial_json'])) {
-                        // Accumulate tool input JSON
-                        if ($toolUseState['activeToolUse'] !== null) {
-                            $toolUseState['activeToolUse']['input_json'] .= $delta['partial_json'];
-                        }
+                            yield $delta['text'];
+
+                            break;
+
+                        case 'thinking_delta':
+                            $blocks[$index]['thinking'] .= $delta['thinking'];
+
+                            break;
+
+                        case 'signature_delta':
+                            $blocks[$index]['signature'] = $delta['signature'];
+
+                            break;
+
+                        case 'input_json_delta':
+                            $toolInputJson[$index] = ($toolInputJson[$index] ?? '') . $delta['partial_json'];
+
+                            break;
                     }
                 } elseif ($type === 'content_block_start') {
-                    $contentBlock = $event['content_block'] ?? [];
-                    if (($contentBlock['type'] ?? '') === 'tool_use') {
-                        // Start a new tool use block
-                        $toolUseState['activeToolUse'] = [
-                            'id' => $contentBlock['id'] ?? '',
-                            'name' => $contentBlock['name'] ?? '',
-                            'input_json' => '',
-                        ];
+                    $blocks[$index] = $event['content_block'] ?? [];
+                } elseif ($type === 'content_block_stop' && ($blocks[$index]['type'] ?? '') === 'tool_use') {
+                    try {
+                        $input = json_decode(($toolInputJson[$index] ?? '') ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException) {
+                        $input = [];
                     }
-                } elseif ($type === 'content_block_stop') {
-                    // Finalize tool use block if active
-                    if ($toolUseState['activeToolUse'] !== null) {
-                        $toolCall = $toolUseState['activeToolUse'];
-
-                        try {
-                            $toolCall['input'] = json_decode($toolCall['input_json'] ?: '{}', true, 512, JSON_THROW_ON_ERROR);
-                        } catch (\JsonException) {
-                            $toolCall['input'] = [];
-                        }
-                        unset($toolCall['input_json']);
-                        $toolUseState['pendingToolCalls'][] = $toolCall;
-                        $toolUseState['activeToolUse'] = null;
-                    }
+                    // An empty PHP array would encode as [], the API expects an object
+                    $blocks[$index]['input'] = \is_array($input) && $input !== [] ? $input : new \stdClass();
                 } elseif ($type === 'message_stop') {
-                    // Check if we have pending tool calls
-                    if (!empty($toolUseState['pendingToolCalls'])) {
+                    $toolCalls = array_values(array_filter($blocks, static fn (array $b): bool => ($b['type'] ?? '') === 'tool_use'));
+
+                    if ($toolCalls !== []) {
                         $socket->close();
 
-                        // Execute tool calls and continue the conversation
-                        $toolResults = $this->executeToolCalls($toolUseState['pendingToolCalls']);
+                        $toolResults = $this->executeToolCalls($toolCalls);
 
-                        // Build continuation messages with tool results
+                        // Echo the assistant turn back unchanged (thinking blocks must keep their signatures)
+                        ksort($blocks);
+                        $assistantContent = array_values(array_filter(
+                            $blocks,
+                            static fn (array $b): bool => ($b['type'] ?? '') !== 'text' || ($b['text'] ?? '') !== '',
+                        ));
+
                         $continuationMessages = $originalMessages;
                         $continuationMessages[] = [
                             'role' => 'assistant',
-                            'content' => $this->buildAssistantToolUseContent($toolUseState['pendingToolCalls']),
+                            'content' => $assistantContent,
                         ];
                         $continuationMessages[] = [
                             'role' => 'user',
@@ -265,12 +268,7 @@ final class AnthropicStreamingClient {
                         ];
 
                         // Continue streaming with tool results
-                        $continuationPayload = [
-                            'model' => $model,
-                            'max_tokens' => $this->maxTokens,
-                            'messages' => $this->formatMessages($continuationMessages),
-                            'stream' => true,
-                        ];
+                        $continuationPayload = $this->basePayload($model, $continuationMessages);
 
                         if ($system !== null) {
                             $continuationPayload['system'] = $system;
@@ -313,6 +311,27 @@ final class AnthropicStreamingClient {
         if (!$hasYieldedContent) {
             error_log('Anthropic API stream ended without content. Remaining buffer: ' . substr($buffer, 0, 200));
         }
+    }
+
+    /**
+     * @param array<array{role: string, content: array<mixed>|string}> $messages
+     *
+     * @return array<string, mixed>
+     */
+    private function basePayload(string $model, array $messages): array {
+        $payload = [
+            'model' => $model,
+            'max_tokens' => $this->maxTokens,
+            'messages' => $this->formatMessages($messages),
+            'stream' => true,
+        ];
+
+        // These models always think, and thinking tokens count against max_tokens
+        if (\in_array($model, self::LOW_EFFORT_MODELS, true)) {
+            $payload['output_config'] = ['effort' => 'low'];
+        }
+
+        return $payload;
     }
 
     /**
@@ -402,7 +421,7 @@ final class AnthropicStreamingClient {
     /**
      * Execute tool calls and return results.
      *
-     * @param array<array{id: string, name: string, input: array<string, mixed>}> $toolCalls
+     * @param list<array<string, mixed>> $toolCalls tool_use content blocks
      *
      * @return array<array{tool_use_id: string, content: string}>
      */
@@ -410,6 +429,7 @@ final class AnthropicStreamingClient {
         $results = [];
 
         foreach ($toolCalls as $toolCall) {
+            $toolCall['input'] = (array) $toolCall['input'];
             $result = match ($toolCall['name']) {
                 'createDocument' => $this->createDocumentTool?->createDocument(
                     $toolCall['input']['kind'] ?? 'text',
@@ -431,28 +451,6 @@ final class AnthropicStreamingClient {
         }
 
         return $results;
-    }
-
-    /**
-     * Build assistant message content with tool use blocks.
-     *
-     * @param array<array{id: string, name: string, input: array<string, mixed>}> $toolCalls
-     *
-     * @return array<array{type: string, id?: string, name?: string, input?: array<string, mixed>}>
-     */
-    private function buildAssistantToolUseContent(array $toolCalls): array {
-        $content = [];
-
-        foreach ($toolCalls as $toolCall) {
-            $content[] = [
-                'type' => 'tool_use',
-                'id' => $toolCall['id'],
-                'name' => $toolCall['name'],
-                'input' => $toolCall['input'],
-            ];
-        }
-
-        return $content;
     }
 
     /**

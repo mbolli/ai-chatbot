@@ -27,91 +27,53 @@ use LLPhant\OpenAIConfig;
 final class LLPhantAIService implements AIServiceInterface {
     /**
      * Default model to use when requested model is not found.
-     * Using Haiku 3 as it's the cheapest option.
+     * Haiku 4.5 is the cheapest Anthropic model still served.
      */
-    public const string DEFAULT_MODEL = 'claude-3-haiku-20240307';
+    public const string DEFAULT_MODEL = 'claude-haiku-4-5';
 
     /**
-     * Anthropic Claude models (current + previous generation).
-     *
-     * Opus: Maximum intelligence (premium)
-     * - 4.5: $5/$25 per MTok (newest, best value for Opus)
-     * - 4.1/4: $15/$75 per MTok
-     *
-     * Sonnet: Best balance of speed and intelligence
-     * - 4.5/4: $3/$15 per MTok
-     *
-     * Haiku: Fastest, most cost-effective
-     * - 4.5: $1/$5 per MTok
-     * - 3.5: $0.80/$4 per MTok
-     * - 3: $0.25/$1.25 per MTok (cheapest!)
+     * Anthropic Claude models (prices per MTok, input/output).
      */
     private const array ANTHROPIC_MODELS = [
-        // Claude 4.x
-        'claude-opus-4-5' => 'Claude Opus 4.5',
-        'claude-sonnet-4-5' => 'Claude Sonnet 4.5',
-        'claude-haiku-4-5' => 'Claude Haiku 4.5',
-        'claude-opus-4-1' => 'Claude Opus 4.1',
-        'claude-opus-4' => 'Claude Opus 4',
-        'claude-sonnet-4' => 'Claude Sonnet 4',
-        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',
-        'claude-3-haiku-20240307' => 'Claude Haiku 3',
+        'claude-opus-5-5' => 'Claude Opus 5.5',     // $4/$20
+        'claude-sonnet-5-5' => 'Claude Sonnet 5.5', // $2/$10
+        'claude-haiku-4-5' => 'Claude Haiku 4.5',   // $1/$5
     ];
 
     /**
-     * Production-allowed Anthropic models (cost-effective Haiku only).
-     * Sorted by cost: Haiku 3 < 3.5 < 4.5.
+     * Production-allowed Anthropic models (cost-effective only).
      */
     private const array ANTHROPIC_MODELS_PROD = [
-        'claude-haiku-4-5' => 'Claude Haiku 4.5',       // $1/$5
-        'claude-3-5-haiku-20241022' => 'Claude Haiku 3.5',   // $0.80/$4
-        'claude-3-haiku-20240307' => 'Claude Haiku 3',       // $0.25/$1.25
+        'claude-haiku-4-5' => 'Claude Haiku 4.5',   // $1/$5
     ];
 
     /**
-     * OpenAI GPT models (current + previous generation).
-     *
-     * GPT-5.x (current generation - 2025):
-     * - gpt-5.2/5.1/5: Full capability ($1.25-1.75 input / $10-14 output)
-     * - gpt-5-mini: Balanced ($0.25 input / $2 output)
-     * - gpt-5-nano: Cheapest ($0.05 input / $0.40 output)
-     *
-     * GPT-4.x (previous generation):
-     * - gpt-4.1/mini/nano: Latest GPT-4 series
-     * - gpt-4o/mini: Omni models
+     * OpenAI GPT models (prices per MTok, input/output).
      */
     private const array OPENAI_MODELS = [
-        // GPT-5.x (current)
-        'gpt-5.2' => 'GPT-5.2',
-        'gpt-5.1' => 'GPT-5.1',
-        'gpt-5' => 'GPT-5',
-        'gpt-5-mini' => 'GPT-5 Mini',
-        'gpt-5-nano' => 'GPT-5 Nano',
-        // GPT-4.x (previous gen)
-        'gpt-4.1' => 'GPT-4.1',
-        'gpt-4.1-mini' => 'GPT-4.1 Mini',
-        'gpt-4.1-nano' => 'GPT-4.1 Nano',
-        'gpt-4o' => 'GPT-4o',
-        'gpt-4o-mini' => 'GPT-4o Mini',
+        'gpt-6-sol' => 'GPT-6 Sol',           // $2/$10
+        'gpt-5.6-terra' => 'GPT-5.6 Terra',   // $2/$12
+        'gpt-6-luna' => 'GPT-6 Luna',         // $0.10/$0.50
+        'gpt-5.6-luna' => 'GPT-5.6 Luna',     // $0.20/$1.20
+        'gpt-4.1-mini' => 'GPT-4.1 Mini',     // $0.40/$1.60
+        'gpt-4o-mini' => 'GPT-4o Mini',       // $0.15/$0.60
     ];
 
     /**
-     * Production-allowed OpenAI models (cost-effective only).
-     * Sorted by cost (cheapest first): nano < mini < 4o-mini < 4.1-nano.
+     * Production-allowed OpenAI models (cost-effective only), cheapest first.
      */
     private const array OPENAI_MODELS_PROD = [
-        'gpt-5-nano' => 'GPT-5 Nano',       // $0.05/$0.40 - cheapest
-        'gpt-5-mini' => 'GPT-5 Mini',       // $0.25/$2.00
-        'gpt-4o-mini' => 'GPT-4o Mini',     // $0.15/$0.60
-        'gpt-4.1-nano' => 'GPT-4.1 Nano',   // $0.10/$0.40
-        'gpt-4.1-mini' => 'GPT-4.1 Mini',   // $0.40/$1.60
+        'gpt-6-luna' => 'GPT-6 Luna',         // $0.10/$0.50
+        'gpt-4o-mini' => 'GPT-4o Mini',       // $0.15/$0.60
+        'gpt-5.6-luna' => 'GPT-5.6 Luna',     // $0.20/$1.20
+        'gpt-4.1-mini' => 'GPT-4.1 Mini',     // $0.40/$1.60
     ];
 
     /**
      * Fast model for title generation (prefer cheapest for speed/cost).
      */
-    private const string TITLE_MODEL_ANTHROPIC = 'claude-3-haiku-20240307';
-    private const string TITLE_MODEL_OPENAI = 'gpt-5-nano';
+    private const string TITLE_MODEL_ANTHROPIC = 'claude-haiku-4-5';
+    private const string TITLE_MODEL_OPENAI = 'gpt-6-luna';
 
     private CreateDocumentTool $createDocumentTool;
     private UpdateDocumentTool $updateDocumentTool;
@@ -155,6 +117,11 @@ final class LLPhantAIService implements AIServiceInterface {
 
     public function streamChat(array $messages, string $model, ?string $chatId = null, ?string $messageId = null): \Generator {
         $this->createdDocuments = [];
+
+        // Stored chats may reference retired models, and the model command accepts any string
+        if (!($this->getAvailableModels()[$model]['available'] ?? false)) {
+            $model = $this->getDefaultModel();
+        }
 
         $provider = $this->getProvider($model);
 
@@ -242,13 +209,16 @@ final class LLPhantAIService implements AIServiceInterface {
     }
 
     public function getDefaultModel(): string {
-        // Return configured default, or first available model, or fallback
-        if ($this->defaultModel !== null) {
-            return $this->defaultModel;
+        $models = $this->getAvailableModels();
+
+        // Configured default if selectable, else the cheap built-in default, else first available
+        foreach ([$this->defaultModel, self::DEFAULT_MODEL] as $candidate) {
+            if ($candidate !== null && ($models[$candidate]['available'] ?? false)) {
+                return $candidate;
+            }
         }
 
-        // Pick first available
-        foreach ($this->getAvailableModels() as $id => $info) {
+        foreach ($models as $id => $info) {
             if ($info['available']) {
                 return $id;
             }
