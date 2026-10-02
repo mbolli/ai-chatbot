@@ -8,6 +8,7 @@ use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
 use App\Domain\Repository\RateLimitRepositoryInterface;
+use App\Domain\Repository\SuggestionRepositoryInterface;
 use App\Domain\Repository\UserRepositoryInterface;
 use App\Domain\Repository\VoteRepositoryInterface;
 use App\Domain\Service\AIServiceInterface;
@@ -23,6 +24,7 @@ use App\Infrastructure\Http\Handler\ChatHandler;
 use App\Infrastructure\Http\Handler\Command\ChatCommandHandler;
 use App\Infrastructure\Http\Handler\Command\DocumentCommandHandler;
 use App\Infrastructure\Http\Handler\Command\MessageCommandHandler;
+use App\Infrastructure\Http\Handler\Command\SuggestionCommandHandler;
 use App\Infrastructure\Http\Handler\Command\VoteCommandHandler;
 use App\Infrastructure\Http\Handler\HomeHandler;
 use App\Infrastructure\Http\Handler\Query\ChatQueryHandler;
@@ -34,6 +36,7 @@ use App\Infrastructure\Persistence\SqliteChatRepository;
 use App\Infrastructure\Persistence\SqliteDocumentRepository;
 use App\Infrastructure\Persistence\SqliteMessageRepository;
 use App\Infrastructure\Persistence\SqliteRateLimitRepository;
+use App\Infrastructure\Persistence\SqliteSuggestionRepository;
 use App\Infrastructure\Persistence\SqliteVoteRepository;
 use App\Infrastructure\Repository\SqliteUserRepository;
 use App\Infrastructure\Session\SwooleTableSessionPersistence;
@@ -110,6 +113,7 @@ class ConfigProvider {
                 DocumentRepositoryInterface::class => fn (ContainerInterface $container): DocumentRepositoryInterface => new SqliteDocumentRepository($container->get(\PDO::class)),
                 VoteRepositoryInterface::class => fn (ContainerInterface $container): VoteRepositoryInterface => new SqliteVoteRepository($container->get(\PDO::class)),
                 RateLimitRepositoryInterface::class => fn (ContainerInterface $container): RateLimitRepositoryInterface => new SqliteRateLimitRepository($container->get(\PDO::class)),
+                SuggestionRepositoryInterface::class => fn (ContainerInterface $container): SuggestionRepositoryInterface => new SqliteSuggestionRepository($container->get(\PDO::class)),
 
                 // Rate Limit Service
                 RateLimitService::class => function (ContainerInterface $container): RateLimitService {
@@ -141,6 +145,9 @@ class ConfigProvider {
                         defaultModel: $aiConfig['default_model'] ?? null,
                         productionMode: $isProduction,
                         responseFormat: $aiConfig['response_format'] ?? 'markdown',
+                        suggestionRepository: $container->get(SuggestionRepositoryInterface::class),
+                        chatRepository: $container->get(ChatRepositoryInterface::class),
+                        eventBus: $container->get(EventBusInterface::class),
                     );
                 },
 
@@ -192,6 +199,12 @@ class ConfigProvider {
                     $container->get(ChatRepositoryInterface::class),
                     $container->get(EventBusInterface::class),
                 ),
+                SuggestionCommandHandler::class => fn (ContainerInterface $container): SuggestionCommandHandler => new SuggestionCommandHandler(
+                    $container->get(SuggestionRepositoryInterface::class),
+                    $container->get(DocumentRepositoryInterface::class),
+                    $container->get(ChatRepositoryInterface::class),
+                    $container->get(EventBusInterface::class),
+                ),
                 VoteCommandHandler::class => fn (ContainerInterface $container): VoteCommandHandler => new VoteCommandHandler(
                     $container->get(VoteRepositoryInterface::class),
                     $container->get(ChatRepositoryInterface::class),
@@ -219,6 +232,7 @@ class ConfigProvider {
                     $container->get(SwooleTableSessionPersistence::class),
                     $container->get(TemplateRenderer::class),
                     $container->get(DocumentRepositoryInterface::class),
+                    $container->get(SuggestionRepositoryInterface::class),
                 ),
 
                 // Cleanup Timer Listener (for mezzio-swoole WorkerStartEvent)

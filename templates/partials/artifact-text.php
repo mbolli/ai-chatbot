@@ -1,17 +1,30 @@
 <?php
 
 use App\Domain\Model\Document;
+use App\Domain\Model\Suggestion;
+use App\Infrastructure\Template\SuggestionHighlighter;
 use App\Infrastructure\Template\TemplateRenderer;
 
 /**
  * @var Document $document
+ * @var list<Suggestion> $suggestions
  */
 $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
+// Suggestions whose sentence was edited away can no longer be applied
+$suggestions = array_values(array_filter(
+    $suggestions ?? [],
+    fn (Suggestion $s): bool => $s->appliesTo($document->content ?? ''),
+));
+
 // Use proper markdown parser (handles escaping internally)
-$content = TemplateRenderer::md($document->content ?? '');
+$content = SuggestionHighlighter::highlight(TemplateRenderer::md($document->content ?? ''), $suggestions);
 ?>
 <div class="artifact-text">
+    <?php if ($suggestions !== []) {
+        include __DIR__ . '/artifact-suggestions.php';
+    } ?>
+
     <div class="artifact-text-content markdown" id="artifact-content-text">
         <?php echo $content; ?>
     </div>

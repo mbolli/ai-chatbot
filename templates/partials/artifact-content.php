@@ -1,12 +1,14 @@
 <?php
 
 use App\Domain\Model\Document;
+use App\Domain\Model\Suggestion;
 use App\Infrastructure\Template\TemplateRenderer;
 
 /**
  * Artifact content wrapper - rendered into #artifact-content via SSE.
  *
  * @var Document $document
+ * @var list<Suggestion> $suggestions Pending suggestions (text documents only)
  * @var TemplateRenderer $renderer
  * @var callable $e Escape function
  */
@@ -16,7 +18,7 @@ $e ??= fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8')
     <?php
     echo match ($document->kind) {
         'code' => $renderer->partial('artifact-code', ['document' => $document]),
-        'text' => $renderer->partial('artifact-text', ['document' => $document]),
+        'text' => $renderer->partial('artifact-text', ['document' => $document, 'suggestions' => $suggestions ?? []]),
         'sheet' => $renderer->partial('artifact-sheet', ['document' => $document]),
         'image' => $renderer->partial('artifact-image', ['document' => $document]),
         default => '<pre>' . $e($document->content ?? '') . '</pre>',
