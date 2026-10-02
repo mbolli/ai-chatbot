@@ -12,6 +12,22 @@
     --accent-hover: var(--blue-5);
     --danger: var(--red-6);
     --success: var(--green-6);
+
+    /* The theme is dark only: pin the Open Props normalize to its dark values
+       so a light OS preference does not leak light buttons, links and popovers. */
+    color-scheme: dark;
+    --link: var(--indigo-3);
+    --link-visited: var(--purple-3);
+    --text-1: var(--gray-1);
+    --text-2: var(--gray-4);
+    --surface-4: var(--gray-6);
+    --scrollthumb-color: var(--gray-6);
+}
+
+:where(button, input[type=button], input[type=submit], input[type=reset], .btn) {
+    --_highlight: var(--_highlight-dark);
+    --_bg: var(--_bg-dark);
+    --_ink-shadow: var(--_ink-shadow-dark);
 }
 
 /* ================================
@@ -169,8 +185,9 @@
 }
 
 /* Artifact button pulse when available */
+/* A few pulses draw the eye; an endless one fails WCAG 2.2.2 */
 .btn-icon[title^="Open artifact"] {
-    animation: artifact-pulse 2s var(--ease-in-out-2) infinite;
+    animation: artifact-pulse 2s var(--ease-in-out-2) 3;
 }
 
 .btn-icon[title^="Open artifact"]:hover {
@@ -209,13 +226,14 @@
     transform: translateY(0) scale(0.98);
 }
 
+/* blue-8 keeps white button text above 4.5:1 */
 .btn-primary {
-    background: var(--accent);
+    background: var(--blue-8);
     color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
+    background: var(--blue-7);
 }
 
 .btn-primary:disabled {
@@ -379,13 +397,14 @@ html, body {
 /* App Container - True 3x3 Grid Layout */
 .app-container {
     display: grid;
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
         "sidebar-header  main-header   artifact-header"
         "sidebar-nav     main-content  artifact-content"
         "sidebar-footer  main-input    artifact-footer";
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -403,7 +422,7 @@ html, body {
     background: var(--surface-1);
     border-right: 1px solid var(--surface-3);
     border-bottom: 1px solid var(--surface-3);
-    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3);
+    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3), visibility 0.4s;
 }
 
 .sidebar-header h2 {
@@ -419,6 +438,7 @@ html, body {
     padding: var(--size-4) 0;
     overflow: hidden;
     border-right-color: transparent;
+    visibility: hidden;
 }
 
 .sidebar-nav {
@@ -429,7 +449,7 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     padding: var(--size-2);
-    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3);
+    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3), visibility 0.4s;
 }
 
 .sidebar-nav.sidebar-closed {
@@ -437,6 +457,7 @@ html, body {
     padding: var(--size-2) 0;
     overflow: hidden;
     border-right-color: transparent;
+    visibility: hidden;
 }
 
 .sidebar-footer {
@@ -446,7 +467,7 @@ html, body {
     border-right: 1px solid var(--surface-3);
     border-top: 1px solid var(--surface-3);
     padding: var(--size-3);
-    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3);
+    transition: width 0.4s var(--ease-spring-3), padding 0.4s var(--ease-spring-3), visibility 0.4s;
 }
 
 .sidebar-footer.sidebar-closed {
@@ -454,6 +475,7 @@ html, body {
     padding: var(--size-3) 0;
     overflow: hidden;
     border-right-color: transparent;
+    visibility: hidden;
 }
 
 /* Sidebar header actions (new chat + close button) */
@@ -502,13 +524,21 @@ html, body {
 .sidebar-item {
     display: flex;
     align-items: center;
-    gap: var(--size-2);
-    padding: var(--size-3);
     border-radius: var(--radius-2);
-    color: var(--text-primary);
-    text-decoration: none;
     margin-bottom: var(--size-1);
     transition: background var(--ease-2) 0.15s;
+}
+
+.sidebar-item-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--size-2);
+    padding: var(--size-3);
+    border-radius: inherit;
+    color: var(--text-primary);
+    text-decoration: none;
 }
 
 .sidebar-item:hover {
@@ -516,7 +546,8 @@ html, body {
 }
 
 .sidebar-item.active {
-    background: var(--surface-3);
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--accent);
     view-transition-name: active-chat;
 }
 
@@ -530,11 +561,19 @@ html, body {
 
 .sidebar-item .btn-delete {
     opacity: 0;
+    margin-inline-end: var(--size-1);
     transition: opacity var(--ease-2) 0.15s;
 }
 
-.sidebar-item:hover .btn-delete {
+.sidebar-item:hover .btn-delete,
+.sidebar-item:focus-within .btn-delete {
     opacity: 1;
+}
+
+@media (hover: none) {
+    .sidebar-item .btn-delete {
+        opacity: 1;
+    }
 }
 
 .sidebar-footer {
@@ -542,7 +581,7 @@ html, body {
     border-top: 1px solid var(--surface-3);
 }
 
-.connection-indicator {
+#connection-status {
     display: flex;
     align-items: center;
     gap: var(--size-2);
@@ -551,7 +590,7 @@ html, body {
     transition: color 0.3s var(--ease-2);
 }
 
-.connection-indicator .dot {
+#connection-status .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -560,12 +599,12 @@ html, body {
     transition: background 0.3s var(--ease-2);
 }
 
-.connection-indicator[data-connected="true"] .dot {
+#connection-status[data-connected="true"] .dot {
     background: var(--green-5);
     animation: connection-success 0.5s var(--ease-elastic-out-3);
 }
 
-.connection-indicator[data-connected="true"] {
+#connection-status[data-connected="true"] {
     color: var(--green-5);
 }
 
@@ -652,6 +691,7 @@ html, body {
 
 .greeting h1 {
     font-size: var(--font-size-5);
+    max-inline-size: none;
     margin-bottom: var(--size-3);
     color: var(--text-primary);
 }
@@ -697,7 +737,65 @@ html, body {
 
 .message-text {
     line-height: var(--line-height-3);
-    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Rendered markdown in messages; the Open Props normalize zeroes margins
+   and caps line length, which suits articles but not chat bubbles. */
+.markdown-content > :first-child {
+    margin-top: 0;
+}
+
+.markdown-content :is(p, ul, ol, li, blockquote, h1, h2, h3, h4, h5, h6) {
+    max-inline-size: none;
+}
+
+.markdown-content :is(p, ul, ol, pre, table, blockquote) {
+    margin-block: 0 var(--size-3);
+}
+
+.markdown-content > :last-child {
+    margin-bottom: 0;
+}
+
+.markdown-content :is(h1, h2, h3, h4, h5, h6) {
+    margin-block: var(--size-4) var(--size-2);
+    line-height: var(--font-lineheight-1);
+}
+
+.markdown-content h1 { font-size: var(--font-size-4); }
+.markdown-content h2 { font-size: var(--font-size-3); }
+.markdown-content h3 { font-size: var(--font-size-2); }
+.markdown-content :is(h4, h5, h6) { font-size: var(--font-size-1); }
+
+.markdown-content pre {
+    max-inline-size: 100%;
+    padding: var(--size-3);
+    background: var(--gray-10, #16191d);
+    border-radius: var(--radius-2);
+    overflow-x: auto;
+    overflow-wrap: normal;
+}
+
+.markdown-content code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.markdown-content table {
+    display: block;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.markdown-content :is(th, td) {
+    padding: var(--size-1) var(--size-3);
+    border: 1px solid var(--surface-3);
+}
+
+.markdown-content img {
+    max-inline-size: 100%;
 }
 
 .message-actions {
@@ -708,8 +806,15 @@ html, body {
     transition: opacity var(--ease-2) 0.15s;
 }
 
-.message:hover .message-actions {
+.message:hover .message-actions,
+.message-actions:focus-within {
     opacity: 1;
+}
+
+@media (hover: none) {
+    .message-actions {
+        opacity: 1;
+    }
 }
 
 /* Artifact button always visible when present */
@@ -756,14 +861,18 @@ html, body {
 
 .input-toolbar .disclaimer {
     flex: 1;
+    min-width: 0;
     margin: 0;
     font-size: var(--font-size-0);
     color: var(--text-secondary);
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.model-selector-compact {
+.model-selector-compact,
+.visibility-selector {
     background: var(--surface-2);
     color: var(--text-primary);
     border: 1px solid var(--surface-3);
@@ -774,8 +883,8 @@ html, body {
     max-width: 160px;
 }
 
-.model-selector-compact:focus {
-    outline: none;
+.model-selector-compact:focus-visible,
+.visibility-selector:focus-visible {
     border-color: var(--accent);
 }
 
@@ -795,6 +904,7 @@ html, body {
     font-family: inherit;
     font-size: var(--font-size-2);
     resize: none;
+    field-sizing: content;
     min-height: 48px;
     max-height: 200px;
 }
@@ -965,18 +1075,20 @@ html, body {
         left: 0;
         width: 280px;
         z-index: 100;
-        transition: transform 0.4s var(--ease-spring-3);
+        transition: transform 0.4s var(--ease-spring-3), visibility 0.4s;
     }
 
     .sidebar-header { top: 0; }
     .sidebar-nav { top: 60px; bottom: 120px; }
     .sidebar-footer { bottom: 0; height: auto; }
 
-    .sidebar-header.sidebar-closed,
-    .sidebar-nav.sidebar-closed,
-    .sidebar-footer.sidebar-closed {
+    /* Closed unless opened, so the drawer never flashes before Datastar starts */
+    .sidebar-header:not(.sidebar-open),
+    .sidebar-nav:not(.sidebar-open),
+    .sidebar-footer:not(.sidebar-open) {
         transform: translateX(-100%);
         width: 280px;
+        visibility: hidden;
     }
 
     /* Main content stacks vertically */
@@ -1045,7 +1157,7 @@ html, body {
         flex-basis: 100%;
         text-align: center;
         white-space: normal;
-        font-size: var(--font-size-00);
+        font-size: var(--font-size-0);
     }
 
     .input-actions {
@@ -1108,8 +1220,40 @@ html, body {
     }
 }
 
+/* Signal inspector, rendered only when APP_DEBUG is on; collapsed it stays in the corner */
+.signal-debug {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    max-height: var(--size-13);
+    overflow: auto;
+    background: var(--surface-1);
+    border: var(--border-size-1) solid var(--surface-4);
+    border-radius: 0 var(--radius-2) 0 0;
+    font-size: var(--font-size-0);
+    z-index: var(--layer-important);
+    box-shadow: var(--shadow-3);
+}
+
+.signal-debug[open] {
+    right: 0;
+    border-radius: 0;
+}
+
+.signal-debug summary {
+    padding: var(--size-1) var(--size-2);
+    background: var(--surface-2);
+}
+
+.signal-debug pre {
+    margin: 0;
+    padding: var(--size-2);
+    white-space: pre-wrap;
+    color: var(--text-2);
+}
+
 /* ================================
-   Modal Styles (Popover API)
+   Modal Styles (native <dialog>)
    ================================ */
 
 /* Popover backdrop */
@@ -1126,6 +1270,7 @@ html, body {
     border: none;
     padding: 0;
     background: transparent;
+    color: var(--text-primary);
     max-width: 100vw;
     max-height: 100vh;
     overflow: visible;
@@ -1141,14 +1286,14 @@ html, body {
                 display 0.25s var(--ease-out-3) allow-discrete;
 }
 
-.modal-popover:popover-open {
+.modal-popover[open] {
     opacity: 1;
     transform: scale(1) translateY(0);
 }
 
 /* Starting style for entry animation */
 @starting-style {
-    .modal-popover:popover-open {
+    .modal-popover[open] {
         opacity: 0;
         transform: scale(0.9) translateY(10px);
     }
@@ -1376,6 +1521,7 @@ html, body {
 
 .artifact-header.artifact-closed {
     display: none;
+    visibility: hidden;
     width: 0;
     padding: var(--size-3) 0;
     opacity: 0;
@@ -1417,6 +1563,7 @@ html, body {
 
 .artifact-content.artifact-closed {
     display: none;
+    visibility: hidden;
     width: 0;
     opacity: 0;
 }
@@ -1451,6 +1598,7 @@ html, body {
 
 .artifact-footer.artifact-closed {
     display: none;
+    visibility: hidden;
     width: 0;
     padding: var(--size-3) 0;
     opacity: 0;
@@ -1463,11 +1611,29 @@ html, body {
     }
 }
 
+.artifact-code,
+.artifact-sheet,
+.artifact-image {
+    padding: var(--size-3);
+}
+
+.btn-edit {
+    align-self: flex-start;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    border: 1px solid var(--surface-3);
+}
+
+.btn-edit:hover:not(:disabled) {
+    background: var(--surface-3);
+}
+
 /* Text Artifact */
 .artifact-text {
     display: flex;
     flex-direction: column;
     height: 100%;
+    padding-bottom: var(--size-3);
 }
 
 .artifact-text-content {
@@ -1477,11 +1643,25 @@ html, body {
     line-height: var(--line-height-4);
 }
 
-.artifact-text-content.markdown h1,
-.artifact-text-content.markdown h2,
-.artifact-text-content.markdown h3 {
+.artifact-text-content.markdown :is(h1, h2, h3, p, ul, ol, li) {
+    max-inline-size: none;
+}
+
+.artifact-text-content.markdown :is(h1, h2, h3) {
     margin-top: var(--size-4);
     margin-bottom: var(--size-2);
+}
+
+.artifact-text-content.markdown > :first-child {
+    margin-top: 0;
+}
+
+.artifact-text-content.markdown h1 { font-size: var(--font-size-5); }
+.artifact-text-content.markdown h2 { font-size: var(--font-size-4); }
+.artifact-text-content.markdown h3 { font-size: var(--font-size-3); }
+
+.artifact-text .btn-edit {
+    margin-inline: var(--size-4);
 }
 
 .artifact-text-content.markdown code {
@@ -1556,6 +1736,7 @@ html, body {
 
 .code-block {
     margin: 0;
+    max-inline-size: none;
     padding: var(--size-4);
     background: var(--gray-9);
     border-radius: var(--radius-2);
@@ -1785,11 +1966,12 @@ html, body {
     .artifact-footer {
         position: fixed;
         right: 0;
-        width: 280px;
+        width: 100%;
         max-width: 100%;
         z-index: 100;
         background: var(--surface-1);
-        transition: transform 0.4s var(--ease-spring-3);
+        border-left: none;
+        transition: transform 0.4s var(--ease-spring-3), visibility 0.4s;
     }
 
     .artifact-header { 
@@ -1797,10 +1979,9 @@ html, body {
         height: 60px; 
     }
     
-    .artifact-content { 
-        top: 60px; 
-        bottom: 60px; 
-        min-height: calc(100vh - 120px);
+    .artifact-content {
+        top: 60px;
+        bottom: 60px;
     }
     
     .artifact-footer { 

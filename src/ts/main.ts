@@ -2,7 +2,7 @@
  * AI Chatbot - Main TypeScript entry point
  *
  * This file contains custom TypeScript code for the chatbot.
- * Datastar is loaded from CDN, so no import needed.
+ * Datastar is loaded as a separate module, so no import needed.
  */
 
 // Pyodide for client-side Python execution
@@ -63,24 +63,21 @@ window.runPythonCode = runPython;
 window.initPyodide = initPyodide;
 
 /**
- * Auto-resize textarea to fit content
+ * Auto-resize the message input where CSS `field-sizing: content` is missing
  */
 function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
-// Setup auto-resize for message input
-document.addEventListener('DOMContentLoaded', () => {
-    const messageInput = document.querySelector<HTMLTextAreaElement>(
-        'textarea[data-signal="message"]'
+const messageInput = document.querySelector<HTMLTextAreaElement>(
+    'textarea.message-input'
+);
+if (messageInput && !CSS.supports('field-sizing', 'content')) {
+    messageInput.addEventListener('input', () =>
+        autoResizeTextarea(messageInput)
     );
-    if (messageInput) {
-        messageInput.addEventListener('input', () =>
-            autoResizeTextarea(messageInput)
-        );
-    }
-});
+}
 
 /**
  * Copy text to clipboard
@@ -105,7 +102,5 @@ async function copyToClipboard(text: string): Promise<boolean> {
 (
     window as unknown as { copyToClipboard: typeof copyToClipboard }
 ).copyToClipboard = copyToClipboard;
-
-console.log('AI Chatbot initialized');
 
 export {};

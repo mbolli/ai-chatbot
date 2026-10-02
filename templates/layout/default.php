@@ -18,6 +18,9 @@ $isGuest = ($user['isGuest'] ?? true);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Fast, privacy-focused AI chatbot powered by Claude and GPT. Create artifacts, write code, analyze data, and get instant answers.">
     <meta name="view-transition" content="same-origin">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#212529">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23228be6' d='M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6l-4 3v-3H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z'/%3E%3C/svg%3E">
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
 
     <!-- Open Props CSS (bundled) -->
@@ -59,7 +62,7 @@ $isGuest = ($user['isGuest'] ?? true);
     <div id="app"
          class="app-container"
          data-signals='{
-            "_sidebarOpen": <?php echo json_encode(!isset($_SERVER['HTTP_USER_AGENT']) || !preg_match('/Mobile|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT'])); ?>,
+            "_sidebarOpen": true,
             "_currentChatId": <?php echo json_encode($currentChatId ?? null); ?>,
             "_model": <?php echo json_encode($defaultModel ?? AIService::DEFAULT_MODEL); ?>,
             "_artifactOpen": false,
@@ -74,13 +77,12 @@ $isGuest = ($user['isGuest'] ?? true);
             "_authEmail": "",
             "_authPassword": "",
             "_authError": "",
-            "_authLoading": false,
-            "_toasts": []
+            "_authLoading": false
          }'
-         data-init="@get('/updates')"
+         data-init="$_sidebarOpen = matchMedia('(min-width: 769px)').matches; @get('/updates')"
          data-on-keys:ctrl-b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
          data-on-keys:ctrl-k__window__prevent="window.location.href = '/'"
-         data-on-keys:esc__window__prevent="console.log(evt); $_artifactOpen = false; $_authModal = null">
+         data-on-keys:esc__window="$_artifactOpen = false; $_authModal = null">
         <?php echo $content ?? ''; ?>
 
         <!-- Auth Modals -->
@@ -90,10 +92,10 @@ $isGuest = ($user['isGuest'] ?? true);
         <?php include __DIR__ . '/../partials/toast.php'; ?>
 
         <!-- Signal Debug Bar (dev only) -->
-        <?php if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') { ?>
-        <details class="signal-debug" style="position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface-1); border-top: var(--border-size-1) solid var(--surface-4); max-height: var(--size-13); overflow: auto; font-size: var(--font-size-0); z-index: var(--layer-important); box-shadow: var(--shadow-3);">
-            <summary style="padding: var(--size-1) var(--size-2); cursor: pointer; background: var(--surface-2); font-weight: var(--font-weight-5);">🔧 Signals</summary>
-            <pre data-json-signals style="padding: var(--size-2); margin: 0; white-space: pre-wrap; font-family: var(--font-mono); color: var(--text-2);"></pre>
+        <?php if (filter_var($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN)) { ?>
+        <details class="signal-debug">
+            <summary>🔧 Signals</summary>
+            <pre data-json-signals></pre>
         </details>
         <?php } ?>
 

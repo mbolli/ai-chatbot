@@ -8,11 +8,6 @@
  * @var callable $e Escape function
  */
 $isGuest = ($user['isGuest'] ?? true);
-// Pre-compute sidebar open state (same logic as data-signals in default.php)
-// so sidebar-closed class is server-rendered, avoiding a layout shift on Datastar init.
-$sidebarOpenInitial = !isset($_SERVER['HTTP_USER_AGENT'])
-    || !preg_match('/Mobile|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT']);
-$sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
 ?>
 <!-- Sidebar backdrop overlay (mobile only) -->
 <div class="sidebar-backdrop"
@@ -20,7 +15,7 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
      data-on:click="$_sidebarOpen = false"></div>
 
 <!-- Top Left: Title + New Chat -->
-<div class="sidebar-header<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}" role="banner">
+<div class="sidebar-header" data-class="{'sidebar-closed': !$_sidebarOpen, 'sidebar-open': $_sidebarOpen}">
     <h2>AI Chatbot</h2>
     <div class="sidebar-header-actions">
         <button class="btn-icon" data-on:click="@post('/cmd/chat')" title="New Chat" aria-label="New Chat">
@@ -33,15 +28,15 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
 </div>
 
 <!-- Middle Left: Conversations -->
-<nav class="sidebar-nav<?php echo $sidebarClosedClass; ?>" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen}" aria-label="Chat history">
+<nav class="sidebar-nav" id="chat-list" data-class="{'sidebar-closed': !$_sidebarOpen, 'sidebar-open': $_sidebarOpen}" aria-label="Chat history">
     <?php if (empty($chats)) { ?>
         <p class="sidebar-empty animate-fade-in">No conversations yet</p>
     <?php } else { ?>
-        <?php foreach ($chats as $chat) { ?>
+        <?php foreach ($chats as $sidebarChat) { ?>
             <?php echo $this->partial('sidebar-item', [
-                'chatId' => $chat->id,
-                'title' => $chat->title ?? 'New Chat',
-                'isActive' => $chat->id === $currentChatId,
+                'chatId' => $sidebarChat->id,
+                'title' => $sidebarChat->title ?? 'New Chat',
+                'isActive' => $sidebarChat->id === $currentChatId,
                 'e' => $e,
             ]); ?>
         <?php } ?>
@@ -49,7 +44,7 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
 </nav>
 
 <!-- Bottom Left: Connection Status + Auth -->
-<div class="sidebar-footer<?php echo $sidebarClosedClass; ?>" data-class="{'sidebar-closed': !$_sidebarOpen}" role="contentinfo">
+<div class="sidebar-footer" data-class="{'sidebar-closed': !$_sidebarOpen, 'sidebar-open': $_sidebarOpen}">
     <div id="connection-status" class="connection-indicator">
         <span class="dot"></span>
         <span>Connecting...</span>
@@ -59,7 +54,7 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
         <div class="sidebar-auth">
             <button class="btn btn-secondary btn-sm btn-block"
                     data-on:click="$_authModal = 'upgrade'">
-                <svg class="icon"><use href="#icon-user-plus"></use></svg> Save Chats
+                <svg class="icon" aria-hidden="true"><use href="#icon-user-plus"></use></svg> Save Chats
             </button>
             <button class="btn-link btn-sm"
                     data-on:click="$_authModal = 'login'">
@@ -69,7 +64,7 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
     <?php } else { ?>
         <div class="sidebar-user">
             <div class="user-info">
-                <svg class="icon"><use href="#icon-user-circle"></use></svg>
+                <svg class="icon" aria-hidden="true"><use href="#icon-user-circle"></use></svg>
                 <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
             </div>
             <button class="btn-icon"
@@ -80,4 +75,4 @@ $sidebarClosedClass = $sidebarOpenInitial ? '' : ' sidebar-closed';
             </button>
         </div>
     <?php } ?>
-</div></aside>
+</div>

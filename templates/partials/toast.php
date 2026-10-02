@@ -1,59 +1,17 @@
 <?php
 /**
- * Toast Notifications Partial
- * Uses Popover API for accessible, auto-dismissing notifications.
+ * Toast notifications container.
  *
- * Signals used:
- * - $_toasts: array of {id, type, message, duration}
+ * The server appends toasts as HTML fragments (PatchElements, selector
+ * #toast-container, mode append), for example:
  *
- * Usage from server (SSE):
- *   $sse->mergeSignals(['_toasts' => [['id' => uniqid(), 'type' => 'success', 'message' => 'Saved!']]]);
+ *   <div class="toast" data-type="error" data-init="setTimeout(() => el.remove(), 5000)">
+ *       <span class="toast-message">You've reached your daily limit.</span>
+ *       <button type="button" class="toast-close btn-icon" aria-label="Dismiss"
+ *               data-on:click="el.closest('.toast').remove()">×</button>
+ *   </div>
  *
- * Usage from client:
- *   $_toasts = [...$_toasts, {id: Date.now(), type: 'error', message: 'Something went wrong'}]
+ * data-type is one of success, error, warning, info.
  */
 ?>
-
-<!-- Toast Container -->
-<div id="toast-container"
-     class="toast-container"
-     aria-live="polite"
-     aria-label="Notifications">
-
-    <template data-for="toast in $_toasts">
-        <div class="toast"
-             data-attr-data-type="toast.type"
-             data-on-signal-patch="
-                 const el = this;
-                 const duration = toast.duration || 4000;
-                 setTimeout(() => {
-                     el.classList.add('toast-exit');
-                     setTimeout(() => {
-                         $_toasts = $_toasts.filter(t => t.id !== toast.id);
-                     }, 300);
-                 }, duration);
-             "
-             data-on-signal-patch-filter="{include: /^_toasts$/}">
-
-            <div class="toast-icon">
-                <svg class="icon">
-                    <use data-attr-href="
-                        toast.type === 'success' ? '#icon-check-circle' :
-                        toast.type === 'error' ? '#icon-exclamation-circle' :
-                        toast.type === 'warning' ? '#icon-exclamation-triangle' :
-                        '#icon-info-circle'
-                    "></use>
-                </svg>
-            </div>
-
-            <span class="toast-message" data-text="toast.message"></span>
-
-            <button type="button"
-                    class="toast-close btn-icon"
-                    data-on:click="$_toasts = $_toasts.filter(t => t.id !== toast.id)"
-                    aria-label="Dismiss">
-                <svg class="icon"><use href="#icon-times"></use></svg>
-            </button>
-        </div>
-    </template>
-</div>
+<div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-label="Notifications"></div>

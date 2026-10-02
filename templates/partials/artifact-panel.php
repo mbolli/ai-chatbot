@@ -13,7 +13,7 @@
 <!-- Top Right: Artifact Title + Actions -->
 <div class="artifact-header artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}" role="region" aria-label="Artifact panel">
     <span class="artifact-title">
-        <svg class="icon"><use href="#icon-file-code"></use></svg>
+        <svg class="icon" aria-hidden="true"><use href="#icon-file-code"></use></svg>
         <span id="artifact-title">Artifact</span>
     </span>
     <div class="artifact-actions">
@@ -32,8 +32,8 @@
 </div>
 
 <!-- Bottom Right: Fun footer -->
-<div class="artifact-footer artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}" role="contentinfo">
-    <svg class="icon"><use href="#icon-wand-magic-sparkles"></use></svg>
+<div class="artifact-footer artifact-closed" data-class="{'artifact-closed': !$_artifactOpen}">
+    <svg class="icon" aria-hidden="true"><use href="#icon-wand-magic-sparkles"></use></svg>
     <span>Generated with AI magic ✨</span>
 </div>
 
