@@ -313,6 +313,7 @@ final class MessageCommandHandler implements RequestHandlerInterface {
         $wasStopped = false;
         $failed = false;
         $calledAi = false;
+        $generateTitle = false;
         $startedAt = hrtime(true);
         $firstTokenAt = null;
 
@@ -425,10 +426,8 @@ final class MessageCommandHandler implements RequestHandlerInterface {
                 fullContent: $response->content() . ($wasStopped ? ' ⏹' : ''),
             ));
 
-            // Generate title if this is the first message exchange (and not stopped early)
-            if (!$wasStopped && !$isEmpty && $chat->title === null && \count($messages) <= 2) {
-                $this->generateChatTitle($userId, $chat, $userMessage->content ?? '');
-            }
+            // Title only for the first exchange; generated after the session is released (see below)
+            $generateTitle = !$wasStopped && !$isEmpty && $chat->title === null && \count($messages) <= 2;
         } catch (\Throwable $e) {
             $failed = true;
 
@@ -486,6 +485,11 @@ final class MessageCommandHandler implements RequestHandlerInterface {
 
             // Always clean up the session
             $this->sessionManager->endSession($chatId, $userId);
+        }
+
+        // After endSession: a follow-up message sent while the title is generated must not get a 409
+        if ($generateTitle) {
+            $this->generateChatTitle($userId, $chat, $userMessage->content ?? '');
         }
     }
 
