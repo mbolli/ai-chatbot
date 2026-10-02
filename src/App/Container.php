@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App;
 
 use App\Application\ChatCommands;
+use App\Application\DocumentCommands;
 use App\Application\MessageCommands;
+use App\Application\SuggestionCommands;
 use App\Domain\Repository\ChatRepositoryInterface;
 use App\Domain\Repository\DocumentRepositoryInterface;
 use App\Domain\Repository\MessageRepositoryInterface;
@@ -159,6 +161,23 @@ final class Container {
             $this->rateLimits(),
             contextMaxTokens: $this->config['ai']['context_max_tokens'] ?? 8000,
             testCommandsEnabled: !$this->isProduction(),
+        ));
+    }
+
+    public function documentCommands(): DocumentCommands {
+        return $this->shared(DocumentCommands::class, fn (): DocumentCommands => new DocumentCommands(
+            $this->documents(),
+            $this->chats(),
+            $this->eventBus(),
+        ));
+    }
+
+    public function suggestionCommands(): SuggestionCommands {
+        return $this->shared(SuggestionCommands::class, fn (): SuggestionCommands => new SuggestionCommands(
+            $this->suggestions(),
+            $this->documents(),
+            $this->chats(),
+            $this->eventBus(),
         ));
     }
 
