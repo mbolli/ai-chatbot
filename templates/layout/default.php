@@ -10,6 +10,8 @@ use App\Infrastructure\AI\AIService;
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $isGuest = ($user['isGuest'] ?? true);
+// Assets are cached for a year, so their URLs must change whenever the file does
+$asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__ . '/../../public' . $path) ?: 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,22 +26,22 @@ $isGuest = ($user['isGuest'] ?? true);
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
 
     <!-- Open Props CSS (bundled) -->
-    <link rel="stylesheet" href="/css/open-props-bundle.css">
+    <link rel="stylesheet" href="<?php echo $asset('/css/open-props-bundle.css'); ?>">
 
     <!-- Custom styles -->
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="<?php echo $asset('/css/app.css'); ?>">
 
     <!-- Datastar -->
     <script type="importmap">
     {
         "imports": {
-            "datastar": "/js/datastar.js",
-            "datastar-on-keys": "/js/datastar-on-keys.js"
+            "datastar": "<?php echo $asset('/js/datastar.js'); ?>",
+            "datastar-on-keys": "<?php echo $asset('/js/datastar-on-keys.js'); ?>"
         }
     }
     </script>
-    <script type="module" src="/js/datastar.js"></script>
-    <script type="module" src="/js/datastar-on-keys.js"></script>
+    <script type="module" src="<?php echo $asset('/js/datastar.js'); ?>"></script>
+    <script type="module" src="<?php echo $asset('/js/datastar-on-keys.js'); ?>"></script>
 
     <!-- Speculation Rules for prefetching chat pages on hover -->
     <script type="speculationrules">
@@ -102,6 +104,6 @@ $isGuest = ($user['isGuest'] ?? true);
     </div>
 
     <!-- App JS -->
-    <script type="module" src="/js/app.js"></script>
+    <script type="module" src="<?php echo $asset('/js/app.js'); ?>"></script>
 </body>
 </html>
