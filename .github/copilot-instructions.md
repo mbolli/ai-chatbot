@@ -97,7 +97,7 @@ Test events by subscribing before action: `$this->eventBus->subscribe(fn($e) => 
 - **ConfigProvider.php** - All DI container factories (no separate factory classes)
 - **routes.php** - Route-to-handler mapping with `:method` suffixes for multi-action handlers
 - **templates/** - Plain PHP templates with `<?php echo $var; ?>` escaping
-- **swoole-server.php** - Custom SSE handling bypassing Mezzio for `/updates`
+- **SseRequestListener.php** - Custom SSE handling bypassing Mezzio for `/updates`
 
 ## Adding New Features
 
