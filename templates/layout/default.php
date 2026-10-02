@@ -84,11 +84,7 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
             "_output": "",
             "_generatingMessage": "",
             "_authModal": null,
-            "_aboutOpen": false,
-            "_authEmail": "",
-            "_authPassword": "",
-            "_authError": "",
-            "_authLoading": false
+            "_aboutOpen": false
          }'
          data-init="$_sidebarOpen = matchMedia('(min-width: 769px)').matches"
          data-on-keys:ctrl-b__window__prevent="$_sidebarOpen = !$_sidebarOpen"
@@ -97,7 +93,7 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
         <?php echo $content ?? ''; ?>
 
         <!-- Auth Modals -->
-        <?php include __DIR__ . '/../partials/auth-modal.php'; ?>
+        <?php echo $slots['authModal'](); ?>
 
         <!-- About this project -->
         <?php include __DIR__ . '/../partials/about-modal.php'; ?>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web;
 
+use App\Domain\Event\AccountChangedEvent;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\MessageStreamingEvent;
@@ -48,6 +49,7 @@ final class ViaEventBus implements EventBusInterface {
             $event instanceof SuggestionsUpdatedEvent,
             $event instanceof VoteUpdatedEvent => $this->broadcast(Scopes::chat($event->chatId)),
             $event instanceof RateLimitExceededEvent => $this->onRateLimited($event),
+            $event instanceof AccountChangedEvent => $this->broadcast(Scopes::user($event->userId)),
             default => null,
         };
     }

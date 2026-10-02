@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @var string $chatId Chat ID
  * @var null|bool $vote User's vote (true=upvote, false=downvote, null=no vote)
  * @var null|array{id: string, title: string} $artifact Artifact info if message has one
+ * @var array<string, string> $actions Action URLs; 'vote' is set for the chat's owner only
  * @var callable $e Escape function
  */
 $vote = $vote ?? null;
@@ -29,12 +30,15 @@ $downvoted = $vote === false ? 'voted' : '';
     ">
         <svg class="icon" aria-hidden="true"><use href="#icon-copy"></use></svg>
     </button>
+    <?php if (isset($actions['vote'])) {
+        $voteUrl = $actions['vote'] . '?message=' . rawurlencode($messageId) . '&up=';
+        ?>
     <button class="btn-icon vote-btn <?php echo $upvoted; ?>"
             id="vote-up-<?php echo $e($messageId); ?>"
             title="Good response"
             aria-label="Good response"
             aria-pressed="<?php echo $vote === true ? 'true' : 'false'; ?>"
-            data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($messageId); ?>', {payload: {isUpvote: true}})">
+            data-on:click="@post('<?php echo $e($voteUrl . '1'); ?>')">
         <svg class="icon" aria-hidden="true"><use href="#icon-thumbs-up"></use></svg>
     </button>
     <button class="btn-icon vote-btn <?php echo $downvoted; ?>"
@@ -42,7 +46,8 @@ $downvoted = $vote === false ? 'voted' : '';
             title="Bad response"
             aria-label="Bad response"
             aria-pressed="<?php echo $vote === false ? 'true' : 'false'; ?>"
-            data-on:click="@patch('/cmd/vote/<?php echo $e($chatId); ?>/<?php echo $e($messageId); ?>', {payload: {isUpvote: false}})">
+            data-on:click="@post('<?php echo $e($voteUrl . '0'); ?>')">
         <svg class="icon" aria-hidden="true"><use href="#icon-thumbs-down"></use></svg>
     </button>
+    <?php } ?>
 </div>

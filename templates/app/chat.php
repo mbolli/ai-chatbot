@@ -21,7 +21,7 @@ $title = $chat->title ?? 'New Chat';
 <?php echo $slots['sidebar'](); ?>
 
 <!-- Center Column: Header, Messages, Input -->
-<?php include __DIR__ . '/../partials/header.php'; ?>
+<?php echo $slots['header'](); ?>
 
 <div class="main-content" id="messages-container" role="main" aria-label="Chat messages"
      data-on:scroll__passive="el.dataset.pinned = el.scrollHeight - el.scrollTop - el.clientHeight < 80"

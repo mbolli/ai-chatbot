@@ -1,21 +1,51 @@
 <?php
 /**
- * Auth Modal Partial
- * Renders login/register/upgrade modals as native modal dialogs.
+ * Sign-in, register and upgrade dialogs; $_authModal names the open one.
+ *
+ * @var array{login: string, register: string, upgrade: string} $urls Action URLs
+ * @var array{email: string, password: string, error: string, loading: string} $signals php-via signal ids
+ * @var callable $e Escape function
  */
-$e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$error = '$' . $signals['error'];
+$loading = '$' . $signals['loading'];
+
+$dialogs = [
+    'login' => [
+        'title' => 'Sign In',
+        'submit' => 'Sign In',
+        'busy' => 'Signing in...',
+        'passwordAutocomplete' => 'current-password',
+        'footer' => ['Don\'t have an account?', 'register', 'Create one'],
+    ],
+    'register' => [
+        'title' => 'Create Account',
+        'submit' => 'Create Account',
+        'busy' => 'Creating...',
+        'passwordAutocomplete' => 'new-password',
+        'footer' => ['Already have an account?', 'login', 'Sign in'],
+    ],
+    'upgrade' => [
+        'title' => 'Save Your Chats',
+        'description' => 'Create an account to keep your chat history and access it from any device. Your existing chats will be preserved.',
+        'submit' => 'Create Account & Save Chats',
+        'busy' => 'Creating...',
+        'passwordAutocomplete' => 'new-password',
+        'footer' => ['Already have an account?', 'login', 'Sign in instead'],
+    ],
+];
 ?>
-
-<!-- Login Modal -->
-<dialog id="login-modal"
+<?php foreach ($dialogs as $name => $dialog) { ?>
+<?php // The page morph on SSE connect would drop "open" from a dialog opened before it, e.g. by a toast?>
+<dialog id="<?php echo $name; ?>-modal"
      class="modal-popover"
-     aria-labelledby="login-modal-title"
-     data-on-signal-patch="$_authModal === 'login' ? el.open || el.showModal() : el.close()"
+     aria-labelledby="<?php echo $name; ?>-modal-title"
+     data-preserve-attr="open"
+     data-on-signal-patch="$_authModal === '<?php echo $name; ?>' ? el.open || el.showModal() : el.close()"
      data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:close="if ($_authModal === 'login') { $_authModal = null; $_authError = ''; }">
+     data-on:close="if ($_authModal === '<?php echo $name; ?>') { $_authModal = null; <?php echo $error; ?> = ''; }">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="login-modal-title">Sign In</h2>
+            <h2 id="<?php echo $name; ?>-modal-title"><?php echo $e($dialog['title']); ?></h2>
             <button class="btn-icon modal-close"
                     type="button"
                     aria-label="Close"
@@ -24,217 +54,63 @@ $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'U
             </button>
         </div>
 
+        <?php if (isset($dialog['description'])) { ?>
+        <p class="modal-description"><?php echo $e($dialog['description']); ?></p>
+        <?php } ?>
+
         <form class="auth-form"
-              data-on:submit__prevent="
-                  $_authLoading = true;
-                  $_authError = '';
-                  @post('/auth/login', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
-              ">
+              data-on:submit__prevent="<?php echo $loading; ?> = true; <?php echo $error; ?> = ''; @post('<?php echo $e($urls[$name]); ?>')">
             <div class="form-group">
-                <label for="login-email">Email</label>
+                <label for="<?php echo $name; ?>-email">Email</label>
                 <input type="email"
-                       id="login-email"
+                       id="<?php echo $name; ?>-email"
                        autofocus
                        name="email"
-                       data-bind="_authEmail"
+                       data-bind="<?php echo $e($signals['email']); ?>"
                        placeholder="you@example.com"
                        required
                        autocomplete="email">
             </div>
 
             <div class="form-group">
-                <label for="login-password">Password</label>
+                <label for="<?php echo $name; ?>-password">Password</label>
                 <input type="password"
-                       id="login-password"
+                       id="<?php echo $name; ?>-password"
                        name="password"
-                       data-bind="_authPassword"
+                       data-bind="<?php echo $e($signals['password']); ?>"
                        placeholder="••••••••"
                        required
-                       autocomplete="current-password">
-            </div>
-
-            <div class="form-error" role="alert" data-show="$_authError">
-                <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
-                <span data-text="$_authError"></span>
-            </div>
-
-            <button type="submit"
-                    class="btn btn-primary btn-block"
-                    data-attr:disabled="!!$_authLoading">
-                <span data-show="!$_authLoading">Sign In</span>
-                <span data-show="$_authLoading">
-                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Signing in...
-                </span>
-            </button>
-        </form>
-
-        <div class="modal-footer">
-            <p>Don't have an account?
-                <button type="button"
-                        class="btn-link"
-                        data-on:click="$_authModal = 'register'; $_authError = ''">
-                    Create one
-                </button>
-            </p>
-        </div>
-    </div>
-</dialog>
-
-<!-- Register Modal -->
-<dialog id="register-modal"
-     class="modal-popover"
-     aria-labelledby="register-modal-title"
-     data-on-signal-patch="$_authModal === 'register' ? el.open || el.showModal() : el.close()"
-     data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:close="if ($_authModal === 'register') { $_authModal = null; $_authError = ''; }">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="register-modal-title">Create Account</h2>
-            <button class="btn-icon modal-close"
-                    type="button"
-                    aria-label="Close"
-                    data-on:click="$_authModal = null">
-                <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
-            </button>
-        </div>
-
-        <form class="auth-form"
-              data-on:submit__prevent="
-                  $_authLoading = true;
-                  $_authError = '';
-                  @post('/auth/register', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
-              ">
-            <div class="form-group">
-                <label for="register-email">Email</label>
-                <input type="email"
-                       id="register-email"
-                       autofocus
-                       name="email"
-                       data-bind="_authEmail"
-                       placeholder="you@example.com"
-                       required
-                       autocomplete="email">
-            </div>
-
-            <div class="form-group">
-                <label for="register-password">Password</label>
-                <input type="password"
-                       id="register-password"
-                       name="password"
-                       data-bind="_authPassword"
-                       placeholder="••••••••"
-                       required
-                       minlength="8"
-                       autocomplete="new-password">
+                       <?php if ($name !== 'login') { ?>minlength="8"<?php } ?>
+                       autocomplete="<?php echo $dialog['passwordAutocomplete']; ?>">
+                <?php if ($name !== 'login') { ?>
                 <small class="form-hint">At least 8 characters</small>
+                <?php } ?>
             </div>
 
-            <div class="form-error" role="alert" data-show="$_authError">
+            <div class="form-error" role="alert" data-show="<?php echo $error; ?> !== ''" style="display: none">
                 <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
-                <span data-text="$_authError"></span>
+                <span data-text="<?php echo $error; ?>"></span>
             </div>
 
             <button type="submit"
                     class="btn btn-primary btn-block"
-                    data-attr:disabled="!!$_authLoading">
-                <span data-show="!$_authLoading">Create Account</span>
-                <span data-show="$_authLoading">
-                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...
+                    data-attr:disabled="!!<?php echo $loading; ?>">
+                <span data-show="!<?php echo $loading; ?>"><?php echo $e($dialog['submit']); ?></span>
+                <span data-show="!!<?php echo $loading; ?>" style="display: none">
+                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> <?php echo $e($dialog['busy']); ?>
                 </span>
             </button>
         </form>
 
         <div class="modal-footer">
-            <p>Already have an account?
+            <p><?php echo $e($dialog['footer'][0]); ?>
                 <button type="button"
                         class="btn-link"
-                        data-on:click="$_authModal = 'login'; $_authError = ''">
-                    Sign in
+                        data-on:click="$_authModal = '<?php echo $dialog['footer'][1]; ?>'; <?php echo $error; ?> = ''">
+                    <?php echo $e($dialog['footer'][2]); ?>
                 </button>
             </p>
         </div>
     </div>
 </dialog>
-
-<!-- Upgrade Modal (for guest users) -->
-<dialog id="upgrade-modal"
-     class="modal-popover"
-     aria-labelledby="upgrade-modal-title"
-     data-on-signal-patch="$_authModal === 'upgrade' ? el.open || el.showModal() : el.close()"
-     data-on-signal-patch-filter="{include: /^_authModal$/}"
-     data-on:close="if ($_authModal === 'upgrade') { $_authModal = null; $_authError = ''; }">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="upgrade-modal-title">Save Your Chats</h2>
-            <button class="btn-icon modal-close"
-                    type="button"
-                    aria-label="Close"
-                    data-on:click="$_authModal = null">
-                <svg class="icon" aria-hidden="true"><use href="#icon-times"></use></svg>
-            </button>
-        </div>
-
-        <p class="modal-description">
-            Create an account to keep your chat history and access it from any device.
-            Your existing chats will be preserved.
-        </p>
-
-        <form class="auth-form"
-              data-on:submit__prevent="
-                  $_authLoading = true;
-                  $_authError = '';
-                  @post('/auth/upgrade', {contentType: 'json', payload: {email: $_authEmail, password: $_authPassword}})
-              ">
-            <div class="form-group">
-                <label for="upgrade-email">Email</label>
-                <input type="email"
-                       id="upgrade-email"
-                       autofocus
-                       name="email"
-                       data-bind="_authEmail"
-                       placeholder="you@example.com"
-                       required
-                       autocomplete="email">
-            </div>
-
-            <div class="form-group">
-                <label for="upgrade-password">Password</label>
-                <input type="password"
-                       id="upgrade-password"
-                       name="password"
-                       data-bind="_authPassword"
-                       placeholder="••••••••"
-                       required
-                       minlength="8"
-                       autocomplete="new-password">
-                <small class="form-hint">At least 8 characters</small>
-            </div>
-
-            <div class="form-error" role="alert" data-show="$_authError">
-                <svg class="icon" aria-hidden="true"><use href="#icon-exclamation-circle"></use></svg>
-                <span data-text="$_authError"></span>
-            </div>
-
-            <button type="submit"
-                    class="btn btn-primary btn-block"
-                    data-attr:disabled="!!$_authLoading">
-                <span data-show="!$_authLoading">Create Account & Save Chats</span>
-                <span data-show="$_authLoading">
-                    <svg class="icon icon-spin" aria-hidden="true"><use href="#icon-spinner"></use></svg> Creating...
-                </span>
-            </button>
-        </form>
-
-        <div class="modal-footer">
-            <p>Already have an account?
-                <button type="button"
-                        class="btn-link"
-                        data-on:click="$_authModal = 'login'; $_authError = ''">
-                    Sign in instead
-                </button>
-            </p>
-        </div>
-    </div>
-</dialog>
-
-
+<?php } ?>

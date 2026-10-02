@@ -5,6 +5,7 @@
  * @var array $chats List of chat objects
  * @var null|string $currentChatId Currently active chat ID
  * @var array $user User data (nullable)
+ * @var array<string, string> $actions Action URLs (deleteChat, logout)
  * @var callable $e Escape function
  */
 $isGuest = ($user['isGuest'] ?? true);
@@ -37,6 +38,7 @@ $isGuest = ($user['isGuest'] ?? true);
                 'chatId' => $sidebarChat->id,
                 'title' => $sidebarChat->title ?? 'New Chat',
                 'isActive' => $sidebarChat->id === $currentChatId,
+                'deleteUrl' => $actions['deleteChat'],
                 'e' => $e,
             ]); ?>
         <?php } ?>
@@ -69,7 +71,7 @@ $isGuest = ($user['isGuest'] ?? true);
                 <span class="user-email"><?php echo $e($user['email'] ?? 'User'); ?></span>
             </div>
             <button class="btn-icon"
-                    data-on:click="@post('/auth/logout')"
+                    data-on:click="@post('<?php echo $e($actions['logout']); ?>')"
                     title="Sign out"
                     aria-label="Sign out">
                 <svg class="icon" aria-hidden="true"><use href="#icon-sign-out-alt"></use></svg>
