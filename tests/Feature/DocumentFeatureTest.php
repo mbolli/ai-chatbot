@@ -2,31 +2,21 @@
 
 declare(strict_types=1);
 
-use App\Container;
 use App\Domain\Event\ChatUpdatedEvent;
 use App\Domain\Event\DocumentUpdatedEvent;
 use App\Domain\Event\SuggestionsUpdatedEvent;
 use App\Domain\Model\Chat;
 use App\Domain\Model\Document;
+use App\Domain\Model\Message;
 use App\Domain\Model\Suggestion;
 use App\Domain\Model\User;
-use App\Web\DocumentFeature;
-use Mbolli\PhpVia\Config;
-use Mbolli\PhpVia\Context;
-use Mbolli\PhpVia\Via;
+use Tests\Support\ChatTestApp;
 use Tests\Support\DocumentTab;
 
-// php-via queues patches in arrays instead of OpenSwoole channels
-putenv('VIA_TEST_MODE=1');
-
 beforeEach(function (): void {
-    $this->container = new Container(['database' => ['path' => ':memory:'], 'app' => ['env' => 'development']], dirname(__DIR__, 2));
-    $pdo = $this->container->pdo();
-    $pdo->exec((string) file_get_contents(__DIR__ . '/../../data/schema.sql'));
-    $pdo->exec("INSERT INTO users (email, password_hash, is_guest, created_at) VALUES ('a@example.com', 'hash', 0, datetime('now')), ('b@example.com', 'hash', 0, datetime('now'))");
-
-    $this->app = new Via((new Config())->withLogLevel('error'));
-    $this->container->eventBus()->attach($this->app);
+    $this->container = ChatTestApp::container('development');
+    $this->container->pdo()->exec("INSERT INTO users (email, password_hash, is_guest, created_at) VALUES ('a@example.com', 'hash', 0, datetime('now')), ('b@example.com', 'hash', 0, datetime('now'))");
+    $this->app = ChatTestApp::create($this->container);
 
     $this->owner = new User(1, 'a@example.com', 'hash');
     $this->visitor = new User(2, 'b@example.com', 'hash');
@@ -39,12 +29,14 @@ beforeEach(function (): void {
     $this->essay = Document::text($this->chat->id, 'Essay', 'Their is a error. Fine.');
     $this->container->documents()->save($this->essay);
 
+    // Each tab in a browser of its own, signed in as $user
     $this->tab = fn (?User $user = null): DocumentTab => new DocumentTab(
-        new Context('tab-' . bin2hex(random_bytes(4)), '/chat/' . $this->chat->id, $this->app),
-        new DocumentFeature($this->container),
-        $user ?? $this->owner,
-        $this->chat,
+        ChatTestApp::browserOf($this->app, $user ?? $this->owner)->open('/chat/' . $this->chat->id),
     );
+});
+
+afterEach(function (): void {
+    ChatTestApp::stop($this->app);
 });
 
 it('starts closed, showing no document', function (): void {
@@ -52,7 +44,22 @@ it('starts closed, showing no document', function (): void {
 
     expect($tab->title())->toBe('Artifact')
         ->and($tab->command())->toBe('artifact-command-0: $_artifactOpen = false; $_artifactEditing = false')
-        ->and($tab->openUrl)->toBe('/_action/artifact-open')
+    ;
+});
+
+it('opens the document of a reply from the button under it', function (): void {
+    $reply = Message::assistant($this->chat->id, 'Here is a table');
+    $this->container->messages()->save($reply);
+    $table = Document::sheet($this->chat->id, 'Table', 'a,b', $reply->id);
+    $this->container->documents()->save($table);
+    $tab = ($this->tab)();
+
+    $found = preg_match('#id="artifact-btn-' . $reply->id . '"[^>]*@post\(\'/_action/([^?]+)\?id=' . $table->id . '\'\)#', $tab->tab->html(), $button);
+    $tab->tab->action($button[1] ?? 'missing', ['id' => $table->id]);
+
+    expect($found)->toBe(1)
+        ->and($button[1])->toBe('artifact-open')
+        ->and($tab->title())->toBe('Table')
     ;
 });
 
@@ -65,6 +72,7 @@ it('opens a document of the chat in this tab only', function (): void {
     expect($tab->title())->toBe('Script')
         ->and($tab->render())->toContain('print(&quot;v2&quot;)')
         ->and($tab->command())->toStartWith('artifact-command-1: $_artifactOpen = true')
+        ->and($other->updates())->toBe(0)
         ->and($other->title())->toBe('Artifact')
     ;
 });
@@ -73,10 +81,14 @@ it('keeps the open document through a broadcast re-render', function (): void {
     $tab = ($this->tab)();
     $tab->act('open', ['id' => $this->essay->id]);
     $command = $tab->command();
+    $tab->updates();
 
     $this->container->eventBus()->emit(1, new DocumentUpdatedEvent($this->code->id, $this->chat->id, 1, 'updated'));
 
-    expect($tab->title())->toBe('Essay')->and($tab->command())->toBe($command);
+    expect($tab->updates())->toBe(1)
+        ->and($tab->title())->toBe('Essay')
+        ->and($tab->command())->toBe($command)
+    ;
 });
 
 it('ignores a document of another chat', function (): void {
@@ -88,7 +100,10 @@ it('ignores a document of another chat', function (): void {
 
     $tab->act('open', ['id' => $foreign->id]);
 
-    expect($tab->title())->toBe('Artifact')->and($tab->render())->not->toContain('Secret');
+    expect($tab->updates())->toBe(0)
+        ->and($tab->title())->toBe('Artifact')
+        ->and($tab->tab->html())->not->toContain('Secret')
+    ;
 });
 
 it('switches versions and back to the latest', function (): void {
@@ -112,8 +127,12 @@ it('saves the edited content as a new version and shows the latest', function ()
     $tab->edit('print("v3")');
     $tab->act('save');
 
+    // TestApp renders the save's broadcast inside the action, before it switches to the latest version, where a
+    // server renders it on the next tick, so the page is rendered from the tab's state on the server instead
     expect($this->container->documents()->findWithContent($this->code->id)->content)->toBe('print("v3")')
-        ->and($tab->render())->toContain('print(&quot;v3&quot;)')->toContain('value="3" selected')
+        ->and($tab->tab->signal('artifact.content'))->toBe('')
+        ->and($tab->tab->signal('artifact.version'))->toBe(0)
+        ->and($tab->tab->html())->toContain('print(&quot;v3&quot;)')->toContain('value="3" selected')
     ;
 });
 
@@ -149,7 +168,6 @@ it('shows a public chat read-only to other users', function (): void {
 it('opens a document the reply created in the owner\'s tabs, once', function (): void {
     $tab = ($this->tab)();
     $visitor = ($this->tab)($this->visitor);
-    $tab->render();
 
     $this->container->eventBus()->emit(1, new DocumentUpdatedEvent($this->essay->id, $this->chat->id, 1, 'created'));
     $opened = $tab->command();
@@ -157,6 +175,7 @@ it('opens a document the reply created in the owner\'s tabs, once', function ():
 
     expect($opened)->toStartWith('artifact-command-1: $_artifactOpen = true')
         ->and($tab->title())->toBe('Script')
+        ->and($visitor->updates())->toBe(1)
         ->and($visitor->title())->toBe('Artifact')
     ;
 });
@@ -176,11 +195,14 @@ it('leaves the tabs alone when the owner saves an edit', function (): void {
     $editor = ($this->tab)();
     $tab->act('open', ['id' => $this->code->id]);
     $editor->act('open', ['id' => $this->essay->id]);
+    $tab->updates();
 
     $editor->edit('Edited.');
     $editor->act('save');
 
-    expect($tab->title())->toBe('Script');
+    expect($tab->updates())->toBe(1)
+        ->and($tab->title())->toBe('Script')
+    ;
 });
 
 it('opens a document the reply asked suggestions for and accepts them', function (): void {
@@ -207,10 +229,12 @@ it('dismisses a suggestion and hides suggestions from visitors', function (): vo
     $tab->act('open', ['id' => $this->essay->id]);
     $visitor->act('open', ['id' => $this->essay->id]);
 
+    $ownerHtml = $tab->render();
     $visitorHtml = $visitor->render();
     $tab->act('dismiss', ['id' => $suggestion->id]);
 
-    expect($visitorHtml)->not->toContain('artifact-suggestions')
+    expect($ownerHtml)->toContain('artifact-suggestions')
+        ->and($visitorHtml)->toContain('Their is a error.')->not->toContain('artifact-suggestions')
         ->and($tab->render())->not->toContain('artifact-suggestions')
         ->and($this->container->suggestions()->find($suggestion->id)->status)->toBe(Suggestion::STATUS_REJECTED)
     ;
