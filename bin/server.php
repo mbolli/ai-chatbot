@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Container;
 use App\Web\ChatApp;
+use App\Web\Scopes;
 use Mbolli\PhpVia\Config;
 use Mbolli\PhpVia\Via;
 
@@ -35,6 +36,8 @@ $viaConfig = (new Config())
     // php-via's Dev Bar overlays the page; opt in with VIA_DEVBAR=1
     ->withDevBar(filter_var(getenv('VIA_DEVBAR') ?: ($_ENV['VIA_DEVBAR'] ?? false), FILTER_VALIDATE_BOOLEAN))
     ->withStaticDir($root . '/public')
+    // Streamed replies re-render at most every 50 ms per chat; the last state always arrives
+    ->withBroadcastThrottle(Scopes::allStreams(), 50)
     // Asset URLs carry the file's mtime, so they can be cached for a year
     ->withStaticCacheControl(static fn (string $file, string $mime): string => in_array($mime, ['text/css', 'text/javascript', 'application/javascript'], true)
         ? 'public, max-age=31536000'

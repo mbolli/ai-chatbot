@@ -24,4 +24,9 @@ final class Scopes {
     public static function stream(string $chatId): string {
         return Scope::build('chatstream', $chatId);
     }
+
+    /** Every chat's stream scope, for the broadcast throttle */
+    public static function allStreams(): string {
+        return Scope::build('chatstream', '*');
+    }
 }

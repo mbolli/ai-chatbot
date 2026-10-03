@@ -313,4 +313,25 @@ describe('AuthService', function (): void {
             expect($user->email)->toBe('test@example.com');
         });
     });
+
+    describe('session rotation', function (): void {
+        it('gives the session a new id on every change of user', function (): void {
+            $this->authService->register($this->session, 'new@example.com', 'password123');
+            $this->authService->logout($this->session);
+            $this->authService->login($this->session, 'new@example.com', 'password123');
+            $this->authService->logout($this->session);
+            $this->authService->createGuestUser($this->session);
+            $this->authService->upgradeGuestAccount($this->session, 'guest@example.com', 'password123');
+
+            expect($this->session->regenerations)->toBe(5);
+        });
+
+        it('keeps the session id when a login fails', function (): void {
+            $this->authService->register(new ArraySession(), 'known@example.com', 'password123');
+
+            $this->authService->login($this->session, 'known@example.com', 'wrong-password');
+
+            expect($this->session->regenerations)->toBe(0);
+        });
+    });
 });

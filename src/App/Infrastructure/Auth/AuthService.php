@@ -72,7 +72,8 @@ final class AuthService {
         try {
             $user = $this->userRepository->createUser($email, $password);
 
-            // Auto-login after registration
+            // Auto-login after registration, under a new session id like a login
+            $session->regenerate();
             $session->set(self::USER_SESSION_KEY, $user->id);
 
             return ['success' => true, 'user' => $user];

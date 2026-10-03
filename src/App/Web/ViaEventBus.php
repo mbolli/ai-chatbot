@@ -15,21 +15,12 @@ use App\Domain\Event\VoteUpdatedEvent;
 use App\Domain\Service\RateLimitType;
 use App\Infrastructure\EventBus\EventBusInterface;
 use Mbolli\PhpVia\Via;
-use OpenSwoole\Timer;
 
 /**
  * Turns domain events into state changes plus php-via broadcasts; the components re-render from state.
  */
 final class ViaEventBus implements EventBusInterface {
-    private const int STREAM_INTERVAL_MS = 50;
-
     private ?Via $app = null;
-
-    /** @var array<string, float> */
-    private array $lastStreamBroadcast = [];
-
-    /** @var array<string, true> */
-    private array $pendingStreamBroadcast = [];
 
     public function __construct(private readonly LiveState $state) {}
 
@@ -57,7 +48,7 @@ final class ViaEventBus implements EventBusInterface {
     private function onStreaming(MessageStreamingEvent $event): void {
         if (!$event->isComplete) {
             $this->state->updateStream($event->chatId, $event->messageId, content: $event->fullContent);
-            $this->broadcastStream($event->chatId);
+            $this->broadcast(Scopes::stream($event->chatId));
 
             return;
         }
@@ -69,7 +60,7 @@ final class ViaEventBus implements EventBusInterface {
 
     private function onThinking(MessageThinkingEvent $event): void {
         $this->state->updateStream($event->chatId, $event->messageId, thinking: $event->fullThinking);
-        $this->broadcastStream($event->chatId);
+        $this->broadcast(Scopes::stream($event->chatId));
     }
 
     private function onChatUpdated(ChatUpdatedEvent $event): void {
@@ -118,30 +109,6 @@ final class ViaEventBus implements EventBusInterface {
 
         $this->state->pushToast($event->userId, $message, signals: $signals);
         $this->broadcast(Scopes::user($event->userId));
-    }
-
-    /**
-     * At most one stream broadcast per interval and chat; a trailing one carries the latest text.
-     */
-    private function broadcastStream(string $chatId): void {
-        if (isset($this->pendingStreamBroadcast[$chatId])) {
-            return;
-        }
-
-        $elapsedMs = (microtime(true) - ($this->lastStreamBroadcast[$chatId] ?? 0.0)) * 1000;
-        if ($elapsedMs >= self::STREAM_INTERVAL_MS) {
-            $this->lastStreamBroadcast[$chatId] = microtime(true);
-            $this->broadcast(Scopes::stream($chatId));
-
-            return;
-        }
-
-        $this->pendingStreamBroadcast[$chatId] = true;
-        Timer::after((int) ceil(self::STREAM_INTERVAL_MS - $elapsedMs), function () use ($chatId): void {
-            unset($this->pendingStreamBroadcast[$chatId]);
-            $this->lastStreamBroadcast[$chatId] = microtime(true);
-            $this->broadcast(Scopes::stream($chatId));
-        });
     }
 
     private function broadcast(string $scope): void {

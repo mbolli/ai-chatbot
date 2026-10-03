@@ -30,6 +30,6 @@ final class ViaSession implements SessionInterface {
     }
 
     public function regenerate(): void {
-        // php-via has no session id rotation yet, so a fixated session id survives login
+        $this->context->regenerateSession();
     }
 }

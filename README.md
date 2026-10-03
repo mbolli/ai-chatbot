@@ -164,7 +164,7 @@ Browser (Datastar)
 1. The `send` action calls `MessageCommands::send()`, which saves the user message and an empty assistant message
 2. An OpenSwoole coroutine iterates `AIService::streamChat()`
 3. Each chunk emits a `MessageStreamingEvent` with the full text so far
-4. `ViaEventBus` stores the text in `LiveState` and broadcasts the chat stream scope, at most once per 50 ms per chat
+4. `ViaEventBus` stores the text in `LiveState` and broadcasts the chat stream scope, which php-via renders at most once per 50 ms per chat (`withBroadcastThrottle()`)
 5. The `stream` component renders the reply as Markdown on the server; Datastar morphs only the changed nodes
 6. When the reply is complete, the message list renders the stored message
 7. The message container keeps the newest text in view unless the user scrolled up
