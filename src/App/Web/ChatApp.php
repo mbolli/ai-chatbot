@@ -34,7 +34,7 @@ final class ChatApp {
         $chat = $chatId !== null ? $this->container->chats()->find($chatId) : null;
 
         if ($chatId !== null && ($chat === null || (!$chat->isOwnedBy($user->id) && !$chat->isPublic()))) {
-            $c->view(static fn (): string => '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body></body></html>', cacheUpdates: false);
+            $c->view(static fn (): string => '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body></body></html>');
 
             return;
         }
@@ -48,7 +48,7 @@ final class ChatApp {
         $actions = $this->registerActions($c, $user, $chat, $message, $model, $accounts) + $account['actions'] + $documents['actions'];
         $slots = $this->registerComponents($c, $user, $chat, $actions) + $account['slots'] + $documents['slots'];
 
-        $c->view(fn (): string => $this->renderPage($c->getId(), $user, $chat, $message, $model, $actions, $slots), cacheUpdates: false);
+        $c->view(fn (): string => $this->renderPage($c->viaHead(), $user, $chat, $message, $model, $actions, $slots));
     }
 
     /**
@@ -123,14 +123,14 @@ final class ChatApp {
                     'user' => $this->userInfo($user),
                     'actions' => $actions,
                     'e' => TemplateRenderer::escape(...),
-                ]), cacheUpdates: false);
+                ]));
             }, 'sidebar'),
             'toasts' => $c->component(function (Context $cc) use ($user): void {
                 $cc->addScope(Scopes::user($user->id));
                 $cc->view(fn (): string => $this->renderer()->partial('toast', [
                     'toasts' => $this->container->liveState()->toasts($user->id),
                     'e' => TemplateRenderer::escape(...),
-                ]), cacheUpdates: false);
+                ]));
             }, 'toasts'),
         ];
 
@@ -140,12 +140,12 @@ final class ChatApp {
 
         $stream = $c->component(function (Context $cc) use ($chat): void {
             $cc->addScope(Scopes::stream($chat->id));
-            $cc->view(fn (): string => $this->renderStream($chat->id), cacheUpdates: false);
+            $cc->view(fn (): string => $this->renderStream($chat->id));
         }, 'stream');
 
         $slots['messages'] = $c->component(function (Context $cc) use ($user, $chat, $stream, $actions): void {
             $cc->addScope(Scopes::chat($chat->id));
-            $cc->view(fn (): string => $this->renderMessages($user, $chat->id, $stream, $actions), cacheUpdates: false);
+            $cc->view(fn (): string => $this->renderMessages($user, $chat->id, $stream, $actions));
         }, 'messages');
 
         return $slots;
@@ -155,7 +155,7 @@ final class ChatApp {
      * @param array<string, string>             $actions
      * @param array<string, callable(): string> $slots
      */
-    private function renderPage(string $contextId, User $user, ?Chat $chat, Signal $message, Signal $model, array $actions, array $slots): string {
+    private function renderPage(string $viaHead, User $user, ?Chat $chat, Signal $message, Signal $model, array $actions, array $slots): string {
         // Reload so title, header and visibility reflect the stored chat
         $chat = $chat !== null ? ($this->container->chats()->find($chat->id) ?? $chat) : null;
         $ai = $this->container->ai();
@@ -170,7 +170,7 @@ final class ChatApp {
             'actions' => $actions,
             'signals' => ['message' => $message->id(), 'model' => $model->id()],
             'slots' => $slots,
-            'contextId' => $contextId,
+            'viaHead' => $viaHead,
             'e' => TemplateRenderer::escape(...),
             'md' => TemplateRenderer::md(...),
         ];

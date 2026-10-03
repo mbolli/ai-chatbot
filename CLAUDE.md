@@ -12,7 +12,7 @@ A PHP port of the Vercel AI Chatbot, built to compare a lean hypermedia stack ag
 
 The app runs on **OpenSwoole** (`ext-openswoole ^26`) under PHP 8.5, started with the system `php`. php-via needs OpenSwoole; the Swoole extension must not be loaded in the same PHP process, so do not point `PHP_INI_SCAN_DIR` at a Swoole ini directory.
 
-php-via comes from a Composer path repository, `../php-via-fix` (symlinked into `vendor/`), and the lock pins its branch `dev-fix/component-dom-ids`. That branch makes component wrapper ids valid CSS selectors on routes with parameters, which `/chat/{id}` needs. Before a deploy, php-via has to be released with that fix: require the released version in `composer.json`, delete the `repositories` entry and run `composer update mbolli/php-via`. Until then Composer only resolves where `../php-via-fix` exists. Composer also needs `--ignore-platform-req=ext-inotify` where inotify is missing (it is a dev requirement).
+php-via 0.14 (unreleased) comes from a Composer path repository, `../php-via-014` (symlinked into `vendor/`): its 0.14 line plus the fix that makes component wrapper ids valid CSS selectors on routes with parameters, which `/chat/{id}` needs. Before a deploy, php-via 0.14 has to be released with that fix: require the released version in `composer.json`, delete the `repositories` entry and run `composer update mbolli/php-via`. Until then Composer only resolves where `../php-via-014` exists. The layout calls `$c->viaHead()` (passed in as `$viaHead`) for the php-via bootstrap and loads its own Datastar 1.0.4 bundle with the on-keys plugin instead of `viaFoot()`. Composer also needs `--ignore-platform-req=ext-inotify` where inotify is missing (it is a dev requirement).
 
 ## Commands
 

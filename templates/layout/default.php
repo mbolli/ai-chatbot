@@ -1,13 +1,13 @@
 <?php
 /**
- * Full-document layout: php-via injects via_ctx and its includes, the page carries the SSE bootstrap.
+ * Full-document layout. $viaHead connects the page to php-via; the page loads its own Datastar bundle.
  *
  * @var null|string $title
  * @var null|string $content
  * @var null|string $currentChatId
  * @var null|array $user
  * @var array<string, callable(): string> $slots
- * @var string $contextId php-via context of this tab
+ * @var string $viaHead php-via bootstrap: via_ctx, the SSE connect and the tab-close beacon
  */
 $e = fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $isGuest = ($user['isGuest'] ?? true);
@@ -17,9 +17,8 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- via_ctx must come before the SSE bootstrap below: Datastar applies attributes in document order -->
-    <meta data-signals='<?php echo $e(json_encode(['via_ctx' => $contextId, '_disconnected' => false])); ?>'>
     <meta charset="UTF-8">
+    <?php echo $viaHead; ?>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Fast, privacy-focused AI chatbot powered by Claude and GPT. Create artifacts, write code, analyze data, and get instant answers.">
     <meta name="view-transition" content="same-origin">
@@ -27,13 +26,6 @@ $asset = static fn (string $path): string => $path . '?v=' . (@filemtime(__DIR__
     <meta name="theme-color" content="#212529">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23228be6' d='M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6l-4 3v-3H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z'/%3E%3C/svg%3E">
     <title><?php echo $e($title ?? 'AI Chatbot'); ?></title>
-    <!-- php-via: one SSE stream per tab, reconnecting every 15 s while down -->
-    <meta data-indicator="_connecting"
-          data-on-interval__duration.15s.leading="!$_connecting && @get('/_sse')"
-          data-on:datastar-fetch="el === evt.detail.el &&
-              ((evt.detail.type.startsWith('datastar') && ($_disconnected = false)) ||
-               (['retrying', 'error', 'finished'].includes(evt.detail.type) && ($_disconnected = true)))">
-    <meta data-init="window.addEventListener('beforeunload', () => navigator.sendBeacon('/_session/close', $via_ctx))">
 
     <!-- Open Props CSS (bundled) -->
     <link rel="stylesheet" href="<?php echo $asset('/css/open-props-bundle.css'); ?>">

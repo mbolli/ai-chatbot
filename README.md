@@ -2,7 +2,7 @@
 
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![OpenSwoole](https://img.shields.io/badge/OpenSwoole-26-007EC6)](https://openswoole.com/)
-[![php-via](https://img.shields.io/badge/php--via-0.13-6C3BAF)](https://via.zweiundeins.gmbh)
+[![php-via](https://img.shields.io/badge/php--via-0.14-6C3BAF)](https://via.zweiundeins.gmbh)
 [![Datastar](https://img.shields.io/badge/Datastar-1.0-FF6B35?logo=rocket&logoColor=white)](https://data-star.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -48,12 +48,12 @@ Measured on the Swoole/Mezzio version, before the port to php-via.
 
 | Aspect | Next.js | PHP/OpenSwoole | Ratio |
 |--------|---------|----------------|-------|
-| **Dependencies (prod)** | 799 packages | **20 packages** | **40x fewer** |
-| **node_modules / vendor** | 793 MB | **5.6 MB** | **140x smaller** |
+| **Dependencies (prod)** | 799 packages | **18 packages** | **44x fewer** |
+| **node_modules / vendor** | 793 MB | **2.4 MB** | **330x smaller** |
 | **Build Step** | Required | **None on deploy** (`public/js/app.js` is committed) | |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | |
 
-PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via installed as a copy of its dist files). Twig, Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies.
+PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via 0.14 installed as a copy of its dist files). Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies; Twig is optional since php-via 0.14 and not installed.
 
 **The takeaway:** Modern PHP on OpenSwoole is a serious contender for real-time applications: no transpilation, no hydration, no serverless cold starts.
 
@@ -80,7 +80,7 @@ PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy
 - Composer
 - Node.js and pnpm, only for TypeScript changes and the Playwright suite
 
-php-via is not yet released with the fix this app needs (component ids on routes with parameters). Until it is, `composer.json` installs it from a path repository at `../php-via-fix`, so a checkout of php-via's `fix/component-dom-ids` branch has to sit next to this repository.
+This app targets php-via 0.14, which is not released yet and still lacks a fix it needs (component ids on routes with parameters). Until both are released, `composer.json` installs php-via from a path repository at `../php-via-014`: a checkout of php-via's 0.14 line with commit `fix: give components on routes with parameters a wrapper id that works as a CSS selector` applied.
 
 ## 🚀 Quick Start
 
@@ -438,7 +438,7 @@ The app is one long-running PHP process. Put a reverse proxy in front for TLS an
 ### Production Checklist
 
 1. `APP_ENV=production` and `APP_DEBUG=false` in `.env`; no `VIA_DEVBAR`
-2. Require a released php-via version in `composer.json` and drop the `../php-via-fix` path repository
+2. Require a released php-via version in `composer.json` and drop the `../php-via-014` path repository
 3. `server.host` set to `127.0.0.1` in `config/autoload/app.local.php`
 4. HTTPS in front: in production the session cookie is `Secure` with the `__Host-` prefix
 5. After each update: back up `data/db.sqlite`, `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
@@ -538,8 +538,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev unzi
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
-# Only while composer.json points at ../php-via-fix: build with --build-context php-via=../php-via-fix
-COPY --from=php-via . /php-via-fix
+# Only while composer.json points at ../php-via-014: build with --build-context php-via=../php-via-014
+COPY --from=php-via . /php-via-014
 COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
@@ -549,7 +549,7 @@ CMD ["sh", "-c", "php bin/init-db.php && php bin/migrate.php && exec php bin/ser
 ```
 
 ```bash
-docker build --build-context php-via=../php-via-fix -t ai-chatbot .
+docker build --build-context php-via=../php-via-014 -t ai-chatbot .
 docker run -p 8080:8080 --env-file .env -v ai-chatbot-data:/app/data ai-chatbot
 ```
 

@@ -37,7 +37,8 @@ beforeEach(function (): void {
     $this->run = function (Context $context, string $action, array $query = [], array $signals = []): void {
         $context->setRequestInput($query, []);
         foreach ($signals as $name => $value) {
-            $context->getSignal($name)?->setValue($value, false);
+            $context->getSignal($name)?->setValue($value);
+            $context->getSignal($name)?->markSynced();
         }
         $context->executeAction($action);
     };

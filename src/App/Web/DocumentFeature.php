@@ -81,7 +81,7 @@ final class DocumentFeature {
         ];
         $urls = array_map(static fn (Action $action): string => $action->url(), $actions);
 
-        $cc->view(fn (): string => $this->render($user, $chat, $panel, $content, $urls), cacheUpdates: false);
+        $cc->view(fn (): string => $this->render($user, $chat, $panel, $content, $urls));
 
         return $urls;
     }

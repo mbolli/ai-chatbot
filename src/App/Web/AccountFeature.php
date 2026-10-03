@@ -114,7 +114,7 @@ final class AccountFeature {
                     'visibilityUrl' => $visibilityUrl,
                     'e' => TemplateRenderer::escape(...),
                 ]);
-            }, cacheUpdates: false);
+            });
         }, 'header');
     }
 

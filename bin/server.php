@@ -33,7 +33,7 @@ $viaConfig = (new Config())
     ->withDevMode((bool) ($config['debug'] ?? false))
     ->withLogLevel(($config['debug'] ?? false) ? 'debug' : 'warning')
     // php-via's Dev Bar overlays the page; opt in with VIA_DEVBAR=1
-    ->withTracing(filter_var(getenv('VIA_DEVBAR') ?: ($_ENV['VIA_DEVBAR'] ?? false), FILTER_VALIDATE_BOOLEAN))
+    ->withDevBar(filter_var(getenv('VIA_DEVBAR') ?: ($_ENV['VIA_DEVBAR'] ?? false), FILTER_VALIDATE_BOOLEAN))
     ->withStaticDir($root . '/public')
     // Asset URLs carry the file's mtime, so they can be cached for a year
     ->withStaticCacheControl(static fn (string $file, string $mime): string => in_array($mime, ['text/css', 'text/javascript', 'application/javascript'], true)
