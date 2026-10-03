@@ -62,9 +62,10 @@ final class DocumentFeature {
                 }
             }, 'version'),
             'save' => $cc->action(function () use ($cc, $user, $chat, $documents, $panel, $content): void {
+                // Before the update: its broadcast re-renders this tab's panel, which must then show the new version
+                $panel->showVersion(0);
                 if ($documents->update($user->id, $chat->id, $panel->documentId(), $content->string()) === 204) {
-                    // The broadcast re-renders the panel; the edit buffer need not travel with every request
-                    $panel->showVersion(0);
+                    // The edit buffer need not travel with every request
                     $content->setValue('');
                     $cc->syncSignals();
                 }
