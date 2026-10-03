@@ -445,16 +445,17 @@ The app is one long-running PHP process. Put a reverse proxy in front for TLS an
 
 ### Caddy
 
+php-via compresses pages, static files and the SSE streams with Brotli itself. That needs the `brotli` PHP extension, `'server' => ['brotli' => true]` in `config/autoload/app.local.php` (which turns on `withH2c()->withBrotli()`) and HTTP/2 cleartext from Caddy to the app, without Caddy's own `encode`:
+
 ```caddy
 chat.example.com {
-    encode zstd gzip
-    reverse_proxy 127.0.0.1:3200
+    reverse_proxy h2c://127.0.0.1:3200
 }
 ```
 
-Caddy needs nothing extra for the SSE streams: `reverse_proxy` flushes `text/event-stream` responses immediately, also through `encode`. php-via writes an SSE comment after 15 seconds of silence, so idle streams stay open. This setup (Caddy 2.11.6, `encode zstd gzip`) passed the Playwright suite, streaming specs included, in October 2026.
+`reverse_proxy` flushes `text/event-stream` responses immediately; php-via writes an SSE comment after 15 seconds of silence, so idle streams stay open. This setup (Caddy 2.11.6 with `h2c://`, php-via 0.14 with `withBrotli()`) served pages, static files and `/_sse` with `Content-Encoding: br` and passed a streaming browser run in October 2026. Each open SSE stream keeps its own Brotli encoder, which costs memory per tab (see php-via's deployment docs).
 
-Let Caddy compress, not php-via. php-via can compress pages and streams itself with `Config::withBrotli()`, but that needs the `brotli` PHP extension, HTTP/2 to the proxy (`withH2c()` and `reverse_proxy h2c://…`) and `encode` removed from Caddy, and each open SSE stream keeps its own Brotli encoder (about 9 MB per busy stream at the default level, according to php-via's deployment docs). `bin/server.php` does not enable it. Stock Caddy encodes gzip and zstd; `encode br` needs a Caddy build with a Brotli module (`caddy list-modules | grep http.encoders` shows what a binary has).
+Without the brotli extension, leave `brotli` off and let Caddy compress instead: `encode zstd gzip` and a plain `reverse_proxy 127.0.0.1:3200`. Stock Caddy has no Brotli encoder.
 
 ### systemd
 
@@ -520,7 +521,7 @@ For a server that runs the earlier version (`php8.5 vendor/bin/laminas mezzio:sw
    sudo systemctl daemon-reload && sudo systemctl restart chat
    journalctl -u chat -f
    ```
-7. Caddy: `reverse_proxy 127.0.0.1:3200` and the existing `encode` stay as they are. Nothing changes for SSE.
+7. Brotli in php-via: build the `brotli` extension for PHP 8.5 if `php8.5 -m` does not list it, add `'brotli' => true` to the `server` key in `app.local.php`, and switch Caddy to `reverse_proxy h2c://127.0.0.1:3200` without `encode` for this site (`caddy validate`, then `systemctl reload caddy`). Do this in the same step as the restart: the Mezzio app does not speak h2c.
 8. Check: `curl -s -D - -o /dev/null https://chat.example.com/` answers 200 with a `__Host-via_session_id` cookie, and a test message streams token by token. In the browser's network panel, `/_sse` stays open with `Content-Type: text/event-stream`.
 
 Rollback: check out the noted commit, run `composer install --no-dev`, swap the extensions back (`phpdismod -v 8.5 -s cli openswoole`, `phpenmod -v 8.5 -s cli swoole`), restore the drop-in and restart. The port to php-via itself does not change the schema; if `migrate.php` applied a migration, restore the backup as well.

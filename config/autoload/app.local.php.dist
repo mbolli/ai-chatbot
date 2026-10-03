@@ -19,5 +19,7 @@ return [
     'server' => [
         'host' => '127.0.0.1',
         'port' => 8080,
+        // Compress the SSE stream in php-via (needs ext-brotli and an h2c proxy) instead of in the proxy
+        // 'brotli' => true,
     ],
 ];

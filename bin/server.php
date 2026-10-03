@@ -44,6 +44,10 @@ $viaConfig = (new Config())
 if ($container->isProduction()) {
     $viaConfig->withSecureCookie(true);
 }
+// php-via compresses the SSE stream itself; needs ext-brotli and a proxy speaking h2c (Caddy: reverse_proxy h2c://…)
+if ((bool) ($server['brotli'] ?? false)) {
+    $viaConfig->withH2c()->withBrotli();
+}
 
 $app = new Via($viaConfig);
 $container->eventBus()->attach($app);
