@@ -53,6 +53,10 @@ final class Container {
             $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
             $pdo->exec('PRAGMA foreign_keys = ON');
+            // WAL: a write appends to the log instead of creating, syncing and deleting a rollback journal,
+            // which halves the cost of a page view that creates a guest user
+            $pdo->exec('PRAGMA journal_mode = WAL');
+            $pdo->exec('PRAGMA synchronous = NORMAL');
 
             return $pdo;
         });

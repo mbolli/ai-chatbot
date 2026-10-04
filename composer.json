@@ -39,7 +39,7 @@
     "scripts": {
         "serve": [
             "Composer\\Config::disableProcessTimeout",
-            "php bin/server.php"
+            "php -d opcache.enable_cli=1 bin/server.php"
         ],
         "test": "pest",
         "test:coverage": "pest --coverage",

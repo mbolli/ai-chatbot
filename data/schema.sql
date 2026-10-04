@@ -17,7 +17,6 @@ CREATE TABLE "users" (
     "created_at" TEXT NOT NULL DEFAULT (datetime('now')),
     CONSTRAINT "users_email_uq" UNIQUE ("email")
 );
-CREATE INDEX "users_email_ix" ON "users" ("email");
 
 -- =====================================================
 -- Application tables
@@ -136,4 +135,4 @@ CREATE INDEX "message_usage_user_id_created_at_ix" ON "message_usage" ("user_id"
 PRAGMA foreign_keys = ON;
 
 -- Must match the highest version in App\Infrastructure\Persistence\SchemaMigrator
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;

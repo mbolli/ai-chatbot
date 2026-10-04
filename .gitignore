@@ -1,5 +1,7 @@
 /vendor/
 /data/*.sqlite
+/data/*.sqlite-wal
+/data/*.sqlite-shm
 /data/cache/
 /config/autoload/*.local.php
 /node_modules/

@@ -46,7 +46,7 @@ it('upgrades a database created from the previous schema', function (): void {
     $migrator = new SchemaMigrator($pdo);
 
     expect($migrator->currentVersion())->toBe(0);
-    expect($migrator->migrate())->toBe([1]);
+    expect($migrator->migrate())->toBe([1, 2]);
     expect($migrator->currentVersion())->toBe(SchemaMigrator::latestVersion());
 
     expect($pdo->query('SELECT message_count, token_count FROM rate_limits WHERE user_id = 1')->fetch(\PDO::FETCH_ASSOC))

@@ -438,7 +438,8 @@ The app is one long-running PHP process. Put a reverse proxy in front for TLS an
 1. `APP_ENV=production` and `APP_DEBUG=false` in `.env`; no `VIA_DEVBAR`
 2. `server.host set to `127.0.0.1` in `config/autoload/app.local.php`
 3. HTTPS in front: in production the session cookie is `Secure` with the `__Host-` prefix
-4. After each update: back up `data/db.sqlite`, `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
+4. Start PHP with `-d opcache.enable_cli=1`. The CLI leaves OPcache off by default, and every page renders its PHP templates with `include`, so without it each request compiles them again
+5. After each update: back up the database with `sqlite3 data/db.sqlite ".backup data/db.sqlite.bak"` (it runs in WAL mode, so copying the file alone can miss recent writes), `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
 
 ### Caddy
 
@@ -465,7 +466,7 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/ai-chatbot
-ExecStart=/usr/bin/php8.5 bin/server.php
+ExecStart=/usr/bin/php8.5 -d opcache.enable_cli=1 bin/server.php
 Restart=on-failure
 RestartSec=5s
 
@@ -481,7 +482,7 @@ For a server that runs the earlier version (`php8.5 vendor/bin/laminas mezzio:sw
 
 1. Back up the database and note the running commit for a rollback:
    ```bash
-   cp data/db.sqlite data/db.sqlite.$(date +%F).bak
+   sqlite3 data/db.sqlite ".backup data/db.sqlite.$(date +%F).bak"
    git rev-parse HEAD
    ```
 2. Install OpenSwoole for PHP 8.5. Use the distribution package if one exists (`apt-cache policy php8.5-openswoole`), otherwise build it with OpenSSL:
@@ -512,7 +513,7 @@ For a server that runs the earlier version (`php8.5 vendor/bin/laminas mezzio:sw
    [Service]
    Type=simple
    ExecStart=
-   ExecStart=/usr/bin/php8.5 bin/server.php
+   ExecStart=/usr/bin/php8.5 -d opcache.enable_cli=1 bin/server.php
    ```
    ```bash
    sudo systemctl daemon-reload && sudo systemctl restart chat
@@ -541,7 +542,7 @@ RUN composer install --no-dev --optimize-autoloader
 
 VOLUME /app/data
 EXPOSE 8080
-CMD ["sh", "-c", "php bin/init-db.php && php bin/migrate.php && exec php bin/server.php"]
+CMD ["sh", "-c", "php bin/init-db.php && php bin/migrate.php && exec php -d opcache.enable_cli=1 bin/server.php"]
 ```
 
 ```bash

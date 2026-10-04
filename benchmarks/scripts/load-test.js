@@ -42,7 +42,7 @@ export default function () {
 export function handleSummary(data) {
   return {
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
-    '/var/www/ai-chatbot/benchmarks/results/k6-summary.json': JSON.stringify(data, null, 2),
+    [__ENV.SUMMARY || 'k6-summary.json']: JSON.stringify(data, null, 2),
   };
 }
 

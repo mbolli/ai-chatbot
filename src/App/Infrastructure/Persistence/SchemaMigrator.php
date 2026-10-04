@@ -38,6 +38,10 @@ final class SchemaMigrator {
             )',
             'CREATE INDEX "message_usage_user_id_created_at_ix" ON "message_usage" ("user_id", "created_at")',
         ],
+        // The UNIQUE constraint already indexes users.email
+        2 => [
+            'DROP INDEX IF EXISTS "users_email_ix"',
+        ],
     ];
 
     public function __construct(

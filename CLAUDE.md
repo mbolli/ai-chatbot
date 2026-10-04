@@ -17,7 +17,7 @@ php-via comes from Packagist (`^0.14`). The layout calls `$c->viaHead()` (passed
 ## Commands
 
 ```bash
-composer serve          # php bin/server.php; 0.0.0.0:8080 unless config/autoload/app.local.php sets server.host/port
+composer serve          # php -d opcache.enable_cli=1 bin/server.php; 0.0.0.0:8080 unless config/autoload/app.local.php sets server.host/port
 composer test           # Pest, in-memory SQLite built from data/schema.sql
 vendor/bin/pest tests/Unit/Infrastructure/AIToolsTest.php --filter 'refuses to update'
 composer stan           # PHPStan level 6 + type-coverage 100% (bleedingEdge)
@@ -69,7 +69,7 @@ The page itself joins no scope, so a broadcast re-renders only the components in
 
 **Users and limits.** `AuthService` keeps the user in the php-via session (`ViaSession`); guests get a session-backed user. `RateLimitService` enforces an hourly request window, a daily message limit and an optional daily token limit per user, with separate guest and registered tiers. `MessageCommands` stores tool calls in `messages.parts` (replayed as text notes by `ConversationHistoryBuilder`), usage in `message_usage`, and logs one `ai_response {json}` line per response.
 
-**Schema changes** go into `data/schema.sql` (fresh installs, tests) and as a new step in `SchemaMigrator` (existing DBs, keyed on `PRAGMA user_version`); deploys run `composer db:migrate`.
+**Schema changes** go into `data/schema.sql` (fresh installs, tests) and as a new step in `SchemaMigrator` (existing DBs, keyed on `PRAGMA user_version`); deploys run `composer db:migrate`. `Container::pdo()` opens the database in WAL mode with `synchronous = NORMAL`, so back it up with `sqlite3 .backup`, not by copying the file. Start the server with `opcache.enable_cli=1`: templates are `include`d on every render and recompile without it.
 
 **Domain models** (`Domain/Model`) are immutable: readonly properties, `fromArray()` from snake_case DB rows, `toArray()` back, and `update*`/`append*` methods return new instances. Repository interfaces live in `Domain/Repository`, SQLite implementations in `Infrastructure/Persistence`. `App\Container` wires everything by hand, one method per service.
 
