@@ -48,12 +48,12 @@ Measured on the Swoole/Mezzio version, before the port to php-via.
 
 | Aspect | Next.js | PHP/OpenSwoole | Ratio |
 |--------|---------|----------------|-------|
-| **Dependencies (prod)** | 799 packages | **18 packages** | **44x fewer** |
-| **node_modules / vendor** | 793 MB | **2.4 MB** | **330x smaller** |
+| **Dependencies (prod)** | 592 packages | **18 packages** | **33x fewer** |
+| **node_modules / vendor** | 714 MB | **2.4 MB** | **298x smaller** |
 | **Build Step** | Required | **None on deploy** (`public/js/app.js` is committed) | |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | |
 
-PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via 0.14 installed as a copy of its dist files). Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies; Twig is optional since php-via 0.14 and not installed.
+PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via 0.14 installed as a copy of its dist files). Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies; Twig is optional since php-via 0.14 and not installed. Next.js numbers: `pnpm install --prod` of vercel/ai-chatbot at c2f8235 (July 2026), counting the unique packages in `node_modules/.pnpm`.
 
 **The takeaway:** Modern PHP on OpenSwoole is a serious contender for real-time applications: no transpilation, no hydration, no serverless cold starts.
 

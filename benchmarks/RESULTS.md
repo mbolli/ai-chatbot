@@ -90,20 +90,22 @@ Both servers are warm-cache ties at this geographic distance. PHP avoids cold st
 
 ### 5. Codebase Size
 
+Measured October 2026: the live PHP app (Mezzio on Swoole) and vercel/ai-chatbot at c2f8235 (July 2026).
+
 **Production (no dev dependencies):**
 
 | Metric | PHP/Swoole | Next.js | Ratio |
 |--------|------------|---------|-------|
-| **Dependencies (installed)** | **69** | 799 | **11.6x** |
-| **Disk size (vendor/node_modules)** | **25 MB** | 793 MB | **31.7x** |
+| **Dependencies (installed)** | **50** | 592 | **12x** |
+| **Disk size (vendor/node_modules)** | **11 MB** | 714 MB | **65x** |
 
 **With dev dependencies:**
 
 | Metric | PHP/Swoole | Next.js | Ratio |
 |--------|------------|---------|-------|
-| **Dependencies (installed)** | **140** | 921 | 6.6x |
-| **Disk size (vendor/node_modules)** | **76 MB** | 986 MB | 13x |
-| **Direct dependencies** | 32 | 97 | 3x |
+| **Dependencies (installed)** | **123** | 754 | 6.1x |
+| **Disk size (vendor/node_modules)** | **86 MB** | 885 MB | 10x |
+| **Direct dependencies** | 23 | 85 | 3.7x |
 
 ### 6. Load Test (k6, PHP only)
 
@@ -269,14 +271,13 @@ for i in (seq 5); curl -s -o /dev/null -w "%{time_starttransfer}s\n" -L https://
 # Production builds (no dev dependencies) - more accurate comparison
 # PHP
 composer install --no-dev --optimize-autoloader
-du -sh vendor                    # PHP: ~50M (production)
-composer show | wc -l            # PHP: ~90 packages
+composer show | wc -l            # 50
+du -sh vendor                    # 11M
 
-# Next.js  
-pnpm install --prod
-du -sh ai-chatbot/node_modules   # Next.js: ~500M (production, estimate)
-
-# Note: Original benchmarks used dev dependencies which inflates both numbers
+# Next.js
+pnpm install --prod --frozen-lockfile --ignore-scripts
+ls node_modules/.pnpm | grep -v -e '^lock.yaml$' -e '^node_modules$' | sed 's/_.*//' | sort -u | wc -l   # 592
+du -sh node_modules              # 714M
 ```
 
 ### k6 Load Test
@@ -317,8 +318,8 @@ curl -s -o /dev/null -w "DNS: %{time_namelookup}s\nTCP: %{time_connect}s\nTLS: %
 | **JS Heap Growth (load)** | 🏆 PHP | +1.5 MB vs +12.9 MB (8.6x) |
 | **JS Heap Growth (chat)** | 🏆 PHP | +1.9 MB vs +10.4 MB (5.5x) |
 | **SSE Compression** | 🏆 PHP | Brotli 58.5x vs none; 2x less transferred over 10 turns |
-| **Dependencies (prod)** | 🏆 PHP | 69 vs 799 (11.6x) |
-| **Vendor/node_modules** | 🏆 PHP | 25 MB vs 793 MB (31.7x) |
+| **Dependencies (prod)** | 🏆 PHP | 50 vs 592 (12x) |
+| **Vendor/node_modules** | 🏆 PHP | 11 MB vs 714 MB (65x) |
 | **Cold Start** | 🏆 PHP | 0ms vs 1.85s |
 | **Hosting Cost** | 🏆 PHP | $20/year vs usage-based |
 | **Cumulative Layout Shift** | ~Tie | 0.001 vs 0 |
