@@ -30,10 +30,12 @@ final class ChatApp {
     }
 
     private function page(Context $c, ?string $chatId): void {
-        $user = $this->container->auth()->getOrCreateUser(new ViaSession($c))['user'];
         $chat = $chatId !== null ? $this->container->chats()->find($chatId) : null;
+        $auth = $this->container->auth();
+        // The home page creates no guest: an anonymous visitor gets one with the first message
+        $user = $chat === null ? $auth->getUser(new ViaSession($c)) : $auth->getOrCreateUser(new ViaSession($c))['user'];
 
-        if ($chatId !== null && ($chat === null || (!$chat->isOwnedBy($user->id) && !$chat->isPublic()))) {
+        if ($chatId !== null && ($chat === null || $user === null || (!$chat->isOwnedBy($user->id) && !$chat->isPublic()))) {
             $c->view(static fn (): string => '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/"></head><body></body></html>');
 
             return;
@@ -54,12 +56,13 @@ final class ChatApp {
     /**
      * @return array<string, string> action name => URL
      */
-    private function registerActions(Context $c, User $user, ?Chat $chat, Signal $message, Signal $model, AccountFeature $accounts): array {
+    private function registerActions(Context $c, ?User $user, ?Chat $chat, Signal $message, Signal $model, AccountFeature $accounts): array {
         $send = $c->action(function (Context $ctx) use ($user, $chat, $message, $model, $accounts): void {
             $text = mb_trim($message->string());
             if ($text === '' || $accounts->guard($ctx, $user)) {
                 return;
             }
+            $user ??= $this->container->auth()->getOrCreateUser(new ViaSession($ctx))['user'];
 
             $commands = $this->container->messageCommands();
             // A rejected message keeps its text in the input
@@ -87,7 +90,7 @@ final class ChatApp {
 
         $actions = ['send' => $send->url()];
 
-        if ($chat !== null) {
+        if ($chat !== null && $user !== null) {
             $actions['stop'] = $c->action(function (Context $ctx) use ($user, $chat, $accounts): void {
                 if ($accounts->guard($ctx, $user)) {
                     return;
@@ -111,14 +114,16 @@ final class ChatApp {
      *
      * @return array<string, callable(): string> slot name => component renderer
      */
-    private function registerComponents(Context $c, User $user, ?Chat $chat, array $actions): array {
+    private function registerComponents(Context $c, ?User $user, ?Chat $chat, array $actions): array {
         $currentChatId = $chat?->id;
 
         $slots = [
             'sidebar' => $c->component(function (Context $cc) use ($user, $currentChatId, $actions): void {
-                $cc->addScope(Scopes::user($user->id));
+                if ($user !== null) {
+                    $cc->addScope(Scopes::user($user->id));
+                }
                 $cc->view(fn (): string => $this->renderer()->partial('sidebar', [
-                    'chats' => $this->container->chats()->findByUser($user->id, 20),
+                    'chats' => $user !== null ? $this->container->chats()->findByUser($user->id, 20) : [],
                     'currentChatId' => $currentChatId,
                     'user' => $this->userInfo($user),
                     'actions' => $actions,
@@ -126,15 +131,17 @@ final class ChatApp {
                 ]));
             }, 'sidebar'),
             'toasts' => $c->component(function (Context $cc) use ($user): void {
-                $cc->addScope(Scopes::user($user->id));
+                if ($user !== null) {
+                    $cc->addScope(Scopes::user($user->id));
+                }
                 $cc->view(fn (): string => $this->renderer()->partial('toast', [
-                    'toasts' => $this->container->liveState()->toasts($user->id),
+                    'toasts' => $user !== null ? $this->container->liveState()->toasts($user->id) : [],
                     'e' => TemplateRenderer::escape(...),
                 ]));
             }, 'toasts'),
         ];
 
-        if ($chat === null) {
+        if ($chat === null || $user === null) {
             return $slots;
         }
 
@@ -155,7 +162,7 @@ final class ChatApp {
      * @param array<string, string>             $actions
      * @param array<string, callable(): string> $slots
      */
-    private function renderPage(string $viaHead, User $user, ?Chat $chat, Signal $message, Signal $model, array $actions, array $slots): string {
+    private function renderPage(string $viaHead, ?User $user, ?Chat $chat, Signal $message, Signal $model, array $actions, array $slots): string {
         // Reload so title, header and visibility reflect the stored chat
         $chat = $chat !== null ? ($this->container->chats()->find($chat->id) ?? $chat) : null;
         $ai = $this->container->ai();
@@ -229,10 +236,10 @@ final class ChatApp {
     }
 
     /**
-     * @return array{id: int, email: null|string, isGuest: bool}
+     * @return null|array{id: int, email: null|string, isGuest: bool}
      */
-    private function userInfo(User $user): array {
-        return ['id' => $user->id, 'email' => $user->email, 'isGuest' => $user->isGuest];
+    private function userInfo(?User $user): ?array {
+        return $user !== null ? ['id' => $user->id, 'email' => $user->email, 'isGuest' => $user->isGuest] : null;
     }
 
     private function renderer(): TemplateRenderer {

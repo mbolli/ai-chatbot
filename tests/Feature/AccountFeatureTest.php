@@ -74,8 +74,30 @@ it('reloads instead of acting when the session switched account in another tab',
     ;
 });
 
-it('shows the sign-in error inline and forgets the password', function (): void {
+it('creates no user for a page view, and the guest with the first message', function (): void {
+    $users = fn (): int => (int) $this->container->pdo()->query('SELECT COUNT(*) FROM users')->fetchColumn();
+    $before = $users();
+
     $tab = $this->app->open('/');
+    expect($users())->toBe($before)
+        ->and(ChatTestApp::sessionUser($this->app, $tab))->toBeNull()
+    ;
+
+    $tab->action('send', signals: ['message' => '{help}']);
+    $guestId = ChatTestApp::sessionUser($this->app, $tab);
+    $guest = $this->container->users()->findById((int) $guestId);
+    $chats = $this->container->chats()->findByUser((int) $guestId);
+
+    expect($users())->toBe($before + 1)
+        ->and($guest?->isGuest)->toBeTrue()
+        ->and($chats)->toHaveCount(1)
+        ->and(ChatTestApp::scripts($tab->patches()))->toBe(['window.location.href = "\\/chat\\/' . $chats[0]->id . '"'])
+    ;
+});
+
+it('shows the sign-in error inline and forgets the password', function (): void {
+    $tab = ChatTestApp::browserOf($this->app, $this->container->users()->createGuestUser());
+    $tab->connect();
     $guestId = ChatTestApp::sessionUser($this->app, $tab);
 
     $tab->action('login', signals: ['authEmail' => 'owner@example.com', 'authPassword' => 'wrong-password', 'authLoading' => true]);
@@ -109,7 +131,8 @@ it('signs in, then out', function (): void {
 });
 
 it('upgrades a guest and keeps the guest chats', function (): void {
-    $tab = $this->app->open('/');
+    $tab = ChatTestApp::browserOf($this->app, $this->container->users()->createGuestUser());
+    $tab->connect();
     $guestId = (int) ChatTestApp::sessionUser($this->app, $tab);
     $this->container->chats()->save(Chat::create(userId: $guestId, model: 'claude-haiku-4-5'));
 

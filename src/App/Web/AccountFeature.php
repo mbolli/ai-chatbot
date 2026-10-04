@@ -27,10 +27,10 @@ final class AccountFeature {
     /**
      * @return array{actions: array<string, string>, slots: array<string, callable(): string>}
      */
-    public function register(Context $c, User $user, ?Chat $chat): array {
+    public function register(Context $c, ?User $user, ?Chat $chat): array {
         $actions = [
             'deleteChat' => $c->action(function (Context $ctx) use ($user, $chat): void {
-                if ($this->guard($ctx, $user)) {
+                if ($this->guard($ctx, $user) || $user === null) {
                     return;
                 }
                 $chatId = $this->query($ctx, 'id');
@@ -47,7 +47,7 @@ final class AccountFeature {
             }, 'logout')->url(),
         ];
 
-        if ($chat !== null && $chat->isOwnedBy($user->id)) {
+        if ($chat !== null && $user !== null && $chat->isOwnedBy($user->id)) {
             $actions['vote'] = $c->action(function (Context $ctx) use ($user, $chat): void {
                 if ($this->guard($ctx, $user)) {
                     return;
@@ -73,9 +73,10 @@ final class AccountFeature {
     }
 
     /**
-     * True, after scheduling a reload, when the tab acts for a user its session no longer has.
+     * True, after scheduling a reload, when the tab acts for a user its session no longer has,
+     * or a tab without a user finds that its session got one in another tab.
      */
-    public function guard(Context $ctx, User $user): bool {
+    public function guard(Context $ctx, ?User $user): bool {
         if (!$this->sessionChanged($ctx, $user)) {
             return false;
         }
@@ -89,11 +90,13 @@ final class AccountFeature {
      *
      * @return callable(): string
      */
-    private function header(Context $c, User $user, ?Chat $chat, ?string $visibilityUrl): callable {
+    private function header(Context $c, ?User $user, ?Chat $chat, ?string $visibilityUrl): callable {
         $chatId = $chat?->id;
 
         return $c->component(function (Context $cc) use ($c, $user, $chatId, $visibilityUrl): void {
-            $cc->addScope(Scopes::user($user->id));
+            if ($user !== null) {
+                $cc->addScope(Scopes::user($user->id));
+            }
             if ($chatId !== null) {
                 $cc->addScope(Scopes::chat($chatId));
             }
@@ -104,7 +107,7 @@ final class AccountFeature {
                 }
 
                 $chat = $chatId !== null ? $this->container->chats()->find($chatId) : null;
-                if ($chatId !== null && ($chat === null || (!$chat->isOwnedBy($user->id) && !$chat->isPublic()))) {
+                if ($chatId !== null && ($chat === null || $user === null || (!$chat->isOwnedBy($user->id) && !$chat->isPublic()))) {
                     return '<span hidden data-init="window.location.href = \'/\'"></span>';
                 }
 
@@ -191,8 +194,11 @@ final class AccountFeature {
         return \is_string($value) ? $value : '';
     }
 
-    private function sessionChanged(Context $c, User $user): bool {
+    private function sessionChanged(Context $c, ?User $user): bool {
         $current = $this->container->auth()->getUser(new ViaSession($c));
+        if ($user === null) {
+            return $current !== null;
+        }
 
         return $current === null || $current->id !== $user->id || $current->isGuest !== $user->isGuest;
     }
