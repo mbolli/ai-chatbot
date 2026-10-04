@@ -20,40 +20,40 @@ This project exists to challenge the assumption that modern AI chat apps require
 
 > **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization, and it still leads on most metrics.
 
-### Measured Performance (February 2026)
+### Measured Performance (October 2026)
 
-Measured on the Swoole/Mezzio version, before the port to php-via.
+Measured on the live php-via version against the Vercel demo at chatbot.ai-sdk.dev/demo, median of three Lighthouse 13.5 runs. Details and the February run: [benchmarks/RESULTS.md](benchmarks/RESULTS.md).
 
-**Desktop (Chrome 144):**
+**Desktop (Chromium 154):**
 
 | Metric | Next.js (Vercel) | PHP/Swoole | Difference |
 |--------|------------------|------------|------------|
-| **Lighthouse Score** | 93 | **100** | 🏆 PHP |
-| **Time to Interactive** | 1.6s | **0.3s** | **5.3x faster** |
-| **Total Blocking Time** | 110ms | **0ms** | ∞ better |
-| **JavaScript Sent** | ~1,080 KB | **13.5 KB** | **80x less** |
-| **HTTP Requests** | 36+ | **8** | **4.5x fewer** |
-| **Page Weight** | 1,107 KB | **42 KB** | **26x smaller** |
+| **Lighthouse Score** | 90 | **100** | 🏆 PHP |
+| **Time to Interactive** | 1.64s | **0.30s** | **5.5x faster** |
+| **Total Blocking Time** | 153ms | **0ms** | ∞ better |
+| **JavaScript Sent** | 1,291 KB | **13.6 KB** | **95x less** |
+| **HTTP Requests** | 35 | **7** | **5x fewer** |
+| **Page Weight** | 1,416 KB | **52 KB** | **27x smaller** |
 
 **Mobile (Slow 4G + 4x CPU throttling):**
 
 | Metric | Next.js (Vercel) | PHP/Swoole | Difference |
 |--------|------------------|------------|------------|
-| **Lighthouse Score** | 54 | **100** | 🏆 PHP |
-| **Time to Interactive** | 8.2s | **1.1s** | **7.5x faster** |
-| **Total Blocking Time** | 780ms | **0ms** | ∞ better |
-| **Largest Contentful Paint** | 8.1s | **1.1s** | **7.4x faster** |
+| **Lighthouse Score** | 52 | **100** | 🏆 PHP |
+| **Time to Interactive** | 8.87s | **1.07s** | **8.3x faster** |
+| **Total Blocking Time** | 898ms | **0ms** | ∞ better |
+| **Largest Contentful Paint** | 8.85s | **1.07s** | **8.3x faster** |
 
 ### Codebase Comparison (Production)
 
 | Aspect | Next.js | PHP/OpenSwoole | Ratio |
 |--------|---------|----------------|-------|
 | **Dependencies (prod)** | 592 packages | **18 packages** | **33x fewer** |
-| **node_modules / vendor** | 714 MB | **2.4 MB** | **298x smaller** |
+| **node_modules / vendor** | 714 MB | **4.6 MB** | **155x smaller** |
 | **Build Step** | Required | **None on deploy** (`public/js/app.js` is committed) | |
 | **Hosting Cost** | Usage-based | **$20/year VPS** | |
 
-PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via 0.14 installed as a copy of its dist files). Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies; Twig is optional since php-via 0.14 and not installed. Next.js numbers: `pnpm install --prod` of vercel/ai-chatbot at c2f8235 (July 2026), counting the unique packages in `node_modules/.pnpm`.
+PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy, then `du -sh vendor` (October 2026, php-via 0.14.0 from Packagist). Nyholm PSR-7 and `openswoole/core` arrive as php-via dependencies; Twig is optional since php-via 0.14 and not installed. Next.js numbers: `pnpm install --prod` of vercel/ai-chatbot at c2f8235 (July 2026), counting the unique packages in `node_modules/.pnpm`.
 
 **The takeaway:** Modern PHP on OpenSwoole is a serious contender for real-time applications: no transpilation, no hydration, no serverless cold starts.
 

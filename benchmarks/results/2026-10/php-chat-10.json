@@ -1,0 +1,76 @@
+{
+  "site": "php",
+  "turns": 10,
+  "throttled": false,
+  "model": "default of each app",
+  "prompt": "Answer directly in the chat and do not create a document: write the numbers from 1 to 300, separated by single spaces. Output nothing else.",
+  "answerChars": 1091,
+  "encodings": [
+    "br"
+  ],
+  "streamConnections": 2,
+  "encodedBytes": 34463,
+  "decodedBytes": 2511874,
+  "perTurn": [
+    {
+      "turn": 1,
+      "ms": 7838,
+      "encoded": 15674,
+      "decoded": 268978
+    },
+    {
+      "turn": 2,
+      "ms": 7373,
+      "encoded": 2152,
+      "decoded": 211135
+    },
+    {
+      "turn": 3,
+      "ms": 7315,
+      "encoded": 2056,
+      "decoded": 220261
+    },
+    {
+      "turn": 4,
+      "ms": 5825,
+      "encoded": 2240,
+      "decoded": 232317
+    },
+    {
+      "turn": 5,
+      "ms": 5831,
+      "encoded": 1897,
+      "decoded": 241621
+    },
+    {
+      "turn": 6,
+      "ms": 6034,
+      "encoded": 2080,
+      "decoded": 248978
+    },
+    {
+      "turn": 7,
+      "ms": 6083,
+      "encoded": 2051,
+      "decoded": 257811
+    },
+    {
+      "turn": 8,
+      "ms": 6103,
+      "encoded": 2249,
+      "decoded": 267511
+    },
+    {
+      "turn": 9,
+      "ms": 6095,
+      "encoded": 2114,
+      "decoded": 276953
+    },
+    {
+      "turn": 10,
+      "ms": 6104,
+      "encoded": 1950,
+      "decoded": 286309
+    }
+  ]
+}
