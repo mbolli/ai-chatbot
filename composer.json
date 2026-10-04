@@ -8,7 +8,7 @@
         "ext-pdo": "*",
         "ext-pdo_sqlite": "*",
         "php": "^8.5",
-        "mbolli/php-via": "@dev",
+        "mbolli/php-via": "^0.14",
         "parsedown/parsedown": "^1.7",
         "ramsey/uuid": "^4.7",
         "starfederation/datastar-php": "^1.0",
@@ -57,15 +57,5 @@
             "phpstan/extension-installer": true
         }
     },
-    "minimum-stability": "RC",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../php-via-014",
-            "options": {
-                "symlink": true
-            }
-        }
-    ]
+    "prefer-stable": true
 }

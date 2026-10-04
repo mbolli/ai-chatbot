@@ -80,8 +80,6 @@ PHP numbers: `composer install --no-dev --optimize-autoloader` into a clean copy
 - Composer
 - Node.js and pnpm, only for TypeScript changes and the Playwright suite
 
-This app targets php-via 0.14, which is not released yet and still lacks a fix it needs (component ids on routes with parameters). Until both are released, `composer.json` installs php-via from a path repository at `../php-via-014`: a checkout of php-via's 0.14 line with commit `fix: give components on routes with parameters a wrapper id that works as a CSS selector` applied.
-
 ## 🚀 Quick Start
 
 ### 1. Clone and Install Dependencies
@@ -438,10 +436,9 @@ The app is one long-running PHP process. Put a reverse proxy in front for TLS an
 ### Production Checklist
 
 1. `APP_ENV=production` and `APP_DEBUG=false` in `.env`; no `VIA_DEVBAR`
-2. Require a released php-via version in `composer.json` and drop the `../php-via-014` path repository
-3. `server.host` set to `127.0.0.1` in `config/autoload/app.local.php`
-4. HTTPS in front: in production the session cookie is `Secure` with the `__Host-` prefix
-5. After each update: back up `data/db.sqlite`, `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
+2. `server.host set to `127.0.0.1` in `config/autoload/app.local.php`
+3. HTTPS in front: in production the session cookie is `Secure` with the `__Host-` prefix
+4. After each update: back up `data/db.sqlite`, `composer install --no-dev --optimize-autoloader`, `php bin/migrate.php`, restart the service. A restart logs every user out and ends running replies, because sessions live in memory
 
 ### Caddy
 
@@ -539,8 +536,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev unzi
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
-# Only while composer.json points at ../php-via-014: build with --build-context php-via=../php-via-014
-COPY --from=php-via . /php-via-014
 COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
@@ -550,7 +545,7 @@ CMD ["sh", "-c", "php bin/init-db.php && php bin/migrate.php && exec php bin/ser
 ```
 
 ```bash
-docker build --build-context php-via=../php-via-014 -t ai-chatbot .
+docker build -t ai-chatbot .
 docker run -p 8080:8080 --env-file .env -v ai-chatbot-data:/app/data ai-chatbot
 ```
 
