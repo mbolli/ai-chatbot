@@ -130,7 +130,7 @@
         },
         {
             "name": "mbolli/php-via",
-            "version": "dev-7a49802e7a3c44001f08a699f5cf380f9c906128",
+            "version": "dev-152a100e99ad26c2c034e6117af6433160b31ac7",
             "dist": {
                 "type": "path",
                 "url": "../php-via-014",
