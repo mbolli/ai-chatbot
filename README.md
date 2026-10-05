@@ -18,7 +18,7 @@ A real-time AI chatbot built with **PHP 8.5**, **OpenSwoole**, **[php-via](https
 
 This project exists to challenge the assumption that modern AI chat apps require heavy JavaScript stacks. We rebuilt the Vercel AI Chatbot in PHP and measured both.
 
-> **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **86 contributors** and **600+ commits** of optimization. This PHP port is a straightforward implementation with minimal optimization, and it still leads on most metrics.
+> **Context:** The [Vercel AI Chatbot](https://github.com/vercel/ai-chatbot) has **around 80 contributors** and **over 600 commits** of optimization. This PHP port is a straightforward implementation with minimal optimization, and it still leads on most metrics.
 
 ### Measured Performance (October 2026)
 
