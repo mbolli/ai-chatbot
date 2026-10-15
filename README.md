@@ -565,3 +565,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 *Tired of JavaScript complexity?* [zwei und eins gmbh](https://zweiundeins.gmbh) builds high-performance PHP applications that compete with (and often outperform) modern JS stacks.
+
+## Maintainer
+
+Maintained by [Michael Bolli](https://github.com/mbolli) at [zwei und eins gmbh](https://zweiundeins.gmbh), Aarberg, Switzerland.
